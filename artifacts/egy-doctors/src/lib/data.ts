@@ -1,0 +1,93 @@
+export type Specialty = "Cardiology" | "Dermatology" | "Orthopedics" | "Neurology" | "Pediatrics";
+export type Location = "New Cairo" | "Zamalek" | "Maadi" | "Heliopolis" | "Dokki";
+
+export interface Doctor {
+  id: string;
+  name: string;
+  specialty: Specialty;
+  location: Location;
+  fee: number;
+  bio: string;
+  image: string;
+  clinicAddress: string;
+  slots: string[];
+}
+
+export interface Appointment {
+  id: string;
+  patientName: string;
+  phone: string;
+  date: string;
+  time: string;
+  doctorId: string;
+}
+
+export const doctors: Doctor[] = [
+  {
+    id: "1",
+    name: "Dr. Ahmed Youssef",
+    specialty: "Cardiology",
+    location: "New Cairo",
+    fee: 450,
+    bio: "Senior Consultant Cardiologist with 15 years of experience specializing in heart failure and preventive cardiology.",
+    image: "https://randomuser.me/api/portraits/men/32.jpg",
+    clinicAddress: "15 South Teseen St, 4th Floor, New Cairo",
+    slots: ["Today 4:00 PM", "Tomorrow 9:00 AM", "Thu 5:30 PM", "Fri 11:00 AM"]
+  },
+  {
+    id: "2",
+    name: "Dr. Sara Mahmoud",
+    specialty: "Dermatology",
+    location: "Zamalek",
+    fee: 350,
+    bio: "Expert dermatologist specializing in cosmetic dermatology, laser treatments, and skin conditions.",
+    image: "https://randomuser.me/api/portraits/women/44.jpg",
+    clinicAddress: "8A 26th of July Corridor, Zamalek",
+    slots: ["Today 2:00 PM", "Tomorrow 1:00 PM", "Wed 6:00 PM", "Sat 10:00 AM"]
+  },
+  {
+    id: "3",
+    name: "Dr. Kareem Hassan",
+    specialty: "Orthopedics",
+    location: "Maadi",
+    fee: 400,
+    bio: "Consultant Orthopedic Surgeon focusing on sports injuries and joint replacement surgeries.",
+    image: "https://randomuser.me/api/portraits/men/65.jpg",
+    clinicAddress: "45 Road 9, Maadi",
+    slots: ["Today 5:00 PM", "Tomorrow 4:30 PM", "Thu 2:00 PM", "Mon 12:00 PM"]
+  },
+  {
+    id: "4",
+    name: "Dr. Laila Omar",
+    specialty: "Pediatrics",
+    location: "Heliopolis",
+    fee: 300,
+    bio: "Compassionate pediatrician dedicated to child health, development, and vaccination programs.",
+    image: "https://randomuser.me/api/portraits/women/68.jpg",
+    clinicAddress: "12 El Hegaz St, Heliopolis",
+    slots: ["Today 10:00 AM", "Tomorrow 11:30 AM", "Wed 9:00 AM", "Sun 3:00 PM"]
+  },
+  {
+    id: "5",
+    name: "Dr. Tarek Ibrahim",
+    specialty: "Neurology",
+    location: "Dokki",
+    fee: 500,
+    bio: "Renowned neurologist treating complex neurological disorders, migraines, and epilepsy.",
+    image: "https://randomuser.me/api/portraits/men/82.jpg",
+    clinicAddress: "22 Mossadak St, Dokki",
+    slots: ["Today 6:00 PM", "Tomorrow 7:00 PM", "Thu 8:00 PM", "Fri 4:00 PM"]
+  }
+];
+
+export const appointments: Appointment[] = [
+  { id: "a1", patientName: "Omar Tarek", phone: "01012345678", date: "2023-11-01", time: "4:00 PM", doctorId: "1" },
+  { id: "a2", patientName: "Nourhan Ali", phone: "01123456789", date: "2023-11-02", time: "9:00 AM", doctorId: "1" },
+  { id: "a3", patientName: "Youssef Adel", phone: "01234567890", date: "2023-11-02", time: "1:00 PM", doctorId: "2" },
+  { id: "a4", patientName: "Mona Hassan", phone: "01545678901", date: "2023-11-03", time: "6:00 PM", doctorId: "2" },
+  { id: "a5", patientName: "Salma Fouad", phone: "01098765432", date: "2023-11-04", time: "10:00 AM", doctorId: "4" },
+  { id: "a6", patientName: "Amr Zaki", phone: "01187654321", date: "2023-11-05", time: "5:00 PM", doctorId: "3" },
+];
+
+export const specialties: Specialty[] = ["Cardiology", "Dermatology", "Orthopedics", "Neurology", "Pediatrics"];
+export const locations: Location[] = ["New Cairo", "Zamalek", "Maadi", "Heliopolis", "Dokki"];

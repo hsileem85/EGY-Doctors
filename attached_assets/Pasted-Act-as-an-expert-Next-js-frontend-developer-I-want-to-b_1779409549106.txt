@@ -1,0 +1,35 @@
+Act as an expert Next.js frontend developer. I want to build the frontend MVP for "EGY Doctors", a SaaS medical directory platform. 
+
+Tech Stack: Next.js (App Router), React, Tailwind CSS, and Lucide React for icons.
+Constraint: DO NOT connect a database yet. Use hardcoded mock data for all doctors, appointments, and slots so the UI is fully interactive immediately.
+
+Please generate the following 4 pages and their components. Use a clean, modern medical color palette (Trust Blue, crisp whites, and soft grays). Ensure everything is mobile-responsive.
+
+1. Mock Data (Create a `lib/data.ts` or similar file):
+- Create an array of 5 mock doctors. Fields: id, name, specialty, location (e.g., "New Cairo"), fee, bio, image (use Unsplash placeholders), and an array of available slots (e.g., ["Today 4:00 PM", "Tomorrow 5:30 PM"]).
+
+2. Global Components:
+- A Navbar with the logo "EGY Doctors", a "Search" link, and a "Doctor Login" button.
+- A clean Footer.
+
+3. Page 1: Homepage (`/`)
+- A Hero section with a headline "Find & Book the Best Doctors in Egypt for Free."
+- A Search Bar component with two dropdowns: "Specialty" and "Location", and a "Search" button.
+- A "Featured Doctors" grid showing 3 doctor cards using the mock data.
+
+4. Page 2: Search Results (`/search`)
+- A page displaying a vertical list of doctor cards.
+- Each card should show the doctor's image, name, specialty, location, and the next 3 available time slots as clickable pill buttons.
+
+5. Page 3: Doctor Profile (`/doctor/[id]`)
+- A detailed layout for a specific doctor.
+- Left column: Doctor's photo, Name, Specialty, detailed Bio, and Clinic Address.
+- Right column: A "Book Appointment" widget. It should display a grid of their available slots. 
+- Interaction: When a slot is clicked, show a form asking for "Patient Name" and "Phone Number", and a "Confirm Booking" button. (Just show a success message state when clicked).
+
+6. Page 4: Doctor Dashboard (`/dashboard`)
+- A sidebar layout (simulating a logged-in doctor).
+- A top stat cards row: "Total Bookings", "Profile Views".
+- A table listing "Upcoming Appointments" showing Patient Name, Phone, Date, and Time.
+
+Please build this step-by-step, starting with the layout and mock data, then generating the pages.

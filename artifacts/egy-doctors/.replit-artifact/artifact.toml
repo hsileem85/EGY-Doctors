@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "EGY Doctors"
+version = "1.0.0"
+id = "artifacts/egy-doctors"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20495
+
+[services.development]
+run = "pnpm --filter @workspace/egy-doctors run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/egy-doctors", "run", "build" ]
+publicDir = "artifacts/egy-doctors/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20495"
+BASE_PATH = "/"
