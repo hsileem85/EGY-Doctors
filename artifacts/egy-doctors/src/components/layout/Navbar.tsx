@@ -31,6 +31,12 @@ export function Navbar() {
             <span>{lang === "en" ? "عربي" : "EN"}</span>
           </button>
 
+          <Link href="/register" data-testid="link-register">
+            <Button variant="ghost" className="font-medium text-sm hidden sm:inline-flex">
+              {t.nav.register}
+            </Button>
+          </Link>
+
           <Link href="/dashboard" data-testid="link-dashboard">
             <Button variant="outline" className="font-medium text-sm">
               {t.nav.doctorLogin}

@@ -8,6 +8,9 @@ import Home from "@/pages/Home";
 import Search from "@/pages/Search";
 import DoctorProfile from "@/pages/DoctorProfile";
 import Dashboard from "@/pages/Dashboard";
+import DoctorRegister from "@/pages/DoctorRegister";
+import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
+import PublishContent from "@/pages/PublishContent";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +21,9 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/doctor/:id" component={DoctorProfile} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard/publish" component={PublishContent} />
+      <Route path="/register" component={DoctorRegister} />
+      <Route path="/profile-setup" component={DoctorProfileSetup} />
       <Route component={NotFound} />
     </Switch>
   );

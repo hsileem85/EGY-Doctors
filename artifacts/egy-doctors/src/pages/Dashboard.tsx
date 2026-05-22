@@ -1,11 +1,13 @@
-import { CalendarDays, Users, TrendingUp, Search } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { appointments } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -39,6 +41,12 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4" />
                 {t.dashboard.performance}
               </a>
+              <Link href="/dashboard/publish">
+                <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
+                  <PenSquare className="h-4 w-4" />
+                  {t.dashboard.publishContent}
+                </span>
+              </Link>
             </nav>
           </div>
         </aside>
@@ -92,7 +100,7 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            <Card className="border-0 shadow-sm shadow-gray-200/50">
+            <Card className="border-0 shadow-sm shadow-gray-200/50 mb-8">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b bg-gray-50/50 rounded-t-xl pb-4">
                 <div>
                   <CardTitle className="text-lg">{t.dashboard.appointments}</CardTitle>
@@ -143,6 +151,60 @@ export default function Dashboard() {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Recent Publications */}
+            <Card className="border-0 shadow-sm shadow-gray-200/50">
+              <CardHeader className="flex flex-row items-center justify-between border-b bg-gray-50/50 rounded-t-xl pb-4">
+                <CardTitle className="text-lg">{t.dashboard.recentPublications}</CardTitle>
+                <Link href="/dashboard/publish">
+                  <Button size="sm" className="gap-1">
+                    <Plus className="w-4 h-4" />
+                    {t.dashboard.newPublication}
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  <div className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">Understanding Heart Disease Risks</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[10px] h-5">Article</Badge>
+                        <span className="text-xs text-gray-500">Today</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
+                      <Video className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">Healthy Diet for Blood Pressure</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[10px] h-5">Video</Badge>
+                        <span className="text-xs text-gray-500">Yesterday</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600">
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">Drink 8 glasses of water daily</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[10px] h-5">Advice</Badge>
+                        <span className="text-xs text-gray-500">Oct 28</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </main>
       </div>
