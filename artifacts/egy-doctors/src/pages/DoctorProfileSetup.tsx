@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Upload, Camera, Clock } from "lucide-react";
+import { Upload, Camera, Clock, ArrowLeft } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { specialties, locations } from "@/lib/data";
+import { Link } from "wouter";
 
 const DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 type Day = typeof DAYS[number];
 
 export default function DoctorProfileSetup() {
-  const { t } = useLanguage();
-  const [, setLocation] = useLocation();
+  const { t, dir } = useLanguage();
+  const [pathname, setLocation] = useLocation();
   const { toast } = useToast();
+  const isEditMode = pathname.includes("edit-profile");
   
   const [formData, setFormData] = useState({
     fullName: "Dr. Ahmed Youssef",
@@ -41,14 +43,23 @@ export default function DoctorProfileSetup() {
     } as Record<Day, { active: boolean, from: string, to: string }>
   });
 
-  const handleSave = () => {
+    const handleSave = () => {
+    let title: string;
+    let description: string;
+    if (isEditMode) {
+      title = dir === 'rtl' ? 'تم حفظ الملف الشخصي!' : 'Profile Updated!';
+      description = dir === 'rtl' ? 'تم حفظ تغييرات ملفك الشخصي بنجاح.' : 'Your profile changes have been saved successfully.';
+    } else {
+      title = t.profileSetup.publishedSuccess;
+      description = t.profileSetup.publishedSuccess;
+    }
     toast({
-      title: t.profileSetup.publishedSuccess,
-      description: t.profileSetup.publishedSuccess,
-      className: "bg-green-50 text-green-900 border-green-200"
+      title,
+      description,
+      className: 'bg-green-50 text-green-900 border-green-200'
     });
     setTimeout(() => {
-      setLocation("/dashboard");
+      setLocation('/dashboard');
     }, 1500);
   };
 
@@ -71,12 +82,33 @@ export default function DoctorProfileSetup() {
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{t.profileSetup.title}</h1>
-              <p className="text-gray-500 mt-1">{t.register.successDesc}</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isEditMode
+                  ? (dir === "rtl" ? "تعديل الملف الشخصي" : "Edit Profile")
+                  : t.profileSetup.title}
+              </h1>
+              <p className="text-gray-500 mt-1">
+                {isEditMode
+                  ? (dir === "rtl" ? "حدث معلوماتك والجدول واحفظ التغييرات."
+                    : "Update your information, schedule, and save changes.")
+                  : t.register.successDesc}
+              </p>
             </div>
-            <Button onClick={handleSave} size="lg" className="w-full md:w-auto" data-testid="button-save-profile">
-              {t.profileSetup.savePublish}
-            </Button>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              {isEditMode && (
+                <Link href="/dashboard">
+                  <Button variant="outline" size="lg" className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    {dir === "rtl" ? "الرجوع إلى لوحة التحكم" : "Back to Dashboard"}
+                  </Button>
+                </Link>
+              )}
+              <Button onClick={handleSave} size="lg" className="w-full md:w-auto" data-testid="button-save-profile">
+                {isEditMode
+                  ? (dir === "rtl" ? "حفظ التغييرات" : "Save Changes")
+                  : t.profileSetup.savePublish}
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

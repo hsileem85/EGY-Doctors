@@ -29,6 +29,7 @@ function Router() {
       <Route path="/doctor-login" component={DoctorAuth} />
       <Route path="/patient-auth" component={PatientAuth} />
       <Route path="/profile-setup" component={DoctorProfileSetup} />
+      <Route path="/edit-profile" component={DoctorProfileSetup} />
       <Route path="/about" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>

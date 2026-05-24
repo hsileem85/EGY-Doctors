@@ -10,7 +10,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Link } from "wouter";
 
 export default function Dashboard() {
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
 
   return (
     <Layout>
@@ -45,6 +45,12 @@ export default function Dashboard() {
                 <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
                   <PenSquare className="h-4 w-4" />
                   {t.dashboard.publishContent}
+                </span>
+              </Link>
+              <Link href="/edit-profile">
+                <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
+                  <TrendingUp className="h-4 w-4" />
+                  {dir === "rtl" ? "تعديل الملف الشخصي" : "Edit Profile"}
                 </span>
               </Link>
             </nav>
