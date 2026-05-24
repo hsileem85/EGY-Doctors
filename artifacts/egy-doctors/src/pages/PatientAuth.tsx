@@ -18,6 +18,7 @@ export default function PatientAuth() {
     fullName: "",
     email: "",
     phone: "",
+    nationalId: "",
     password: "",
     confirmPassword: "",
   });
@@ -53,12 +54,12 @@ export default function PatientAuth() {
             </h2>
             <p className="text-gray-500 mb-6">
               {dir === "rtl"
-                ? "مرحباً بك في EGY Doctors. تمت إعادة توجيهك إلى الصفحة الرئيسية."
-                : "Welcome to EGY Doctors. You will be redirected to the home page."}
+                ? "مرحباً بك في EGY Doctors. تم إنشاء ملفك الطبي الإلكتروني. يمكنك الآن متابعة مواعيدك وتاريخك الصحي."
+                : "Welcome to EGY Doctors. Your Electronic Medical Record has been created. You can now track appointments and your health history."}
             </p>
-            <Link href="/">
+            <Link href="/patient/dashboard">
               <Button className="w-full">
-                {dir === "rtl" ? "الذهاب إلى الصفحة الرئيسية" : "Go to Home"}
+                {dir === "rtl" ? "الذهاب إلى لوحة التحكم" : "Go to Dashboard"}
               </Button>
             </Link>
           </CardContent>
@@ -209,6 +210,30 @@ export default function PatientAuth() {
                     }
                     data-testid="input-patient-signup-phone"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signupNationalId">
+                    {dir === "rtl" ? "الرقم القومي (اختياري)" : "National ID (Optional)"}
+                  </Label>
+                  <Input
+                    id="signupNationalId"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={14}
+                    value={signupData.nationalId}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 14);
+                      setSignupData({ ...signupData, nationalId: val });
+                    }}
+                    placeholder={dir === "rtl" ? "14 رقم" : "14 digits"}
+                    data-testid="input-patient-signup-nationalid"
+                  />
+                  <p className="text-xs text-gray-400">
+                    {dir === "rtl"
+                      ? "يُستخدم لإنشاء ملفك الطبي الإلكتروني (EMR) لاحقاً."
+                      : "Used later to create your Electronic Medical Record (EMR)."}
+                  </p>
                 </div>
 
                 <div className="space-y-2">

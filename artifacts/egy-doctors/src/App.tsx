@@ -14,6 +14,8 @@ import PatientAuth from "@/pages/PatientAuth";
 import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
 import PublishContent from "@/pages/PublishContent";
 import AboutUs from "@/pages/AboutUs";
+import PatientDashboard from "@/pages/PatientDashboard";
+import PatientEMR from "@/pages/PatientEMR";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,8 @@ function Router() {
       <Route path="/profile-setup" component={DoctorProfileSetup} />
       <Route path="/edit-profile" component={DoctorProfileSetup} />
       <Route path="/about" component={AboutUs} />
+      <Route path="/patient/dashboard" component={PatientDashboard} />
+      <Route path="/patient/emr" component={PatientEMR} />
       <Route component={NotFound} />
     </Switch>
   );
