@@ -69,7 +69,7 @@ export default function DoctorRegister() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
       <Link href="/" className="flex items-center gap-2 mb-8">
         <Stethoscope className="h-8 w-8 text-primary" />
-        <span className="text-2xl font-bold text-gray-900 tracking-tight">EGY Doctors</span>
+        <span className="text-2xl font-bold text-gray-900 tracking-tight font-brand">EGY Doctors</span>
       </Link>
 
       <Card className="w-full max-w-lg shadow-lg">

@@ -60,7 +60,7 @@ export default function AboutUs() {
         <div className="relative container mx-auto px-4 py-12 lg:py-16 text-center">
           <Stethoscope className="h-10 w-10 text-white/80 mx-auto mb-4" />
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
-            {dir === "rtl" ? "عن إجي دكتورز" : "About EGY Doctors"}
+            {dir === "rtl" ? "عن " : "About "}<span className="font-brand">{dir === "rtl" ? "إجي دكتورز" : "EGY Doctors"}</span>
           </h1>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
             {dir === "rtl"
@@ -124,7 +124,7 @@ export default function AboutUs() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-              {dir === "rtl" ? "لماذا EGY Doctors؟" : "Why EGY Doctors?"}
+              {dir === "rtl" ? <>لماذا <span className="font-brand">EGY Doctors</span>؟</> : <>Why <span className="font-brand">EGY Doctors</span>?</>}
             </h2>
             <p className="text-gray-600 max-w-xl mx-auto">
               {dir === "rtl"

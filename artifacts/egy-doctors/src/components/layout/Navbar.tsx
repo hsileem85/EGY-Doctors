@@ -11,7 +11,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2" data-testid="link-home">
           <Stethoscope className="h-5 w-5 text-primary" />
-          <span className="text-lg font-semibold text-gray-900 tracking-tight">{lang === "ar" ? "إجي دكتورز" : "EGY Doctors"}</span>
+          <span className="text-lg font-semibold text-gray-900 tracking-tight font-brand">{lang === "ar" ? "إجي دكتورز" : "EGY Doctors"}</span>
         </Link>
         <div className="flex items-center gap-3">
           <Link

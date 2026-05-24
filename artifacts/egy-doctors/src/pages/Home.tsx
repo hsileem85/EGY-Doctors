@@ -46,7 +46,7 @@ export default function Home() {
         </div>
 
         <div className="relative container mx-auto px-4 py-16 lg:py-24 flex flex-col items-center justify-center text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight max-w-4xl">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight max-w-4xl">
             {t.home.heroTitle}
           </h1>
           <p className="text-lg md:text-xl text-white/80 mb-12 max-w-2xl">
