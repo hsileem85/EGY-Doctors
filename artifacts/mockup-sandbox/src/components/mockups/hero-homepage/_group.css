@@ -1,0 +1,16 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=Cairo:wght@400;500;600;700&display=swap");
+
+:root {
+  --primary: 158 65% 38%;
+  --primary-foreground: 0 0% 100%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --border: 214 32% 91%;
+  --radius: 0.5rem;
+  --app-font-sans: 'Inter', sans-serif;
+  --font-serif: Georgia, serif;
+}
