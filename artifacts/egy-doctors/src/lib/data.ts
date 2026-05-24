@@ -1,11 +1,15 @@
 export type Specialty = "Cardiology" | "Dermatology" | "Orthopedics" | "Neurology" | "Pediatrics";
 export type Location = "New Cairo" | "Zamalek" | "Maadi" | "Heliopolis" | "Dokki";
+export type Governorate = "Cairo" | "Giza" | "Alexandria";
+export type InsuranceNetwork = "Cigna" | "AXA" | "MetLife" | "Bupa" | "None";
 
 export interface Doctor {
   id: string;
   name: string;
   specialty: Specialty;
   location: Location;
+  governorate: Governorate;
+  insuranceNetwork: InsuranceNetwork;
   fee: number;
   bio: string;
   image: string;
@@ -28,6 +32,8 @@ export const doctors: Doctor[] = [
     name: "Dr. Ahmed Youssef",
     specialty: "Cardiology",
     location: "New Cairo",
+    governorate: "Cairo",
+    insuranceNetwork: "Cigna",
     fee: 450,
     bio: "Senior Consultant Cardiologist with 15 years of experience specializing in heart failure and preventive cardiology.",
     image: "https://randomuser.me/api/portraits/men/32.jpg",
@@ -39,6 +45,8 @@ export const doctors: Doctor[] = [
     name: "Dr. Sara Mahmoud",
     specialty: "Dermatology",
     location: "Zamalek",
+    governorate: "Cairo",
+    insuranceNetwork: "AXA",
     fee: 350,
     bio: "Expert dermatologist specializing in cosmetic dermatology, laser treatments, and skin conditions.",
     image: "https://randomuser.me/api/portraits/women/44.jpg",
@@ -50,6 +58,8 @@ export const doctors: Doctor[] = [
     name: "Dr. Kareem Hassan",
     specialty: "Orthopedics",
     location: "Maadi",
+    governorate: "Cairo",
+    insuranceNetwork: "MetLife",
     fee: 400,
     bio: "Consultant Orthopedic Surgeon focusing on sports injuries and joint replacement surgeries.",
     image: "https://randomuser.me/api/portraits/men/65.jpg",
@@ -61,6 +71,8 @@ export const doctors: Doctor[] = [
     name: "Dr. Laila Omar",
     specialty: "Pediatrics",
     location: "Heliopolis",
+    governorate: "Cairo",
+    insuranceNetwork: "Bupa",
     fee: 300,
     bio: "Compassionate pediatrician dedicated to child health, development, and vaccination programs.",
     image: "https://randomuser.me/api/portraits/women/68.jpg",
@@ -72,6 +84,8 @@ export const doctors: Doctor[] = [
     name: "Dr. Tarek Ibrahim",
     specialty: "Neurology",
     location: "Dokki",
+    governorate: "Giza",
+    insuranceNetwork: "None",
     fee: 500,
     bio: "Renowned neurologist treating complex neurological disorders, migraines, and epilepsy.",
     image: "https://randomuser.me/api/portraits/men/82.jpg",
@@ -91,3 +105,5 @@ export const appointments: Appointment[] = [
 
 export const specialties: Specialty[] = ["Cardiology", "Dermatology", "Orthopedics", "Neurology", "Pediatrics"];
 export const locations: Location[] = ["New Cairo", "Zamalek", "Maadi", "Heliopolis", "Dokki"];
+export const governorates: Governorate[] = ["Cairo", "Giza", "Alexandria"];
+export const insuranceNetworks: InsuranceNetwork[] = ["Cigna", "AXA", "MetLife", "Bupa", "None"];

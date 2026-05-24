@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { doctors, specialties, locations } from "@/lib/data";
+import { doctors, specialties, locations, governorates, insuranceNetworks } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function Search() {
@@ -15,20 +15,35 @@ export default function Search() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
 
+  const initialQuery = searchParams.get("q") || "";
   const initialSpecialty = searchParams.get("specialty") || "";
+  const initialGovernorate = searchParams.get("governorate") || "";
   const initialLocation = searchParams.get("location") || "";
+  const initialInsurance = searchParams.get("insurance") || "";
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
     initialSpecialty ? [initialSpecialty] : []
   );
+  const [selectedGovernorates, setSelectedGovernorates] = useState<string[]>(
+    initialGovernorate ? [initialGovernorate] : []
+  );
   const [selectedLocations, setSelectedLocations] = useState<string[]>(
     initialLocation ? [initialLocation] : []
+  );
+  const [selectedInsurances, setSelectedInsurances] = useState<string[]>(
+    initialInsurance ? [initialInsurance] : []
   );
 
   const toggleSpecialty = (s: string) => {
     setSelectedSpecialties(prev =>
       prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+    );
+  };
+
+  const toggleGovernorate = (g: string) => {
+    setSelectedGovernorates(prev =>
+      prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
     );
   };
 
@@ -38,22 +53,39 @@ export default function Search() {
     );
   };
 
+  const toggleInsurance = (i: string) => {
+    setSelectedInsurances(prev =>
+      prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
+    );
+  };
+
   const filteredDoctors = useMemo(() => {
     return doctors.filter(doctor => {
       const matchSearch =
+        searchQuery === "" ||
         doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doctor.bio.toLowerCase().includes(searchQuery.toLowerCase());
       const matchSpecialty =
         selectedSpecialties.length === 0 || selectedSpecialties.includes(doctor.specialty);
+      const matchGovernorate =
+        selectedGovernorates.length === 0 || selectedGovernorates.includes(doctor.governorate);
       const matchLocation =
         selectedLocations.length === 0 || selectedLocations.includes(doctor.location);
-      return matchSearch && matchSpecialty && matchLocation;
+      const matchInsurance =
+        selectedInsurances.length === 0 || selectedInsurances.includes(doctor.insuranceNetwork);
+      return matchSearch && matchSpecialty && matchGovernorate && matchLocation && matchInsurance;
     });
-  }, [searchQuery, selectedSpecialties, selectedLocations]);
+  }, [searchQuery, selectedSpecialties, selectedGovernorates, selectedLocations, selectedInsurances]);
+
+  const hasActiveFilters =
+    selectedSpecialties.length > 0 ||
+    selectedGovernorates.length > 0 ||
+    selectedLocations.length > 0 ||
+    selectedInsurances.length > 0;
 
   return (
     <Layout>
-      <div className="bg-white border-b sticky top-16 z-40">
+      <div className="bg-white border-b sticky top-14 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="relative max-w-2xl mx-auto">
             <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -98,7 +130,28 @@ export default function Search() {
                 </div>
               </div>
 
-              <div>
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
+                  {t.home.governorate}
+                </h3>
+                <div className="space-y-3">
+                  {governorates.map(g => (
+                    <div key={g} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`gov-${g}`}
+                        checked={selectedGovernorates.includes(g)}
+                        onCheckedChange={() => toggleGovernorate(g)}
+                        data-testid={`checkbox-governorate-${g}`}
+                      />
+                      <Label htmlFor={`gov-${g}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                        {t.governorates[g] ?? g}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-8">
                 <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
                   {t.search.location}
                 </h3>
@@ -119,11 +172,37 @@ export default function Search() {
                 </div>
               </div>
 
-              {(selectedSpecialties.length > 0 || selectedLocations.length > 0) && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
+                  {t.home.insurance}
+                </h3>
+                <div className="space-y-3">
+                  {insuranceNetworks.map(i => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`ins-${i}`}
+                        checked={selectedInsurances.includes(i)}
+                        onCheckedChange={() => toggleInsurance(i)}
+                        data-testid={`checkbox-insurance-${i}`}
+                      />
+                      <Label htmlFor={`ins-${i}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                        {t.insuranceNetworks[i] ?? i}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {hasActiveFilters && (
                 <Button
                   variant="ghost"
                   className="w-full mt-6 text-primary hover:text-primary/80 hover:bg-primary/5"
-                  onClick={() => { setSelectedSpecialties([]); setSelectedLocations([]); }}
+                  onClick={() => {
+                    setSelectedSpecialties([]);
+                    setSelectedGovernorates([]);
+                    setSelectedLocations([]);
+                    setSelectedInsurances([]);
+                  }}
                 >
                   {t.search.clearFilters}
                 </Button>
@@ -151,7 +230,13 @@ export default function Search() {
                 <Button
                   variant="outline"
                   className="mt-6"
-                  onClick={() => { setSelectedSpecialties([]); setSelectedLocations([]); setSearchQuery(""); }}
+                  onClick={() => {
+                    setSelectedSpecialties([]);
+                    setSelectedGovernorates([]);
+                    setSelectedLocations([]);
+                    setSelectedInsurances([]);
+                    setSearchQuery("");
+                  }}
                 >
                   {t.search.clearAllFilters}
                 </Button>
