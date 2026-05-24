@@ -1,6 +1,6 @@
-# [Project name]
+# EGY Doctors
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A bilingual (EN/AR) medical directory platform for Egypt where patients can search, compare, and book appointments with top-rated doctors — and where doctors can register, build their profile, manage their schedule, and publish health content.
 
 ## Run & Operate
 
