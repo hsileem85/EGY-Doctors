@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Search, MapPin, Stethoscope, Building2, Shield, User } from "lucide-react";
+import { Search, MapPin, Stethoscope, Building2, Shield, User, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +8,7 @@ import { Layout } from "@/components/layout/Layout";
 import { DoctorCard } from "@/components/DoctorCard";
 import { doctors, specialties, locations, governorates, insuranceNetworks } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
+import { Link } from "wouter";
 
 export default function Home() {
   const [_, setLocation] = useLocation();
@@ -16,7 +17,7 @@ export default function Home() {
   const [governorate, setGovernorate] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [insurance, setInsurance] = useState<string>("");
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,9 +50,32 @@ export default function Home() {
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight max-w-4xl">
             {t.home.heroTitle}
           </h1>
-          <p className="text-lg md:text-xl text-white/80 mb-12 max-w-2xl">
+          <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl">
             {t.home.heroSubtitle}
           </p>
+
+          {/* Patient auth CTAs */}
+          <div className="flex items-center gap-3 mb-8">
+            <Link href="/patient-auth">
+              <Button
+                variant="outline"
+                className="h-9 px-4 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white text-sm"
+                data-testid="hero-patient-login"
+              >
+                <LogIn className="h-4 w-4 me-2" />
+                {dir === "rtl" ? "تسجيل دخول" : "Sign In"}
+              </Button>
+            </Link>
+            <Link href="/patient-auth">
+              <Button
+                className="h-9 px-4 bg-white text-primary hover:bg-white/90 text-sm"
+                data-testid="hero-patient-register"
+              >
+                <UserPlus className="h-4 w-4 me-2" />
+                {dir === "rtl" ? "إنشاء حساب" : "Sign Up"}
+              </Button>
+            </Link>
+          </div>
 
           {/* Frosted glass floating search */}
           <form onSubmit={handleSearch} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl">

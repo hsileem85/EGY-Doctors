@@ -9,6 +9,8 @@ import Search from "@/pages/Search";
 import DoctorProfile from "@/pages/DoctorProfile";
 import Dashboard from "@/pages/Dashboard";
 import DoctorRegister from "@/pages/DoctorRegister";
+import DoctorAuth from "@/pages/DoctorAuth";
+import PatientAuth from "@/pages/PatientAuth";
 import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
 import PublishContent from "@/pages/PublishContent";
 import AboutUs from "@/pages/AboutUs";
@@ -24,6 +26,8 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/publish" component={PublishContent} />
       <Route path="/register" component={DoctorRegister} />
+      <Route path="/doctor-login" component={DoctorAuth} />
+      <Route path="/patient-auth" component={PatientAuth} />
       <Route path="/profile-setup" component={DoctorProfileSetup} />
       <Route path="/about" component={AboutUs} />
       <Route component={NotFound} />
