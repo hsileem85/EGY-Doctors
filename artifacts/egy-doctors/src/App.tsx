@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import DoctorRegister from "@/pages/DoctorRegister";
 import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
 import PublishContent from "@/pages/PublishContent";
+import AboutUs from "@/pages/AboutUs";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/dashboard/publish" component={PublishContent} />
       <Route path="/register" component={DoctorRegister} />
       <Route path="/profile-setup" component={DoctorProfileSetup} />
+      <Route path="/about" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>
   );
