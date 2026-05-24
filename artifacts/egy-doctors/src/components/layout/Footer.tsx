@@ -1,15 +1,15 @@
 import { useLanguage } from "@/context/LanguageContext";
 
 export function Footer() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   return (
     <footer className="border-t bg-gray-50 py-12 mt-auto">
       <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="text-center md:text-start">
-          <p className="text-sm font-medium text-gray-900">EGY Doctors</p>
+          <p className="text-sm font-medium text-gray-900">{lang === "ar" ? "إجي دكتورز" : "EGY Doctors"}</p>
           <p className="text-xs text-gray-500 mt-1">
-            &copy; {new Date().getFullYear()} EGY Doctors. {t.footer.rights}
+            &copy; {new Date().getFullYear()} {lang === "ar" ? "إجي دكتورز" : "EGY Doctors"}. {t.footer.rights}
           </p>
         </div>
         <div className="flex gap-6 text-sm text-gray-500">
