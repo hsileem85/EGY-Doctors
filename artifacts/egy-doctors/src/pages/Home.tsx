@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Search, MapPin, Stethoscope, Building2, Shield, User, LogIn, UserPlus } from "lucide-react";
+import { Search, MapPin, Stethoscope, Building2, Shield, User, LogIn, UserPlus, FlaskConical, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -212,6 +212,128 @@ export default function Home() {
           >
             {t.home.viewAll}
           </Button>
+        </div>
+      </section>
+
+      {/* Featured Medical Partners */}
+      <section className="py-16 bg-white border-t">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              {dir === "rtl" ? "شركاؤنا الطبية المميزة" : "Featured Medical Partners"}
+            </h2>
+            <p className="text-gray-600 max-w-xl mx-auto">
+              {dir === "rtl"
+                ? "مستشفيات، مراكز تحاليل، ومراكز أشعة معتمدة لتقديم أفضل رعاية صحية."
+                : "Trusted hospitals, labs, and radiology centers delivering top-tier care."}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Saudi German Hospital */}
+            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  SGH
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {dir === "rtl" ? "مستشفى سعودي ألماني" : "Saudi German Hospital"}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {dir === "rtl" ? "مستشفى متعدد التخصصات" : "Multi-Specialty Hospital"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {dir === "rtl"
+                  ? "رعاية صحية شاملة بأحدث التقنيات وفريق طبي متخصص."
+                  : "Comprehensive care with cutting-edge technology and a team of 300+ specialists."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
+                <Building2 className="h-3 w-3" />
+                {dir === "rtl" ? "القاهرة · الإسكندرية" : "Cairo · Alexandria"}
+              </div>
+            </div>
+
+            {/* Dar Al Fouad */}
+            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-lg bg-emerald-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  DAF
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {dir === "rtl" ? "دار الفواد" : "Dar Al Fouad"}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {dir === "rtl" ? "مستشفى ومركز طبي" : "Hospital & Medical Center"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {dir === "rtl"
+                  ? "مركز رعاية صحية متكامل مع تخصصات القلب والكبد والعظام."
+                  : "Full-service health center with heart, liver, and organ transplant specialties."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
+                <Building2 className="h-3 w-3" />
+                {dir === "rtl" ? "6 أوتوستا · القاهرة" : "6th of October · Cairo"}
+              </div>
+            </div>
+
+            {/* Alfa Lab */}
+            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-lg bg-amber-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  AL
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {dir === "rtl" ? "ألفا لاب" : "Alfa Lab"}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {dir === "rtl" ? "مراكز تحاليل" : "Laboratory Network"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {dir === "rtl"
+                  ? "شبكة مراكز تحاليل رائدة بأحدث الأجهزة ونتائج دقيقة."
+                  : "A leading lab network with state-of-the-art equipment and accurate results."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
+                <FlaskConical className="h-3 w-3" />
+                {dir === "rtl" ? "40+ فرع · مصر" : "40+ Branches · Egypt"}
+              </div>
+            </div>
+
+            {/* Alfa Scan */}
+            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  AS
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {dir === "rtl" ? "ألفا سكان" : "Alfa Scan"}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {dir === "rtl" ? "مراكز أشعة ورنتجن" : "Radiology & Imaging"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {dir === "rtl"
+                  ? "أحدث أجهزة الأشعة التشخيصية مع فريق من أفضل الأطباء."
+                  : "Advanced diagnostic imaging with MRI, CT, and ultrasound by top radiologists."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
+                <Scan className="h-3 w-3" />
+                {dir === "rtl" ? "25+ فرع · مصر" : "25+ Branches · Egypt"}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </Layout>
