@@ -27,7 +27,7 @@ if (!basePath) {
 }
 
 export default defineConfig({
-  base: "/egy-doctors/",
+  base: '/EGY-Doctors/',
   plugins: [
     react(),
     tailwindcss(),
