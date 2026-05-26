@@ -39,7 +39,7 @@ export default function Home() {
         {/* Full-bleed background */}
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1600"
+            src="/hero-bg.png"
             alt="Modern hospital interior"
             className="w-full h-full object-cover"
           />
