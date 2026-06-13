@@ -56,7 +56,7 @@ export default function Home() {
 
           {/* Patient auth CTAs */}
           <div className="flex items-center gap-3 mb-8">
-            <Link href="/patient-auth">
+            <Link href="/auth">
               <Button
                 variant="outline"
                 className="h-9 px-4 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white text-sm"
@@ -66,7 +66,7 @@ export default function Home() {
                 {dir === "rtl" ? "تسجيل دخول" : "Sign In"}
               </Button>
             </Link>
-            <Link href="/patient-auth">
+            <Link href="/auth?tab=signup">
               <Button
                 className="h-9 px-4 bg-white text-primary hover:bg-white/90 text-sm"
                 data-testid="hero-patient-register"

@@ -30,15 +30,15 @@ export function Navbar() {
             {lang === "en" ? "ع" : "EN"}
           </button>
 
-          <Link href="/patient-auth" data-testid="link-patient-auth">
+          <Link href="/auth" data-testid="link-sign-in">
             <Button variant="ghost" className="text-sm font-normal hidden sm:inline-flex h-8 px-3">
-              {lang === "ar" ? "دخول المريض" : "Patient Login"}
+              {lang === "ar" ? "تسجيل الدخول" : "Sign In"}
             </Button>
           </Link>
 
-          <Link href="/doctor-login" data-testid="link-doctor-login">
+          <Link href="/auth?tab=signup" data-testid="link-sign-up">
             <Button variant="outline" className="text-sm font-normal h-8 px-3">
-              {lang === "ar" ? "دخول الطبيب" : "Doctor Login"}
+              {lang === "ar" ? "إنشاء حساب" : "Sign Up"}
             </Button>
           </Link>
         </div>

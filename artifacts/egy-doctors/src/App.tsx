@@ -10,12 +10,14 @@ import DoctorProfile from "@/pages/DoctorProfile";
 import Dashboard from "@/pages/Dashboard";
 import DoctorRegister from "@/pages/DoctorRegister";
 import DoctorAuth from "@/pages/DoctorAuth";
-import PatientAuth from "@/pages/PatientAuth";
+import AuthPage from "@/pages/AuthPage";
 import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
 import PublishContent from "@/pages/PublishContent";
 import AboutUs from "@/pages/AboutUs";
 import PatientDashboard from "@/pages/PatientDashboard";
 import PatientEMR from "@/pages/PatientEMR";
+import MedicalCenterDashboard from "@/pages/MedicalCenterDashboard";
+import MedicalCenterProfile from "@/pages/MedicalCenterProfile";
 
 const queryClient = new QueryClient();
 
@@ -28,13 +30,16 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/publish" component={PublishContent} />
       <Route path="/register" component={DoctorRegister} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/doctor-login" component={DoctorAuth} />
-      <Route path="/patient-auth" component={PatientAuth} />
+      <Route path="/patient-auth" component={AuthPage} />
       <Route path="/profile-setup" component={DoctorProfileSetup} />
       <Route path="/edit-profile" component={DoctorProfileSetup} />
       <Route path="/about" component={AboutUs} />
       <Route path="/patient/dashboard" component={PatientDashboard} />
       <Route path="/patient/emr" component={PatientEMR} />
+      <Route path="/medical-center/dashboard" component={MedicalCenterDashboard} />
+      <Route path="/medical-center/profile-setup" component={MedicalCenterProfile} />
       <Route component={NotFound} />
     </Switch>
   );
