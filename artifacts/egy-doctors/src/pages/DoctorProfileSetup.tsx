@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Upload, Camera, Clock, ArrowLeft } from "lucide-react";
+import { Upload, Camera, Clock, ArrowLeft, MapPin, GraduationCap, Briefcase } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,12 @@ export default function DoctorProfileSetup() {
     subSpecialty: "Consultant Cardiologist",
     clinicName: "Heart Care Clinic",
     clinicAddress: "15 South Teseen St, 4th Floor",
+    clinicMapLat: "30.0444",
+    clinicMapLng: "31.2357",
     location: "New Cairo",
     fee: "450",
+    experience: "15",
+    qualificationDegree: "MD, PhD, FRCS",
     bio: "",
     schedule: {
       Sat: { active: true, from: "10:00", to: "18:00" },
@@ -159,6 +163,31 @@ export default function DoctorProfileSetup() {
                         data-testid="input-profile-subspecialty"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-primary" />
+                        {dir === "rtl" ? "سنوات الخبرة" : "Years of Experience"}
+                      </Label>
+                      <Input 
+                        type="number"
+                        value={formData.experience} 
+                        onChange={e => setFormData({...formData, experience: e.target.value})} 
+                        placeholder="e.g. 15"
+                        data-testid="input-profile-experience"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                        {dir === "rtl" ? "الدرجة العلمية" : "Qualification Degree"}
+                      </Label>
+                      <Input 
+                        value={formData.qualificationDegree} 
+                        onChange={e => setFormData({...formData, qualificationDegree: e.target.value})} 
+                        placeholder="e.g. MD, PhD, FRCS"
+                        data-testid="input-profile-degree"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -201,6 +230,62 @@ export default function DoctorProfileSetup() {
                       onChange={e => setFormData({...formData, clinicAddress: e.target.value})} 
                       data-testid="input-profile-address"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      {dir === "rtl" ? "موقع العيادة على الخريطة" : "Clinic Location on Map"}
+                    </Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-500">{dir === "rtl" ? "خط الطول" : "Latitude"}</Label>
+                        <Input 
+                          value={formData.clinicMapLat} 
+                          onChange={e => setFormData({...formData, clinicMapLat: e.target.value})} 
+                          placeholder="30.0444"
+                          data-testid="input-profile-lat"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-500">{dir === "rtl" ? "خط العرض" : "Longitude"}</Label>
+                        <Input 
+                          value={formData.clinicMapLng} 
+                          onChange={e => setFormData({...formData, clinicMapLng: e.target.value})} 
+                          placeholder="31.2357"
+                          data-testid="input-profile-lng"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 rounded-xl border overflow-hidden h-48 bg-gray-100 relative group">
+                      <img
+                        src={`https://staticmap.openstreetmap.de/staticmap.php?center=${formData.clinicMapLat},${formData.clinicMapLng}&zoom=15&size=640x320&markers=${formData.clinicMapLat},${formData.clinicMapLng},red-pushpin`}
+                        alt="Clinic location map"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-8 h-8 bg-primary rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                          <MapPin className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      <a
+                        href={`https://www.openstreetmap.org/?mlat=${formData.clinicMapLat}&mlon=${formData.clinicMapLng}#map=15/${formData.clinicMapLat}/${formData.clinicMapLng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-xs px-2 py-1 rounded-md shadow-sm font-medium text-gray-700 transition-colors"
+                      >
+                        {dir === "rtl" ? "فتح في الخريطة" : "Open in Map"}
+                      </a>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {dir === "rtl" 
+                        ? "الخريطة مرجع مجاني من OpenStreetMap. يمكنك تحديد الموقع من خلال ادخال الإحداثيات."
+                        : "Map preview from OpenStreetMap. You can set the location by entering coordinates."
+                      }
+                    </p>
                   </div>
 
                   <div className="space-y-2 w-full md:w-1/2">
