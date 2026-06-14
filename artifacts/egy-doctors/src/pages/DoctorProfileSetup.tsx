@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Upload, Camera, Clock, ArrowLeft, MapPin, GraduationCap, Briefcase } from "lucide-react";
+import { Upload, Camera, Clock, ArrowLeft, MapPin, GraduationCap, Briefcase, LocateFixed } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -271,14 +271,42 @@ export default function DoctorProfileSetup() {
                           <MapPin className="h-5 w-5 text-white" />
                         </div>
                       </div>
-                      <a
-                        href={`https://www.openstreetmap.org/?mlat=${formData.clinicMapLat}&mlon=${formData.clinicMapLng}#map=15/${formData.clinicMapLat}/${formData.clinicMapLng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-xs px-2 py-1 rounded-md shadow-sm font-medium text-gray-700 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                const lat = position.coords.latitude.toString();
+                                const lng = position.coords.longitude.toString();
+                                setFormData(prev => ({
+                                  ...prev,
+                                  clinicMapLat: lat,
+                                  clinicMapLng: lng
+                                }));
+                                window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`, '_blank');
+                              },
+                              (error) => {
+                                toast({
+                                  title: dir === "rtl" ? "خطأ في تحديد الموقع" : "Location Error",
+                                  description: dir === "rtl" ? "تعذر الحصول على موقعك. يرجى التحقق من إعدادات الموقع." : "Could not get your location. Please check location settings.",
+                                  className: 'bg-red-50 text-red-900 border-red-200'
+                                });
+                              }
+                            );
+                          } else {
+                            toast({
+                              title: dir === "rtl" ? "غير مدعوم" : "Not Supported",
+                              description: dir === "rtl" ? "المتصفح لا يدعم تحديد الموقع الجغرافي." : "Your browser does not support geolocation.",
+                              className: 'bg-red-50 text-red-900 border-red-200'
+                            });
+                          }
+                        }}
+                        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-xs px-2 py-1 rounded-md shadow-sm font-medium text-gray-700 transition-colors flex items-center gap-1"
                       >
-                        {dir === "rtl" ? "فتح في الخريطة" : "Open in Map"}
-                      </a>
+                        <LocateFixed className="h-3 w-3" />
+                        {dir === "rtl" ? "تحديد موقعي" : "Get My Location"}
+                      </button>
                     </div>
                     <p className="text-xs text-gray-400">
                       {dir === "rtl" 
