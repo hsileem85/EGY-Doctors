@@ -6,3 +6,27 @@ id = "7RhUnI5vYUCegF1S3fM4R"
 uri = "file://artifacts/egy-doctors/public/hero-bg.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "GWpKcZZCEcLIRkl68xu7Z"
+uri = "file://artifacts/mockup-sandbox/public/images/hero-medical-bg.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "K71yPN8_AYUPGlpdto43Q"
+uri = "file://artifacts/mockup-sandbox/public/images/doctor-hero.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "MEMVGw5mPRPFd3sTzrUb1"
+uri = "file://artifacts/mockup-sandbox/public/images/hospital.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "AUx5yuZDGlP41yOd2VyK-"
+uri = "file://artifacts/mockup-sandbox/public/images/patient-family.png"
+type = "image"
+title = "generated_image"
