@@ -9,7 +9,6 @@ import Search from "@/pages/Search";
 import DoctorProfile from "@/pages/DoctorProfile";
 import Dashboard from "@/pages/Dashboard";
 import DoctorRegister from "@/pages/DoctorRegister";
-import DoctorAuth from "@/pages/DoctorAuth";
 import AuthPage from "@/pages/AuthPage";
 import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
 import PublishContent from "@/pages/PublishContent";
@@ -31,8 +30,6 @@ function Router() {
       <Route path="/dashboard/publish" component={PublishContent} />
       <Route path="/register" component={DoctorRegister} />
       <Route path="/auth" component={AuthPage} />
-      <Route path="/doctor-login" component={DoctorAuth} />
-      <Route path="/patient-auth" component={AuthPage} />
       <Route path="/profile-setup" component={DoctorProfileSetup} />
       <Route path="/edit-profile" component={DoctorProfileSetup} />
       <Route path="/about" component={AboutUs} />
