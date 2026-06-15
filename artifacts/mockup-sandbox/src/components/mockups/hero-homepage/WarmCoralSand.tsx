@@ -20,14 +20,7 @@ const stats = [
   { value: "4.9/5", label: "Average Rating" },
 ];
 const partners = [
-  { name: "Saudi German Hospital", abbr: "SGH", color: "bg-[#3D5A80]" },
-  { name: "Dar Al Fouad", abbr: "DAF", color: "bg-[#E07A5F]" },
-  { name: "Alfa Lab", abbr: "AL", color: "bg-[#81B29A]" },
-  { name: "Alfa Scan", abbr: "AS", color: "bg-[#3D405B]" },
-  { name: "Cleopatra Hospital", abbr: "CH", color: "bg-[#F2CC8F]" },
-  { name: "Al-Mokhtabar", abbr: "AM", color: "bg-[#81B29A]" },
-  { name: "Nile Scan", abbr: "NS", color: "bg-[#3D5A80]" },
-  { name: "Elite Medical", abbr: "EM", color: "bg-[#E07A5F]" },
+  "Saudi German Hospital", "Dar Al Fouad", "Alfa Lab", "Alfa Scan", "Cleopatra Hospital", "Al-Mokhtabar", "Nile Scan", "Elite Medical"
 ];
 const reviews = [
   { name: "Mohamed Ali", text: "Found an excellent cardiologist in minutes. The booking was seamless, and the doctor was exactly as described.", rating: 5, date: "2 days ago" },
@@ -53,7 +46,7 @@ export function WarmCoralSand() {
             <div className="w-9 h-9 rounded-xl bg-[#E07A5F] flex items-center justify-center shadow-lg shadow-[#E07A5F]/20">
               <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 0 0-.2.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
             </div>
-            <span className="text-xl font-bold text-[#3D405B] font-['Plus_Jakarta_Sans']">EGY <span className="text-[#E07A5F]">Doctors</span></span>
+            <span className="text-xl font-bold text-[#3D405B]">EGY <span className="text-[#E07A5F]">Doctors</span></span>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden md:block text-sm text-[#3D405B] font-medium">Search</span>
@@ -66,148 +59,118 @@ export function WarmCoralSand() {
         </div>
       </nav>
 
-      {/* Hero - Warm Coral */}
-      <section className="relative pt-16 min-h-[90vh] flex items-center bg-[#E07A5F] overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[#F2CC8F]/20 rounded-full"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#F2CC8F]/15 rounded-full"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#D16A4F]/20 rounded-full"></div>
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 py-16 lg:py-24 w-full">
-          <div className="max-w-3xl mx-auto text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 border border-white/30 text-white text-sm font-medium mb-6">
-              <span className="w-2 h-2 rounded-full bg-[#F2CC8F] animate-pulse"></span>
-              Egypt's #1 Medical Booking Platform
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight font-['Plus_Jakarta_Sans'] mb-6">
-              Find & Book the <span className="text-[#F2CC8F]">Best Doctors</span> in Egypt
-            </h1>
-            <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-              Connect with 2,500+ verified medical professionals. Read patient reviews, compare fees, and book your appointment in seconds.
-            </p>
+      {/* Hero - Full bleed with gradient overlay */}
+      <section className="relative pt-16 min-h-screen bg-[#F2E8DC] overflow-hidden">
+        <div className="absolute inset-0 bg-[#E07A5F]/20"></div>
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#E07A5F]/30 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#F2CC8F]/40 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3"></div>
+
+        <div className="relative max-w-7xl mx-auto px-4 h-full flex flex-col items-center justify-center text-center py-20 lg:py-28">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/30 border border-white/40 text-[#3D405B] text-sm font-medium mb-8 backdrop-blur">
+            <span className="w-2 h-2 rounded-full bg-[#E07A5F] animate-pulse"></span>
+            Egypt's #1 Medical Booking Platform
           </div>
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white/20 backdrop-blur-2xl border border-white/30 rounded-3xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">Doctor Name</label>
-                  <div className="flex items-center gap-2 h-12 px-3 border border-white/30 rounded-xl bg-white/10">
-                    <svg className="h-4 w-4 text-white/60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input type="text" placeholder="Search by name" className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 outline-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">Specialty</label>
-                  <div className="flex items-center gap-2 h-12 px-3 border border-white/30 rounded-xl bg-white/10">
-                    <svg className="h-4 w-4 text-white/60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 0 0-.2.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
-                    <select className="flex-1 bg-transparent text-sm text-white outline-none [&>option]:text-gray-900 cursor-pointer"><option value="">Choose specialty</option>{specialties.map(s=><option key={s}>{s}</option>)}</select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">Location</label>
-                  <div className="flex items-center gap-2 h-12 px-3 border border-white/30 rounded-xl bg-white/10">
-                    <svg className="h-4 w-4 text-white/60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <select className="flex-1 bg-transparent text-sm text-white outline-none [&>option]:text-gray-900 cursor-pointer"><option value="">Choose city</option>{locations.map(l=><option key={l}>{l}</option>)}</select>
-                  </div>
-                </div>
-                <div className="flex items-end">
-                  <button className="w-full h-12 bg-white text-[#E07A5F] rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all shadow-lg active:scale-[0.98]">
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    Search Doctors
-                  </button>
-                </div>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#3D405B] leading-[1.05] max-w-4xl mb-6">
+            Your Health,<br />Our <span className="text-[#E07A5F]">Priority</span>
+          </h1>
+          <p className="text-xl text-[#3D405B]/70 max-w-xl mb-12 leading-relaxed">
+            Connect with 2,500+ verified doctors. Book appointments, read reviews, and find the best care.
+          </p>
+
+          {/* Floating search bar */}
+          <div className="w-full max-w-3xl bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-2xl shadow-[#E07A5F]/10">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 flex items-center gap-3 h-14 px-4 bg-white rounded-2xl border border-[#F2E8DC] shadow-sm">
+                <svg className="h-5 w-5 text-[#E07A5F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" placeholder="Search doctors by name..." className="flex-1 bg-transparent text-[#3D405B] placeholder:text-[#3D405B]/40 outline-none text-sm" />
               </div>
+              <div className="flex-1 flex items-center gap-3 h-14 px-4 bg-white rounded-2xl border border-[#F2E8DC] shadow-sm">
+                <svg className="h-5 w-5 text-[#E07A5F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <select className="flex-1 bg-transparent text-[#3D405B] outline-none text-sm cursor-pointer"><option value="">All Locations</option>{locations.map(l=><option key={l}>{l}</option>)}</select>
+              </div>
+              <button className="h-14 px-8 bg-[#E07A5F] text-white rounded-2xl font-semibold text-sm hover:bg-[#D16A4F] transition-all shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] flex items-center gap-2">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                Search
+              </button>
             </div>
-            <div className="flex flex-wrap justify-center gap-2 mt-5">
-              {specialties.slice(0,5).map(s=> (
-                <button key={s} className="px-4 py-2 rounded-full bg-white/15 border border-white/25 text-white/90 text-sm font-medium hover:bg-white/25 hover:text-white transition-all">
-                  {s}
-                </button>
+          </div>
+
+          {/* Stats row below search */}
+          <div className="flex flex-wrap justify-center gap-8 mt-10">
+            {stats.map((stat,i)=> (
+              <div key={i} className="text-center">
+                <div className="text-2xl font-bold text-[#E07A5F]">{stat.value}</div>
+                <div className="text-sm text-[#3D405B]/60">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works - Circular with connecting line */}
+      <section className="py-20 bg-[#FEFCF8]">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <span className="text-sm font-semibold text-[#E07A5F] uppercase tracking-wider mb-3 block">Simple Steps</span>
+            <h2 className="text-3xl font-bold text-[#3D405B]">Book in Minutes</h2>
+          </div>
+          <div className="relative max-w-3xl mx-auto">
+            {/* Connecting line */}
+            <div className="hidden md:block absolute top-16 left-[16%] right-[16%] h-0.5 bg-[#F2E8DC]"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { title: "Search", desc: "Find doctors by specialty, location, or insurance.", icon: "🔍" },
+                { title: "Compare", desc: "Read reviews, compare fees, and view profiles.", icon: "⚖️" },
+                { title: "Book", desc: "Choose a time slot and book instantly.", icon: "📅" },
+              ].map((step, i) => (
+                <div key={i} className="text-center relative z-10">
+                  <div className="w-32 h-32 mx-auto rounded-full bg-white border-4 border-[#F2E8DC] flex flex-col items-center justify-center shadow-lg hover:border-[#E07A5F] transition-all hover:scale-105 cursor-default mb-4">
+                    <span className="text-3xl mb-1">{step.icon}</span>
+                    <span className="text-sm font-bold text-[#3D405B]">{step.title}</span>
+                  </div>
+                  <p className="text-sm text-[#3D405B]/60 max-w-[200px] mx-auto">{step.desc}</p>
+                </div>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="relative -mt-16 z-10">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="bg-white rounded-2xl shadow-xl shadow-[#E07A5F]/10 border border-[#F2E8DC] p-6 sm:p-8 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
-            {stats.map((stat,i)=>(
-              <div key={i} className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-[#E07A5F] font-['Plus_Jakarta_Sans'] mb-1">{stat.value}</div>
-                <div className="text-sm text-[#3D405B] font-medium">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 bg-[#FEFCF8]">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="text-sm font-semibold text-[#E07A5F] uppercase tracking-wider mb-3 block">Simple Process</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#3D405B] font-['Plus_Jakarta_Sans'] mb-4">Book Your Appointment in 3 Easy Steps</h2>
-            <p className="text-[#3D405B]/60 max-w-2xl mx-auto">No more waiting on hold or long queues. Find your doctor, compare, and book in under a minute.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { title:"Search", desc:"Find doctors by specialty, location, or insurance coverage.", icon:<svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> },
-              { title:"Compare", desc:"Read reviews, compare fees, and view doctor profiles.", icon:<svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg> },
-              { title:"Book", desc:"Choose a time slot and book your appointment instantly.", icon:<svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> },
-            ].map((step,i)=>(
-              <div key={i} className="relative text-center p-8 rounded-2xl border border-[#F2E8DC] hover:border-[#E07A5F]/30 hover:shadow-lg hover:shadow-[#E07A5F]/5 transition-all group bg-white">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#E07A5F] text-white text-sm font-bold flex items-center justify-center shadow-lg">{i+1}</div>
-                <div className="w-16 h-16 rounded-2xl bg-[#F2E8DC] flex items-center justify-center mx-auto mb-5 text-[#E07A5F] group-hover:bg-[#E07A5F]/20 transition-colors">{step.icon}</div>
-                <h3 className="text-xl font-bold text-[#3D405B] mb-3">{step.title}</h3>
-                <p className="text-[#3D405B]/60 text-sm leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Doctors */}
+      {/* Featured Doctors - Horizontal Carousel */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between items-end mb-12">
+          <div className="flex justify-between items-end mb-10">
             <div>
               <span className="text-sm font-semibold text-[#E07A5F] uppercase tracking-wider mb-3 block">Top Rated</span>
-              <h2 className="text-3xl sm:text-4xl font-bold text-[#3D405B] font-['Plus_Jakarta_Sans']">Featured Specialists</h2>
-              <p className="text-[#3D405B]/60 mt-2">Hand-picked doctors with the highest patient ratings and verified credentials.</p>
+              <h2 className="text-3xl font-bold text-[#3D405B]">Featured Specialists</h2>
             </div>
-            <button className="text-[#E07A5F] hover:text-[#D16A4F] font-medium text-sm flex items-center gap-1.5 transition-colors">View All Doctors <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg></button>
+            <div className="flex gap-2">
+              <button className="w-10 h-10 rounded-full border border-[#F2E8DC] flex items-center justify-center text-[#3D405B] hover:bg-[#F2E8DC] transition-colors"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button className="w-10 h-10 rounded-full border border-[#F2E8DC] flex items-center justify-center text-[#3D405B] hover:bg-[#F2E8DC] transition-colors"><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {doctors.map((doctor)=>(
-              <div key={doctor.id} className="bg-[#FEFCF8] rounded-2xl border border-[#F2E8DC] shadow-sm hover:shadow-xl hover:shadow-[#E07A5F]/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
-                <div className="relative h-32 bg-[#F2E8DC] overflow-hidden">
-                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-[linear-gradient(to_top,_white,_transparent)]"></div>
-                  <div className="absolute bottom-3 left-6 z-10">
-                    <div className="w-20 h-20 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-white">
+          <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+            {doctors.map((doctor) => (
+              <div key={doctor.id} className="flex-shrink-0 w-80 snap-start bg-[#FEFCF8] rounded-2xl border border-[#F2E8DC] overflow-hidden hover:shadow-xl hover:shadow-[#E07A5F]/10 transition-all">
+                <div className="relative h-40 bg-[#F2E8DC]">
+                  <div className="absolute bottom-0 left-0 right-0 h-20 bg-[linear-gradient(to_top,white,transparent)]"></div>
+                  <div className="absolute top-4 right-4 bg-[#E07A5F] rounded-full px-3 py-1 text-xs font-bold text-white">{doctor.fee} EGP</div>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+                    <div className="w-20 h-20 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white">
                       <img src={doctor.image} alt={doctor.name} className="w-full h-full object-cover" />
                     </div>
                   </div>
-                  <div className="absolute top-4 right-4 bg-[#E07A5F] rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm">{doctor.fee} EGP</div>
                 </div>
-                <div className="pt-6 px-6 pb-6">
+                <div className="pt-8 px-6 pb-6 text-center">
                   <h3 className="text-lg font-bold text-[#3D405B] mb-1">{doctor.name}</h3>
-                  <p className="text-[#E07A5F] font-medium text-sm flex items-center gap-1.5 mb-3">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 0 0-.2.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
-                    {doctor.specialty}
-                  </p>
-                  <div className="flex items-center gap-2 mb-3">
+                  <p className="text-[#E07A5F] font-medium text-sm mb-2">{doctor.specialty}</p>
+                  <div className="flex items-center justify-center gap-2 mb-3">
                     <div className="flex gap-0.5">{Array.from({length:5}).map((_,i)=><Star key={i} />)}</div>
                     <span className="text-xs font-bold text-[#3D405B]">{doctor.rating}</span>
-                    <span className="text-xs text-[#3D405B]/40">({doctor.reviews} reviews)</span>
+                    <span className="text-xs text-[#3D405B]/40">({doctor.reviews})</span>
                   </div>
-                  <p className="text-[#3D405B]/70 text-sm mb-3 line-clamp-2 leading-relaxed">{doctor.bio}</p>
-                  <div className="flex items-center gap-3 text-xs text-[#3D405B]/60 mb-4">
-                    <span className="flex items-center gap-1"><svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>{doctor.experience}</span>
-                    <span className="flex items-center gap-1"><svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{doctor.location}</span>
-                  </div>
-                  <button className="w-full h-11 bg-[#E07A5F] text-white rounded-xl font-medium text-sm hover:bg-[#D16A4F] transition-colors shadow-md shadow-[#E07A5F]/20 active:scale-[0.98]">Book Appointment</button>
+                  <p className="text-[#3D405B]/70 text-sm mb-4 line-clamp-2">{doctor.bio}</p>
+                  <button className="w-full h-11 bg-[#E07A5F] text-white rounded-xl font-medium text-sm hover:bg-[#D16A4F] transition-colors shadow-md shadow-[#E07A5F]/20">Book Appointment</button>
                 </div>
               </div>
             ))}
@@ -215,22 +178,13 @@ export function WarmCoralSand() {
         </div>
       </section>
 
-      {/* Partners */}
-      <section className="py-20 bg-[#FEFCF8]">
+      {/* Partners - Logo strip */}
+      <section className="py-16 bg-[#FEFCF8] border-y border-[#F2E8DC]">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-14">
-            <span className="text-sm font-semibold text-[#E07A5F] uppercase tracking-wider mb-3 block">Trusted Partners</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#3D405B] font-['Plus_Jakarta_Sans'] mb-4">Egypt's Top Medical Partners</h2>
-            <p className="text-[#3D405B]/60 max-w-2xl mx-auto">Partnered with the country's leading hospitals, labs, and imaging centers.</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {partners.map((p,i)=>(
-              <div key={i} className="flex items-center gap-3 p-4 rounded-xl border border-[#F2E8DC] hover:border-[#E07A5F]/20 hover:shadow-md transition-all cursor-pointer bg-white">
-                <div className={`w-12 h-12 rounded-xl ${p.color} flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-md`}>{p.abbr}</div>
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-[#3D405B] text-sm truncate">{p.name}</h4>
-                </div>
-              </div>
+          <p className="text-center text-sm text-[#3D405B]/50 mb-8 font-medium uppercase tracking-wider">Trusted by Egypt's Leading Medical Institutions</p>
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60">
+            {partners.map((name, i) => (
+              <div key={i} className="text-lg font-bold text-[#3D405B]/40 tracking-wide">{name}</div>
             ))}
           </div>
         </div>
@@ -238,25 +192,22 @@ export function WarmCoralSand() {
 
       {/* Testimonials */}
       <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-14">
             <span className="text-sm font-semibold text-[#E07A5F] uppercase tracking-wider mb-3 block">Testimonials</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#3D405B] font-['Plus_Jakarta_Sans']">What Patients Say</h2>
+            <h2 className="text-3xl font-bold text-[#3D405B]">What Patients Say</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {reviews.map((r,i)=>(
+            {reviews.map((r,i)=> (
               <div key={i} className="bg-[#FEFCF8] rounded-2xl p-6 border border-[#F2E8DC] hover:shadow-md transition-all">
                 <div className="flex gap-0.5 mb-4">{Array.from({length:r.rating}).map((_,j)=><Star key={j} />)}</div>
                 <p className="text-[#3D405B] text-sm leading-relaxed mb-5">"{r.text}"</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#E07A5F] flex items-center justify-center text-white font-bold text-sm">{r.name.split(" ").map(n=>n[0]).join("")}</div>
-                    <div>
-                      <div className="font-semibold text-[#3D405B] text-sm">{r.name}</div>
-                      <div className="text-xs text-[#3D405B]/40">Verified Patient</div>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#E07A5F] flex items-center justify-center text-white font-bold text-sm">{r.name.split(" ").map(n=>n[0]).join("")}</div>
+                  <div>
+                    <div className="font-semibold text-[#3D405B] text-sm">{r.name}</div>
+                    <div className="text-xs text-[#3D405B]/40">{r.date}</div>
                   </div>
-                  <span className="text-xs text-[#3D405B]/40">{r.date}</span>
                 </div>
               </div>
             ))}
@@ -264,16 +215,16 @@ export function WarmCoralSand() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 bg-[#3D405B] relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[#E07A5F]/10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#E07A5F]/10 rounded-full translate-x-1/3 translate-y-1/3"></div>
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white font-['Plus_Jakarta_Sans'] mb-6 leading-tight">Ready to Find Your Doctor?</h2>
-          <p className="text-lg text-[#F2E8DC]/70 mb-10 max-w-2xl mx-auto">Join 150,000+ patients who have already found their perfect healthcare match through EGY Doctors.</p>
+      {/* CTA - Full width image */}
+      <section className="relative py-24 overflow-hidden bg-[#3D405B]">
+        <div className="absolute inset-0 bg-[#E07A5F]/10"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_#E07A5F/20_0%,transparent_70%)]"></div>
+        <div className="relative max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-4xl font-bold text-white mb-6">Ready to Find Your Doctor?</h2>
+          <p className="text-lg text-[#F2E8DC]/70 mb-10 max-w-xl mx-auto">Join thousands of patients who trust EGY Doctors for their healthcare needs.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-8 py-4 bg-[#E07A5F] text-white rounded-xl font-semibold text-base hover:bg-[#D16A4F] transition-colors shadow-xl active:scale-[0.98]">Search Doctors Now</button>
-            <button className="px-8 py-4 bg-white/10 border border-white/20 text-white rounded-xl font-semibold text-base hover:bg-white/20 transition-colors active:scale-[0.98]">Are you a Doctor?</button>
+            <button className="px-8 py-4 bg-[#E07A5F] text-white rounded-xl font-semibold hover:bg-[#D16A4F] transition-colors shadow-xl shadow-[#E07A5F]/20">Search Doctors Now</button>
+            <button className="px-8 py-4 bg-white/10 border border-white/20 text-white rounded-xl font-semibold hover:bg-white/20 transition-colors">Are you a Doctor?</button>
           </div>
         </div>
       </section>
@@ -287,14 +238,14 @@ export function WarmCoralSand() {
                 <div className="w-8 h-8 rounded-lg bg-[#E07A5F] flex items-center justify-center">
                   <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 0 0-.2.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
                 </div>
-                <span className="text-lg font-bold font-['Plus_Jakarta_Sans']">EGY Doctors</span>
+                <span className="text-lg font-bold">EGY Doctors</span>
               </div>
-              <p className="text-sm text-[#F2E8DC]/60 leading-relaxed mb-4">Egypt's leading platform for connecting patients with top-rated medical professionals.</p>
+              <p className="text-sm text-[#F2E8DC]/60 leading-relaxed">Egypt's leading platform for connecting patients with top-rated medical professionals.</p>
             </div>
             <div>
               <h4 className="font-semibold text-sm mb-4 text-white">For Patients</h4>
               <ul className="space-y-3">
-                {["Search Doctors","Book Appointment","Specialties","Insurance","Patient Reviews"].map(item=>(
+                {["Search Doctors","Book Appointment","Specialties","Insurance","Patient Reviews"].map(item=> (
                   <li key={item}><span className="text-sm text-[#F2E8DC]/60 hover:text-[#E07A5F] cursor-pointer transition-colors">{item}</span></li>
                 ))}
               </ul>
@@ -302,7 +253,7 @@ export function WarmCoralSand() {
             <div>
               <h4 className="font-semibold text-sm mb-4 text-white">For Doctors</h4>
               <ul className="space-y-3">
-                {["Join Network","Doctor Dashboard","Patient Management","Analytics","Pricing"].map(item=>(
+                {["Join Network","Doctor Dashboard","Patient Management","Analytics","Pricing"].map(item=> (
                   <li key={item}><span className="text-sm text-[#F2E8DC]/60 hover:text-[#E07A5F] cursor-pointer transition-colors">{item}</span></li>
                 ))}
               </ul>
