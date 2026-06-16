@@ -120,36 +120,46 @@ export default function DoctorPublicProfile() {
                 </CardContent>
               </Card>
 
-              {/* Location */}
+              {/* Clinics */}
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <MapPin className="h-5 w-5 text-[#D4A853]" />
                     <h2 className="text-lg font-bold text-gray-900">
-                      {isRTL ? "موقع العيادة" : "Clinic Location"}
+                      {isRTL ? "العيادات" : "Clinics"}
                     </h2>
+                    <span className="ml-auto text-xs text-gray-400 font-medium">
+                      {doctor.clinics.length} {isRTL ? "فرع" : doctor.clinics.length === 1 ? "branch" : "branches"}
+                    </span>
                   </div>
-                  <a
-                    href={doctor.mapUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-2 text-[#D4A853] hover:text-[#c49a4a] hover:underline transition-colors"
-                  >
-                    <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>{doctor.clinicAddress}</span>
-                  </a>
-                  <div className="mt-3 h-48 w-full rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center">
-                    <a
-                      href={doctor.mapUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-3 bg-white rounded-lg shadow-sm border border-gray-200 text-[#D4A853] hover:bg-[#D4A853]/5 hover:border-[#D4A853]/30 transition-colors"
-                    >
-                      <MapPin className="h-5 w-5" />
-                      <span className="font-medium">
-                        {isRTL ? "فتح في خرائط Google" : "Open in Google Maps"}
-                      </span>
-                    </a>
+                  <div className="flex flex-col gap-3">
+                    {doctor.clinics.map((clinic, i) => (
+                      <div key={i} className="rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="flex items-start gap-3 p-4">
+                          <div className="w-9 h-9 rounded-lg bg-[#D4A853]/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <MapPin className="h-4 w-4 text-[#D4A853]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900">{clinic.name}</p>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                              {t.locations[clinic.location] ?? clinic.location} · {clinic.address}
+                            </p>
+                            <p className="text-sm font-bold text-gray-800 mt-1">
+                              {clinic.fee} <span className="font-normal text-gray-500">{t.dashboard.egp}</span>
+                            </p>
+                          </div>
+                          <a
+                            href={clinic.mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-1.5 transition-colors"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            {isRTL ? "الخريطة" : "Map"}
+                          </a>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
