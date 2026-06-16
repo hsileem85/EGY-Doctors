@@ -241,36 +241,32 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Location button — opens Google Maps */}
-                  <a
-                    href={doc.mapUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#D4A853] hover:text-[#c49a4a] underline underline-offset-2 decoration-[#D4A853]/40 hover:decoration-[#D4A853] transition-colors mb-4"
-                  >
-                    <Navigation className="w-3.5 h-3.5" />
-                    {isRTL ? "عرض على الخريطة" : "View on Map"}
-                    <svg className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
                 </div>
 
                 {/* Actions */}
-                <div className="w-full sm:w-[140px] flex flex-col gap-2 shrink-0 sm:border-l border-gray-100 sm:pl-6 sm:py-2 mt-2 sm:mt-0">
+                <div className="w-full sm:w-[120px] flex flex-col gap-2 shrink-0 sm:border-l border-gray-100 sm:pl-4 sm:py-1 mt-2 sm:mt-0">
                   <Link href={`/doctor/${doc.id}`}>
-                    <Button className="w-full bg-[#0F172A] text-white rounded-xl py-3 font-semibold text-sm hover:bg-[#1E293B] shadow-sm hover:shadow-md transition-all active:scale-[0.98] h-auto">
+                    <Button className="w-full bg-[#0F172A] text-white rounded-xl py-2.5 font-semibold text-sm hover:bg-[#1E293B] shadow-sm hover:shadow-md transition-all active:scale-[0.98] h-auto">
                       {isRTL ? "احجز" : "Book"}
                     </Button>
                   </Link>
                   <Link href={`/doctor/${doc.id}`}>
                     <Button
                       variant="outline"
-                      className="w-full bg-white text-[#0F172A] rounded-xl py-2.5 font-semibold text-sm border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                      className="w-full bg-white text-[#0F172A] rounded-xl py-2 font-semibold text-sm border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
                     >
-                      {isRTL ? "الملف الشخصي" : "Profile"}
+                      {isRTL ? "الملف" : "Profile"}
                     </Button>
                   </Link>
+                  <a
+                    href={doc.mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#D4A853] hover:text-[#c49a4a] underline underline-offset-2 decoration-[#D4A853]/40 hover:decoration-[#D4A853] transition-colors py-1"
+                  >
+                    <Navigation className="w-3 h-3" />
+                    {isRTL ? "الخريطة" : "Map"}
+                  </a>
                 </div>
               </div>
             ))}
