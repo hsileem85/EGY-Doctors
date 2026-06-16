@@ -144,9 +144,19 @@ export default function DoctorPublicProfile() {
                             <p className="text-sm text-gray-500 mt-0.5">
                               {t.locations[clinic.location] ?? clinic.location} · {clinic.address}
                             </p>
-                            <p className="text-sm font-bold text-gray-800 mt-1">
-                              {clinic.fee} <span className="font-normal text-gray-500">{t.dashboard.egp}</span>
-                            </p>
+                            <div className="flex items-center flex-wrap gap-3 mt-1.5">
+                              <a
+                                href={`tel:${clinic.phone}`}
+                                className="inline-flex items-center gap-1.5 text-sm text-[#D4A853] hover:text-[#c49a4a] font-medium transition-colors"
+                              >
+                                <Phone className="h-3.5 w-3.5 shrink-0" />
+                                {clinic.phone}
+                              </a>
+                              <span className="text-gray-300">·</span>
+                              <span className="text-sm font-bold text-gray-800">
+                                {clinic.fee} <span className="font-normal text-gray-500">{t.dashboard.egp}</span>
+                              </span>
+                            </div>
                           </div>
                           <a
                             href={clinic.mapUrl}
