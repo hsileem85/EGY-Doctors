@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Clock, Award, BookOpen, Calendar, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Clock, Award, BookOpen, Calendar, CheckCircle2, User } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,7 +63,10 @@ export default function DoctorPublicProfile() {
                 </p>
 
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
-                  <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => document.getElementById("reviews-section")?.scrollIntoView({ behavior: "smooth" })}
+                    className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
+                  >
                     <div className="flex text-amber-400">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star key={i} className="h-4 w-4 fill-current" />
@@ -71,7 +74,7 @@ export default function DoctorPublicProfile() {
                     </div>
                     <span className="font-medium text-white">{doctor.rating}</span>
                     <span className="text-gray-400">({doctor.reviews} {t.card.reviews})</span>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-1">
                     <MapPin className="h-4 w-4 text-[#D4A853]" />
                     <span>{location}</span>
@@ -147,6 +150,45 @@ export default function DoctorPublicProfile() {
                         {isRTL ? "فتح في خرائط Google" : "Open in Google Maps"}
                       </span>
                     </a>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Patient Reviews */}
+              <Card id="reviews-section">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <User className="h-5 w-5 text-[#D4A853]" />
+                    <h2 className="text-lg font-bold text-gray-900">
+                      {isRTL ? "تقييمات المرضى" : "Patient Reviews"}
+                    </h2>
+                    <span className="text-sm text-gray-500 ml-1">
+                      ({doctor.reviews})
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {doctor.reviewList?.map((review) => (
+                      <div key={review.id} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center text-[#D4A853] font-semibold text-xs">
+                              {review.patientName.split(" ").map((n) => n[0]).join("")}
+                            </div>
+                            <span className="font-medium text-gray-900 text-sm">{review.patientName}</span>
+                          </div>
+                          <span className="text-xs text-gray-400">{review.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1 mb-1.5 ml-10">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${i < review.rating ? "text-amber-400 fill-current" : "text-gray-300"}`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-gray-600 text-sm leading-relaxed ml-10">{review.text}</p>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

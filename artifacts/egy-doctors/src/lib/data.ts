@@ -3,6 +3,14 @@ export type Location = "New Cairo" | "Zamalek" | "Maadi" | "Heliopolis" | "Dokki
 export type Governorate = "Cairo" | "Giza" | "Alexandria";
 export type InsuranceNetwork = "Cigna" | "AXA" | "MetLife" | "Bupa" | "None";
 
+export interface Review {
+  id: string;
+  patientName: string;
+  rating: number;
+  date: string;
+  text: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;
@@ -19,6 +27,7 @@ export interface Doctor {
   distance: string;
   rating: number;
   reviews: number;
+  reviewList: Review[];
   nextAvailable: string;
 }
 
@@ -48,6 +57,13 @@ export const doctors: Doctor[] = [
     distance: "1.2 km",
     rating: 4.9,
     reviews: 128,
+    reviewList: [
+      { id: "r1", patientName: "Omar Tarek", rating: 5, date: "2026-06-10", text: "Dr. Ahmed is an excellent cardiologist. He took time to explain everything and made me feel comfortable. Highly recommended!" },
+      { id: "r2", patientName: "Nourhan Ali", rating: 5, date: "2026-05-28", text: "Very professional and thorough. The clinic is clean and well-organized. Will definitely visit again." },
+      { id: "r3", patientName: "Youssef Adel", rating: 4, date: "2026-05-15", text: "Great doctor, but the wait time was a bit long. Otherwise, the consultation was very helpful." },
+      { id: "r4", patientName: "Sara Mahmoud", rating: 5, date: "2026-04-22", text: "The best cardiologist I have ever visited. He detected an issue that previous doctors missed." },
+      { id: "r5", patientName: "Khaled Ibrahim", rating: 5, date: "2026-04-10", text: "Very knowledgeable and patient. Explained my condition in simple terms and gave me a clear treatment plan." },
+    ],
     nextAvailable: "Today, 4:00 PM"
   },
   {
@@ -66,6 +82,11 @@ export const doctors: Doctor[] = [
     distance: "2.5 km",
     rating: 4.8,
     reviews: 96,
+    reviewList: [
+      { id: "r6", patientName: "Mona Hassan", rating: 5, date: "2026-06-08", text: "Dr. Sara transformed my skin! After years of acne issues, I finally have clear skin. Amazing results!" },
+      { id: "r7", patientName: "Laila Omar", rating: 4, date: "2026-05-20", text: "Good dermatologist, very gentle with treatments. The laser session was painless and effective." },
+      { id: "r8", patientName: "Amr Zaki", rating: 5, date: "2026-05-05", text: "Professional and friendly. The clinic has the latest equipment. Very satisfied with the results." },
+    ],
     nextAvailable: "Tomorrow, 10:30 AM"
   },
   {
@@ -84,6 +105,11 @@ export const doctors: Doctor[] = [
     distance: "3.8 km",
     rating: 4.9,
     reviews: 154,
+    reviewList: [
+      { id: "r9", patientName: "Salma Fouad", rating: 5, date: "2026-06-12", text: "Dr. Kareem performed my knee surgery flawlessly. Recovery was faster than expected. A true expert!" },
+      { id: "r10", patientName: "Hassan Mostafa", rating: 5, date: "2026-05-30", text: "Best orthopedic surgeon in Cairo. He explained every step of my shoulder rehabilitation." },
+      { id: "r11", patientName: "Dina Khaled", rating: 4, date: "2026-05-10", text: "Very skilled doctor. The physiotherapy plan he prescribed worked wonders for my back pain." },
+    ],
     nextAvailable: "Today, 7:15 PM"
   },
   {
@@ -102,6 +128,10 @@ export const doctors: Doctor[] = [
     distance: "5.1 km",
     rating: 4.7,
     reviews: 82,
+    reviewList: [
+      { id: "r12", patientName: "Fatma Ali", rating: 5, date: "2026-06-05", text: "Dr. Laila is wonderful with children. My kids actually look forward to their checkups!" },
+      { id: "r13", patientName: "Karim Tarek", rating: 4, date: "2026-05-18", text: "Great pediatrician, very patient with my toddler. The vaccination schedule was well explained." },
+    ],
     nextAvailable: "Wed, 9:00 AM"
   },
   {
@@ -120,6 +150,11 @@ export const doctors: Doctor[] = [
     distance: "4.2 km",
     rating: 4.8,
     reviews: 110,
+    reviewList: [
+      { id: "r14", patientName: "Nadia Sherif", rating: 5, date: "2026-06-09", text: "Dr. Tarek helped me manage my chronic migraines after years of suffering. Life-changing treatment!" },
+      { id: "r15", patientName: "Ahmed Samir", rating: 4, date: "2026-05-25", text: "Very thorough neurological examination. He identified issues that other neurologists overlooked." },
+      { id: "r16", patientName: "Reem Hani", rating: 5, date: "2026-05-12", text: "Excellent neurologist. The cognitive therapy program he designed has significantly improved my condition." },
+    ],
     nextAvailable: "Today, 6:00 PM"
   }
 ];

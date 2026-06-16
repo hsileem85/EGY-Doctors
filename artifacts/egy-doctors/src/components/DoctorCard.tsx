@@ -45,17 +45,22 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         </div>
       </div>
 
-      {/* Rating */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex text-amber-400">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} className="h-3.5 w-3.5 fill-current" />
-          ))}
+      {/* Rating — clickable, opens public profile */}
+      <Link href={`/profile/${doctor.id}`}>
+        <div className="flex items-center gap-2 mb-3 cursor-pointer hover:opacity-80 transition-opacity">
+          <div className="flex text-amber-400">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className="h-3.5 w-3.5 fill-current" />
+            ))}
+          </div>
+          <span className="text-xs font-semibold text-[#D4A853]">
+            {doctor.rating}
+          </span>
+          <span className="text-xs text-gray-500 font-medium">
+            ({doctor.reviews} {t.card.reviews})
+          </span>
         </div>
-        <span className="text-xs text-gray-500 font-medium">
-          120+ {t.card.reviews}
-        </span>
-      </div>
+      </Link>
 
       {/* Bio */}
       <p className="text-gray-600 text-sm mb-3 line-clamp-2 leading-relaxed">
