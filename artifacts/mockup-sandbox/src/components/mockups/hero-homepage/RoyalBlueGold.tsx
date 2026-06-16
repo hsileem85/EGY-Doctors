@@ -142,6 +142,64 @@ export function RoyalBlueGold() {
         </div>
       </section>
 
+      {/* Nearby Doctors - Horizontal Scroll */}
+      <section className="py-16 bg-[#0F172A] border-t border-[#1E293B]">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <span className="text-sm font-semibold text-[#D4A853] uppercase tracking-wider mb-2 block">Nearby You</span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">Doctors Near Your Location</h2>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>New Cairo</span>
+              <button className="text-[#D4A853] hover:text-[#C49A48] text-xs font-medium ml-2 underline">Change</button>
+            </div>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+            {[
+              { ...doctors[0], distance: "1.2 km", nextSlot: "Today 3:00 PM" },
+              { ...doctors[1], distance: "2.8 km", nextSlot: "Today 5:30 PM" },
+              { ...doctors[2], distance: "4.1 km", nextSlot: "Tomorrow 9:00 AM" },
+              { ...doctors[0], distance: "3.5 km", nextSlot: "Today 6:00 PM", name: "Dr. Samir Fathy", specialty: "Neurology", image: "https://randomuser.me/api/portraits/men/28.jpg", fee: 500, rating: 4.7, reviews: 89 },
+              { ...doctors[1], distance: "5.2 km", nextSlot: "Tomorrow 10:00 AM", name: "Dr. Laila Omar", specialty: "Pediatrics", image: "https://randomuser.me/api/portraits/women/52.jpg", fee: 300, rating: 4.9, reviews: 210 },
+            ].map((doctor, i) => (
+              <div key={i} className="flex-shrink-0 w-80 snap-start bg-[#1E293B] border border-[#334155] rounded-2xl overflow-hidden hover:border-[#D4A853]/30 transition-all group">
+                <div className="p-5">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="relative">
+                      <img src={doctor.image} alt={doctor.name} className="w-16 h-16 rounded-xl object-cover border-2 border-[#334155]" />
+                      <div className="absolute -bottom-1 -right-1 bg-[#D4A853] text-[#0F172A] text-[10px] font-bold px-1.5 py-0.5 rounded-md">{doctor.distance}</div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-white truncate">{doctor.name}</h3>
+                      <p className="text-[#D4A853] text-sm font-medium">{doctor.specialty}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex gap-0.5">{Array.from({length:5}).map((_,j)=><Star key={j} />)}</div>
+                        <span className="text-xs text-gray-400">{doctor.rating} ({doctor.reviews})</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>{doctor.location}</span>
+                    <span className="mx-1 text-[#334155]">|</span>
+                    <span className="text-[#D4A853] font-medium">{doctor.fee} EGP</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-1.5 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 flex-1">
+                      <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+                      <span className="text-xs text-gray-300">{doctor.nextSlot}</span>
+                    </div>
+                  </div>
+                  <button className="w-full h-10 bg-[#D4A853] text-[#0F172A] rounded-xl font-semibold text-sm hover:bg-[#C49A48] transition-colors active:scale-[0.98]">Book Appointment</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* How It Works - Horizontal Scroll Cards */}
       <section className="py-20 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto px-4">
