@@ -27,7 +27,7 @@ if (!basePath) {
 }
 
 export default defineConfig({
-  base: basePath,
+  base: "/EGY-Doctors/",
   plugins: [
     react(),
     tailwindcss(),
@@ -49,7 +49,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "@assets": path.resolve(
+        import.meta.dirname,
+        "..",
+        "..",
+        "attached_assets",
+      ),
     },
     dedupe: ["react", "react-dom"],
   },
