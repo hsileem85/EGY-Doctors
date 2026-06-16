@@ -284,16 +284,16 @@ export default function Magazine() {
           <div className="flex items-center gap-3">
             {/* Stethoscope SVG Icon */}
             <svg viewBox="0 0 24 36" className="w-8 h-10 shrink-0" fill="none">
-              <path d="M12 16 C10 13, 7 9, 4 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-              <path d="M12 16 C14 13, 17 9, 20 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-              <path d="M12 16 L12 25" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-              <circle cx="12" cy="29" r="6" fill="#D4A853"/>
+              <path d="M12 16 C10 13, 7 9, 4 4" stroke="#10B981" strokeWidth="4" strokeLinecap="round"/>
+              <path d="M12 16 C14 13, 17 9, 20 4" stroke="#10B981" strokeWidth="4" strokeLinecap="round"/>
+              <path d="M12 16 L12 25" stroke="#10B981" strokeWidth="4" strokeLinecap="round"/>
+              <circle cx="12" cy="29" r="6" fill="#10B981"/>
               <circle cx="12" cy="29" r="3.5" fill="white"/>
-              <circle cx="4" cy="3" r="4" fill="#D4A853"/>
+              <circle cx="4" cy="3" r="4" fill="#10B981"/>
               <circle cx="4" cy="3" r="2" fill="white"/>
-              <circle cx="20" cy="3" r="4" fill="#D4A853"/>
+              <circle cx="20" cy="3" r="4" fill="#10B981"/>
               <circle cx="20" cy="3" r="2" fill="white"/>
-              <circle cx="12" cy="16" r="3.5" fill="#D4A853"/>
+              <circle cx="12" cy="16" r="3.5" fill="#10B981"/>
               <circle cx="12" cy="16" r="1.5" fill="white"/>
               <path d="M12 16 C10 13, 7 9, 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
               <path d="M12 16 C14 13, 17 9, 20 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
@@ -316,14 +316,14 @@ export default function Magazine() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Filter Tabs */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          <Filter className="h-4 w-4 text-[#D4A853] shrink-0" />
+          <Filter className="h-4 w-4 text-[#10B981] shrink-0" />
           {typeFilters.map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 filter === f.key
-                  ? "bg-[#D4A853] text-[#0F172A]"
+                  ? "bg-[#10B981] text-[#0F172A]"
                   : "bg-[#1E293B] text-gray-400 hover:text-white hover:bg-[#334155]"
               }`}
             >
@@ -340,7 +340,7 @@ export default function Magazine() {
             <Badge
               key={tag}
               variant="outline"
-              className="bg-[#1E293B]/50 border-[#334155] text-[#D4A853] hover:bg-[#D4A853]/10 cursor-pointer"
+              className="bg-[#1E293B]/50 border-[#334155] text-[#10B981] hover:bg-[#10B981]/10 cursor-pointer"
             >
               {tag}
             </Badge>
@@ -361,22 +361,22 @@ export default function Magazine() {
             return (
               <Card
                 key={post.id}
-                className="bg-[#1E293B]/80 border-[#334155] overflow-hidden hover:border-[#D4A853]/30 transition-colors"
+                className="bg-[#1E293B]/80 border-[#334155] overflow-hidden hover:border-[#10B981]/30 transition-colors"
               >
                 <CardContent className="p-0">
                   {/* Header */}
                   <div className="p-5 flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <Link href={`/doctor/${post.doctorId}`} className="shrink-0">
-                        <Avatar className="w-12 h-12 border-2 border-[#D4A853]/20 cursor-pointer hover:border-[#D4A853] transition-colors">
-                          <AvatarFallback className="bg-[#D4A853]/10 text-[#D4A853] font-bold">
+                        <Avatar className="w-12 h-12 border-2 border-[#10B981]/20 cursor-pointer hover:border-[#10B981] transition-colors">
+                          <AvatarFallback className="bg-[#10B981]/10 text-[#10B981] font-bold">
                             {post.avatar}
                           </AvatarFallback>
                         </Avatar>
                       </Link>
                       <div className="min-w-0">
                         <Link href={`/doctor/${post.doctorId}`}>
-                          <h3 className="font-semibold text-white hover:text-[#D4A853] transition-colors cursor-pointer truncate">
+                          <h3 className="font-semibold text-white hover:text-[#10B981] transition-colors cursor-pointer truncate">
                             {post.doctorName}
                           </h3>
                         </Link>
@@ -397,8 +397,8 @@ export default function Magazine() {
                         onClick={() => toggleFollow(post.doctorId)}
                         className={`h-8 px-2 text-xs border transition-all ${
                           isFollowing
-                            ? "bg-[#D4A853]/10 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/20"
-                            : "bg-transparent border-[#334155] text-gray-400 hover:text-[#D4A853] hover:border-[#D4A853]/50"
+                            ? "bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/20"
+                            : "bg-transparent border-[#334155] text-gray-400 hover:text-[#10B981] hover:border-[#10B981]/50"
                         }`}
                       >
                         {isFollowing ? (
@@ -422,7 +422,7 @@ export default function Magazine() {
                   {/* Content */}
                   <div className="px-5 pb-4">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <Badge className="bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20 hover:bg-[#D4A853]/20 shrink-0">
+                      <Badge className="bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20 hover:bg-[#10B981]/20 shrink-0">
                         {getTypeIcon(post.type)}
                         <span className="ml-1">{getTypeLabel(post.type)}</span>
                       </Badge>
@@ -451,7 +451,7 @@ export default function Magazine() {
                       />
                       {post.type === "video" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <div className="w-16 h-16 rounded-full bg-[#D4A853] flex items-center justify-center shadow-lg shadow-[#D4A853]/30 cursor-pointer hover:scale-110 transition-transform">
+                          <div className="w-16 h-16 rounded-full bg-[#10B981] flex items-center justify-center shadow-lg shadow-[#10B981]/30 cursor-pointer hover:scale-110 transition-transform">
                             <PlayCircle className="h-8 w-8 text-[#0F172A]" />
                           </div>
                         </div>
@@ -465,17 +465,17 @@ export default function Magazine() {
                       <button
                         onClick={() => toggleLike(post.id)}
                         className={`flex items-center gap-1.5 text-sm transition-colors ${
-                          isLiked ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
+                          isLiked ? "text-[#10B981]" : "text-gray-400 hover:text-[#10B981]"
                         }`}
                       >
-                        <Heart className={`h-5 w-5 ${isLiked ? "fill-[#D4A853]" : ""}`} />
+                        <Heart className={`h-5 w-5 ${isLiked ? "fill-[#10B981]" : ""}`} />
                         <span>{likes}</span>
                       </button>
 
                       <button
                         onClick={() => toggleComments(post.id)}
                         className={`flex items-center gap-1.5 text-sm transition-colors ${
-                          isExpanded ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
+                          isExpanded ? "text-[#10B981]" : "text-gray-400 hover:text-[#10B981]"
                         }`}
                       >
                         <MessageCircle className="h-5 w-5" />
@@ -485,7 +485,7 @@ export default function Magazine() {
                       <button
                         onClick={() => handleShare(post.id)}
                         className={`flex items-center gap-1.5 text-sm transition-colors ${
-                          isShared ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
+                          isShared ? "text-[#10B981]" : "text-gray-400 hover:text-[#10B981]"
                         }`}
                       >
                         <Share2 className="h-5 w-5" />
@@ -496,7 +496,7 @@ export default function Magazine() {
                     <button
                       onClick={() => toggleBookmark(post.id)}
                       className={`text-sm transition-colors ${
-                        isBookmarked ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
+                        isBookmarked ? "text-[#10B981]" : "text-gray-400 hover:text-[#10B981]"
                       }`}
                     >
                       {isBookmarked ? (
@@ -519,7 +519,7 @@ export default function Magazine() {
                           comments.map(comment => (
                             <div key={comment.id} className="flex items-start gap-3">
                               <Avatar className="w-8 h-8 border border-[#334155]">
-                                <AvatarFallback className="bg-[#1E293B] text-[#D4A853] text-xs font-bold">
+                                <AvatarFallback className="bg-[#1E293B] text-[#10B981] text-xs font-bold">
                                   {comment.avatar}
                                 </AvatarFallback>
                               </Avatar>
@@ -532,10 +532,10 @@ export default function Magazine() {
                                   <p className="text-sm text-gray-300">{comment.text}</p>
                                 </div>
                                 <div className="flex items-center gap-3 mt-1 ml-2">
-                                  <button className="text-xs text-gray-500 hover:text-[#D4A853]">
+                                  <button className="text-xs text-gray-500 hover:text-[#10B981]">
                                     {isRTL ? "إعجاب" : "Reply"}
                                   </button>
-                                  <button className="text-xs text-gray-500 hover:text-[#D4A853] flex items-center gap-1">
+                                  <button className="text-xs text-gray-500 hover:text-[#10B981] flex items-center gap-1">
                                     <Heart className="h-3 w-3" />
                                     {comment.likes}
                                   </button>
@@ -549,7 +549,7 @@ export default function Magazine() {
                       {/* Comment Input */}
                       <div className="flex items-center gap-2">
                         <Avatar className="w-8 h-8 border border-[#334155] shrink-0">
-                          <AvatarFallback className="bg-[#D4A853]/10 text-[#D4A853] text-xs font-bold">
+                          <AvatarFallback className="bg-[#10B981]/10 text-[#10B981] text-xs font-bold">
                             YO
                           </AvatarFallback>
                         </Avatar>
@@ -561,12 +561,12 @@ export default function Magazine() {
                               if (e.key === "Enter") addComment(post.id);
                             }}
                             placeholder={isRTL ? "أكتب تعليقاً..." : "Write a comment..."}
-                            className="bg-[#0F172A] border-[#334155] text-white placeholder:text-gray-500 focus-visible:ring-[#D4A853] focus-visible:ring-1 h-9 text-sm"
+                            className="bg-[#0F172A] border-[#334155] text-white placeholder:text-gray-500 focus-visible:ring-[#10B981] focus-visible:ring-1 h-9 text-sm"
                           />
                           <Button
                             size="icon"
                             onClick={() => addComment(post.id)}
-                            className="h-9 w-9 bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] shrink-0"
+                            className="h-9 w-9 bg-[#10B981] text-[#0F172A] hover:bg-[#059669] shrink-0"
                           >
                             <Send className="h-4 w-4" />
                           </Button>

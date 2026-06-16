@@ -123,8 +123,8 @@ export default function MedicalCenterDashboard() {
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 flex items-center justify-center">
-                    <CalendarDays className="h-5 w-5 text-[#D4A853]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
+                    <CalendarDays className="h-5 w-5 text-[#10B981]" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{t.appointments}</p>
@@ -183,7 +183,7 @@ export default function MedicalCenterDashboard() {
                             variant="outline"
                             className={
                               apt.status === "confirmed"
-                                ? "text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5"
+                                ? "text-[#10B981] border-[#10B981]/20 bg-[#10B981]/5"
                                 : "text-amber-700 border-amber-200 bg-amber-50"
                             }
                           >

@@ -83,10 +83,10 @@ export default function PublishContent() {
   };
 
   const renderSuccess = (type: string, resetFn: () => void) => (
-    <Card className="border-[#D4A853]/20 bg-[#D4A853]/5">
+    <Card className="border-[#10B981]/20 bg-[#10B981]/5">
       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mb-4">
-          <CheckCircle2 className="w-8 h-8 text-[#D4A853]" />
+        <div className="w-16 h-16 bg-[#10B981]/10 rounded-full flex items-center justify-center mb-4">
+          <CheckCircle2 className="w-8 h-8 text-[#10B981]" />
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">{t.publish.publishedSuccessfully}</h3>
         <Button onClick={resetFn} variant="outline" className="mt-6" data-testid={`button-publish-another-${type}`}>

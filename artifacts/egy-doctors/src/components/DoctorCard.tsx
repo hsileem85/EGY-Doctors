@@ -67,7 +67,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         href={doctor.mapUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-start gap-1.5 text-sm text-[#D4A853] hover:text-[#c49a4a] underline underline-offset-2 decoration-[#D4A853]/40 hover:decoration-[#D4A853] transition-colors mb-4 group"
+        className="flex items-start gap-1.5 text-sm text-[#10B981] hover:text-[#c49a4a] underline underline-offset-2 decoration-[#10B981]/40 hover:decoration-[#10B981] transition-colors mb-4 group"
       >
         <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         <span className="line-clamp-1">
@@ -87,12 +87,12 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
               href={doctor.mapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm font-medium bg-[#D4A853]/5 hover:bg-[#D4A853]/10 text-[#D4A853] border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-2 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium bg-[#10B981]/5 hover:bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 hover:border-[#10B981]/40 rounded-lg px-3 py-2 transition-colors"
               title={isRTL ? "افتح في خرائط Google" : "Open in Google Maps"}
             >
               <Navigation className="h-3.5 w-3.5" />
               <span>{doctor.distance}</span>
-              <span className="text-[10px] font-normal uppercase tracking-wider text-[#D4A853]/70">
+              <span className="text-[10px] font-normal uppercase tracking-wider text-[#10B981]/70">
                 {isRTL ? "افتح الخريطة" : "Map"}
               </span>
               <svg className="h-3 w-3 ml-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -106,7 +106,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 px-3 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
+                  className="h-9 px-3 border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/10 hover:border-[#10B981]"
                   data-testid={`link-doctor-book-${doctor.id}`}
                 >
                   <Calendar className="h-4 w-4 mr-1.5" />
@@ -118,7 +118,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="shrink-0 h-9 px-4 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
+                  className="shrink-0 h-9 px-4 border-gray-200 hover:border-[#10B981] hover:text-[#10B981]"
                   data-testid={`link-doctor-profile-${doctor.id}`}
                 >
                   {t.card.viewProfile}

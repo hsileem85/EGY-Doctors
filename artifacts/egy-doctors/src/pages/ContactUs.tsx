@@ -103,7 +103,7 @@ export default function ContactUs() {
                 key={i}
                 className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow"
               >
-                <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 flex items-center justify-center text-[#D4A853] mb-3">
+                <div className="w-10 h-10 rounded-lg bg-[#10B981]/10 flex items-center justify-center text-[#10B981] mb-3">
                   {item.icon}
                 </div>
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
@@ -274,7 +274,7 @@ export default function ContactUs() {
             <Link href="/search">
               <Button
                 size="lg"
-                className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] font-semibold px-8"
+                className="bg-[#10B981] text-[#0F172A] hover:bg-[#059669] font-semibold px-8"
               >
                 {isRTL ? "البحث عن أطباء" : "Search Doctors"}
               </Button>

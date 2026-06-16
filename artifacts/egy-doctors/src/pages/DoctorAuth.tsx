@@ -66,12 +66,12 @@ export default function DoctorAuth() {
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#10B981]/10 rounded-full blur-[120px]" />
 
-        <Card className="w-full max-w-md text-center py-10 border-[#D4A853]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
+        <Card className="w-full max-w-md text-center py-10 border-[#10B981]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 bg-[#D4A853]/20 rounded-full flex items-center justify-center mb-2 border border-[#D4A853]/30">
-              <CheckCircle2 className="w-10 h-10 text-[#D4A853]" />
+            <div className="w-20 h-20 bg-[#10B981]/20 rounded-full flex items-center justify-center mb-2 border border-[#10B981]/30">
+              <CheckCircle2 className="w-10 h-10 text-[#10B981]" />
             </div>
             <h2 className="text-2xl font-bold text-white">
               {dir === "rtl" ? "تم التسجيل بنجاح!" : "Registration Successful!"}
@@ -82,7 +82,7 @@ export default function DoctorAuth() {
                 : "Your account has been created. Please complete your profile to start accepting appointments."}
             </p>
             <Button
-              className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold"
+              className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold"
               onClick={() => setLocation("/profile-setup")}
               data-testid="button-go-to-profile-setup"
             >
@@ -98,8 +98,8 @@ export default function DoctorAuth() {
     <div className="min-h-screen bg-[#0F172A] flex items-stretch justify-center relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#D4A853]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#D4A853]/5 rounded-full blur-[100px]" />
+        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#10B981]/5 rounded-full blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#1E293B]/30 rounded-full blur-[80px]" />
       </div>
 
@@ -108,12 +108,12 @@ export default function DoctorAuth() {
         {/* Left brand panel */}
         <div className="hidden lg:flex lg:w-5/12 flex-col justify-center p-12">
           <Link href="/" className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-              <Stethoscope className="h-6 w-6 text-[#D4A853]" />
+            <div className="w-12 h-12 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
+              <Stethoscope className="h-6 w-6 text-[#10B981]" />
             </div>
             <div>
               <span className="text-2xl font-bold text-white tracking-tight font-brand">EGY Doctors</span>
-              <p className="text-xs text-[#D4A853] tracking-wider">{dir === "rtl" ? "إجي دكتورز" : "EGY Doctors"}</p>
+              <p className="text-xs text-[#10B981] tracking-wider">{dir === "rtl" ? "إجي دكتورز" : "EGY Doctors"}</p>
             </div>
           </Link>
 
@@ -130,24 +130,24 @@ export default function DoctorAuth() {
 
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
-                <CalendarDays className="h-4 w-4 text-[#D4A853]" />
+              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
+                <CalendarDays className="h-4 w-4 text-[#10B981]" />
               </div>
               <span className="text-sm">
                 {dir === "rtl" ? "إدارة مواعيدك بسهولة" : "Easy appointment management"}
               </span>
             </div>
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
-                <Award className="h-4 w-4 text-[#D4A853]" />
+              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
+                <Award className="h-4 w-4 text-[#10B981]" />
               </div>
               <span className="text-sm">
                 {dir === "rtl" ? "ملف طبي رقمي مشرف" : "Showcase your credentials"}
               </span>
             </div>
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
-                <Shield className="h-4 w-4 text-[#D4A853]" />
+              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
+                <Shield className="h-4 w-4 text-[#10B981]" />
               </div>
               <span className="text-sm">
                 {dir === "rtl" ? "مريضين مؤهلون يثقون فيك" : "Verified patients trust you"}
@@ -164,29 +164,29 @@ export default function DoctorAuth() {
                 {/* Mobile logo + back */}
                 <div className="lg:hidden flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-                      <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
+                      <Stethoscope className="h-5 w-5 text-[#10B981]" />
                     </div>
                     <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
                   </div>
-                  <Link href="/" className="text-gray-400 hover:text-[#D4A853] transition-colors">
+                  <Link href="/" className="text-gray-400 hover:text-[#10B981] transition-colors">
                     <ArrowLeft className="h-5 w-5" />
                   </Link>
                 </div>
 
                 {/* Desktop back button */}
                 <div className="hidden lg:flex items-center mb-4">
-                  <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
+                  <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#10B981] transition-colors">
                     <ArrowLeft className="h-4 w-4" />
                     <span>{dir === "rtl" ? "العودة للرئيسية" : "Back to Home"}</span>
                   </Link>
                 </div>
 
                 <TabsList className="grid w-full grid-cols-2 bg-[#0F172A]/60 border border-[#334155] p-1">
-                  <TabsTrigger value="login" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
+                  <TabsTrigger value="login" className="data-[state=active]:bg-[#10B981] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
                     {dir === "rtl" ? "تسجيل الدخول" : "Login"}
                   </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-[#10B981] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
                     {dir === "rtl" ? "إنشاء حساب" : "Sign Up"}
                   </TabsTrigger>
                 </TabsList>
@@ -220,7 +220,7 @@ export default function DoctorAuth() {
                         }
                         placeholder={dir === "rtl" ? "doctor@example.com" : "doctor@example.com"}
                         data-testid="input-login-email"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                       />
                     </div>
 
@@ -237,12 +237,12 @@ export default function DoctorAuth() {
                             setLoginData({ ...loginData, password: e.target.value })
                           }
                           data-testid="input-login-password"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#D4A853] transition-colors"
+                          className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#10B981] transition-colors"
                           data-testid="button-toggle-password"
                         >
                           {showPassword ? (
@@ -254,7 +254,7 @@ export default function DoctorAuth() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20" data-testid="button-login">
+                    <Button type="submit" className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20" data-testid="button-login">
                       {dir === "rtl" ? "تسجيل الدخول" : "Login"}
                     </Button>
                   </form>
@@ -275,11 +275,11 @@ export default function DoctorAuth() {
 
                   {/* Step indicator */}
                   <div className="flex items-center justify-center gap-2 mb-6">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${signupStep === 1 ? "bg-[#D4A853] text-[#0F172A]" : "bg-[#D4A853]/20 text-[#D4A853] border border-[#D4A853]/30"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${signupStep === 1 ? "bg-[#10B981] text-[#0F172A]" : "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30"}`}>
                       1
                     </div>
-                    <div className={`w-12 h-0.5 ${signupStep === 2 ? "bg-[#D4A853]" : "bg-[#334155]"}`} />
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${signupStep === 2 ? "bg-[#D4A853] text-[#0F172A]" : "bg-[#334155] text-gray-500"}`}>
+                    <div className={`w-12 h-0.5 ${signupStep === 2 ? "bg-[#10B981]" : "bg-[#334155]"}`} />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${signupStep === 2 ? "bg-[#10B981] text-[#0F172A]" : "bg-[#334155] text-gray-500"}`}>
                       2
                     </div>
                   </div>
@@ -303,7 +303,7 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, fullName: e.target.value })
                           }
                           data-testid="input-signup-fullname"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                       </div>
 
@@ -319,7 +319,7 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, email: e.target.value })
                           }
                           data-testid="input-signup-email"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                       </div>
 
@@ -335,7 +335,7 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, phone: e.target.value })
                           }
                           data-testid="input-signup-phone"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                       </div>
 
@@ -351,13 +351,13 @@ export default function DoctorAuth() {
                             onChange={(e) =>
                               setSignupData({ ...signupData, password: e.target.value })
                             }
-                            className="pe-10 bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                            className="pe-10 bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                             data-testid="input-signup-password"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#D4A853] transition-colors"
+                            className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#10B981] transition-colors"
                           >
                             {showPassword ? (
                               <EyeOff className="h-4 w-4" />
@@ -380,13 +380,13 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, confirmPassword: e.target.value })
                           }
                           data-testid="input-signup-confirm"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                       </div>
 
                       <Button
                         type="submit"
-                        className="w-full mt-2 bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20"
+                        className="w-full mt-2 bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20"
                         disabled={
                           !signupData.fullName ||
                           !signupData.email ||
@@ -420,7 +420,7 @@ export default function DoctorAuth() {
                           </SelectTrigger>
                           <SelectContent className="bg-[#1E293B] border-[#334155]">
                             {specialties.map((s) => (
-                              <SelectItem key={s} value={s} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                              <SelectItem key={s} value={s} className="text-white focus:bg-[#10B981]/10 focus:text-[#10B981]">
                                 {s}
                               </SelectItem>
                             ))}
@@ -445,7 +445,7 @@ export default function DoctorAuth() {
                           </SelectTrigger>
                           <SelectContent className="bg-[#1E293B] border-[#334155]">
                             {locations.map((l) => (
-                              <SelectItem key={l} value={l} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                              <SelectItem key={l} value={l} className="text-white focus:bg-[#10B981]/10 focus:text-[#10B981]">
                                 {l}
                               </SelectItem>
                             ))}
@@ -466,7 +466,7 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, experience: e.target.value })
                           }
                           data-testid="input-signup-experience"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                       </div>
 
@@ -481,7 +481,7 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, license: e.target.value })
                           }
                           data-testid="input-signup-license"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                       </div>
 
@@ -516,7 +516,7 @@ export default function DoctorAuth() {
                         </Button>
                         <Button
                           type="submit"
-                          className="w-2/3 bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20"
+                          className="w-2/3 bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20"
                           disabled={
                             !signupData.specialty ||
                             !signupData.location ||

@@ -12,7 +12,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
           {lang === "ar" ? (
             <span className="text-xl font-bold text-white tracking-tight font-brand">
-              إجي <span className="text-[#D4A853]">دكتورز</span>
+              إجي <span className="text-[#10B981]">دكتورز</span>
             </span>
           ) : (
             <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
@@ -20,19 +20,19 @@ export function Navbar() {
               {/* Stethoscope Y */}
               <svg viewBox="0 0 18 24" className="inline-block w-[20px] h-[26px] ml-[1px]" fill="none">
                 {/* Thick Y arms + bottom tube */}
-                <path d="M9 12 C7 9, 5 6, 4 4" stroke="#D4A853" strokeWidth="3" strokeLinecap="round" fill="none"/>
-                <path d="M9 12 C11 9, 13 6, 14 4" stroke="#D4A853" strokeWidth="3" strokeLinecap="round" fill="none"/>
-                <path d="M9 12 L9 18" stroke="#D4A853" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M9 12 C7 9, 5 6, 4 4" stroke="#10B981" strokeWidth="3" strokeLinecap="round" fill="none"/>
+                <path d="M9 12 C11 9, 13 6, 14 4" stroke="#10B981" strokeWidth="3" strokeLinecap="round" fill="none"/>
+                <path d="M9 12 L9 18" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
                 {/* Chest piece at bottom */}
-                <circle cx="9" cy="21" r="4.5" fill="#D4A853"/>
+                <circle cx="9" cy="21" r="4.5" fill="#10B981"/>
                 <circle cx="9" cy="21" r="2" fill="white"/>
                 {/* Ear tips at top */}
-                <circle cx="4" cy="3" r="3" fill="#D4A853"/>
-                <circle cx="14" cy="3" r="3" fill="#D4A853"/>
+                <circle cx="4" cy="3" r="3" fill="#10B981"/>
+                <circle cx="14" cy="3" r="3" fill="#10B981"/>
                 {/* Center joint */}
-                <circle cx="9" cy="12" r="2.5" fill="#D4A853"/>
+                <circle cx="9" cy="12" r="2.5" fill="#10B981"/>
               </svg>
-              <span className="text-[#D4A853]"> Doctors</span>
+              <span className="text-[#10B981]"> Doctors</span>
             </span>
           )}
         </Link>
@@ -42,7 +42,7 @@ export function Navbar() {
             <Link href="/search">
               <Button
                 variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#10B981] hover:bg-transparent"
               >
                 <Search className="h-4 w-4 mr-1" />
                 {lang === "ar" ? "البحث" : "Search"}
@@ -51,7 +51,7 @@ export function Navbar() {
             <Link href="/magazine">
               <Button
                 variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#10B981] hover:bg-transparent"
               >
                 <Newspaper className="h-4 w-4 mr-1" />
                 {lang === "ar" ? "المجلة" : "Magazine"}
@@ -60,7 +60,7 @@ export function Navbar() {
             <Link href="/about">
               <Button
                 variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#10B981] hover:bg-transparent"
               >
                 <Info className="h-4 w-4 mr-1" />
                 {lang === "ar" ? "من نحن" : "About"}
@@ -88,7 +88,7 @@ export function Navbar() {
           </Link>
 
           <Link href="/auth?tab=signup" data-testid="link-sign-up">
-            <Button className="text-sm font-normal h-8 px-3 bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] border-none">
+            <Button className="text-sm font-normal h-8 px-3 bg-[#10B981] text-[#0F172A] hover:bg-[#059669] border-none">
               {lang === "ar" ? "إنشاء حساب" : "Sign Up"}
             </Button>
           </Link>

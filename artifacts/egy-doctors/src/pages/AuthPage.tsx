@@ -81,12 +81,12 @@ export default function AuthPage() {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
         {/* Background glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#10B981]/10 rounded-full blur-[120px]" />
 
-        <Card className="w-full max-w-md text-center py-10 border-[#D4A853]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
+        <Card className="w-full max-w-md text-center py-10 border-[#10B981]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 bg-[#D4A853]/20 rounded-full flex items-center justify-center mb-2 border border-[#D4A853]/30">
-              <CheckCircle2 className="w-10 h-10 text-[#D4A853]" />
+            <div className="w-20 h-20 bg-[#10B981]/20 rounded-full flex items-center justify-center mb-2 border border-[#10B981]/30">
+              <CheckCircle2 className="w-10 h-10 text-[#10B981]" />
             </div>
             <h2 className="text-2xl font-bold text-white">
               {isRTL ? "تم تسجيل الدخول بنجاح!" : "Login Successful!"}
@@ -97,7 +97,7 @@ export default function AuthPage() {
                 : "Welcome to EGY Doctors. You will be redirected to your dashboard."}
             </p>
             <Link href={getRedirect()}>
-              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold">
+              <Button className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold">
                 {isRTL ? "الذهاب إلى لوحة التحكم" : "Go to Dashboard"}
               </Button>
             </Link>
@@ -150,8 +150,8 @@ export default function AuthPage() {
       onClick={() => setUserType(type)}
       className={`flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
         userType === type
-          ? "border-[#D4A853] bg-[#D4A853]/10 text-[#D4A853] shadow-sm shadow-[#D4A853]/10"
-          : "border-[#334155] text-gray-400 hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5"
+          ? "border-[#10B981] bg-[#10B981]/10 text-[#10B981] shadow-sm shadow-[#10B981]/10"
+          : "border-[#334155] text-gray-400 hover:border-[#10B981]/40 hover:bg-[#10B981]/5"
       }`}
     >
       <Icon className="h-4 w-4" />
@@ -163,8 +163,8 @@ export default function AuthPage() {
     <div className="min-h-screen bg-[#0F172A] flex items-stretch justify-center relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#D4A853]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#D4A853]/5 rounded-full blur-[100px]" />
+        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#10B981]/5 rounded-full blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#1E293B]/30 rounded-full blur-[80px]" />
       </div>
 
@@ -173,12 +173,12 @@ export default function AuthPage() {
         {/* Left brand panel */}
         <div className="hidden lg:flex lg:w-5/12 flex-col justify-center p-12">
           <Link href="/" className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-              <Stethoscope className="h-6 w-6 text-[#D4A853]" />
+            <div className="w-12 h-12 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
+              <Stethoscope className="h-6 w-6 text-[#10B981]" />
             </div>
             <div>
               <span className="text-2xl font-bold text-white tracking-tight font-brand">EGY Doctors</span>
-              <p className="text-xs text-[#D4A853] tracking-wider">{isRTL ? "إجي دكتورز" : "EGY Doctors"}</p>
+              <p className="text-xs text-[#10B981] tracking-wider">{isRTL ? "إجي دكتورز" : "EGY Doctors"}</p>
             </div>
           </Link>
 
@@ -195,14 +195,14 @@ export default function AuthPage() {
 
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
-                <Shield className="h-4 w-4 text-[#D4A853]" />
+              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
+                <Shield className="h-4 w-4 text-[#10B981]" />
               </div>
               <span className="text-sm">{t.secure}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
-                <Heart className="h-4 w-4 text-[#D4A853]" />
+              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
+                <Heart className="h-4 w-4 text-[#10B981]" />
               </div>
               <span className="text-sm">{t.trust}</span>
             </div>
@@ -211,15 +211,15 @@ export default function AuthPage() {
           {/* Stats */}
           <div className="flex gap-8 mt-10 pt-8 border-t border-[#334155]">
             <div>
-              <div className="text-2xl font-bold text-[#D4A853]">2,500+</div>
+              <div className="text-2xl font-bold text-[#10B981]">2,500+</div>
               <div className="text-xs text-gray-500">{isRTL ? "طبيب موثق" : "Verified Doctors"}</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-[#D4A853]">150K+</div>
+              <div className="text-2xl font-bold text-[#10B981]">150K+</div>
               <div className="text-xs text-gray-500">{isRTL ? "حجز شهرياً" : "Monthly Bookings"}</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-[#D4A853]">4.9</div>
+              <div className="text-2xl font-bold text-[#10B981]">4.9</div>
               <div className="text-xs text-gray-500">{isRTL ? "متوسط التقييم" : "Avg. Rating"}</div>
             </div>
           </div>
@@ -232,19 +232,19 @@ export default function AuthPage() {
               {/* Mobile logo + back */}
               <div className="lg:hidden flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-                    <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
+                    <Stethoscope className="h-5 w-5 text-[#10B981]" />
                   </div>
                   <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
                 </div>
-                <Link href="/" className="text-gray-400 hover:text-[#D4A853] transition-colors">
+                <Link href="/" className="text-gray-400 hover:text-[#10B981] transition-colors">
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </div>
 
               {/* Desktop back button */}
               <div className="hidden lg:flex items-center mb-4">
-                <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
+                <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#10B981] transition-colors">
                   <ArrowLeft className="h-4 w-4" />
                   <span>{isRTL ? "العودة للرئيسية" : "Back to Home"}</span>
                 </Link>
@@ -252,10 +252,10 @@ export default function AuthPage() {
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#0F172A]/60 border border-[#334155] p-1">
-                  <TabsTrigger value="signin" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
+                  <TabsTrigger value="signin" className="data-[state=active]:bg-[#10B981] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
                     {t.signIn}
                   </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-[#10B981] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
                     {t.signUp}
                   </TabsTrigger>
                 </TabsList>
@@ -286,7 +286,7 @@ export default function AuthPage() {
                         value={loginData.email}
                         onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                         placeholder="user@example.com"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                       />
                     </div>
 
@@ -298,12 +298,12 @@ export default function AuthPage() {
                           type={showPassword ? "text" : "password"}
                           value={loginData.password}
                           onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#D4A853] transition-colors"
+                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#10B981] transition-colors"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -311,12 +311,12 @@ export default function AuthPage() {
                     </div>
 
                     <div className="flex justify-end">
-                      <Link href="/" className="text-sm text-[#D4A853] hover:text-[#D4A853]/80 hover:underline transition-colors">
+                      <Link href="/" className="text-sm text-[#10B981] hover:text-[#10B981]/80 hover:underline transition-colors">
                         {t.forgotPassword}
                       </Link>
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20">
+                    <Button type="submit" className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20">
                       {t.loginBtn}
                     </Button>
                   </form>
@@ -339,7 +339,7 @@ export default function AuthPage() {
                         id="signupName"
                         value={signupData.fullName}
                         onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                       />
                     </div>
 
@@ -350,7 +350,7 @@ export default function AuthPage() {
                         type="email"
                         value={signupData.email}
                         onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                       />
                     </div>
 
@@ -361,7 +361,7 @@ export default function AuthPage() {
                         type="tel"
                         value={signupData.phone}
                         onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                       />
                     </div>
 
@@ -380,7 +380,7 @@ export default function AuthPage() {
                             setSignupData({ ...signupData, nationalId: val });
                           }}
                           placeholder="14 digits"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                         <p className="text-xs text-gray-500">{t.emrHint}</p>
                       </div>
@@ -399,7 +399,7 @@ export default function AuthPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
                               {["Cardiology", "Dermatology", "Orthopedics", "Pediatrics", "Neurology", "Gynecology", "Ophthalmology", "ENT", "Internal Medicine", "General Surgery"].map((s) => (
-                                <SelectItem key={s} value={s} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">{s}</SelectItem>
+                                <SelectItem key={s} value={s} className="text-white focus:bg-[#10B981]/10 focus:text-[#10B981]">{s}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -415,7 +415,7 @@ export default function AuthPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
                               {["Cairo", "Alexandria", "Giza", "Mansoura", "Tanta", "Zagazig", "Ismailia", "Suez", "Port Said", "Luxor", "Aswan", "Sharm El Sheikh"].map((l) => (
-                                <SelectItem key={l} value={l} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">{l}</SelectItem>
+                                <SelectItem key={l} value={l} className="text-white focus:bg-[#10B981]/10 focus:text-[#10B981]">{l}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -436,7 +436,7 @@ export default function AuthPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
                               {(["hospital", "clinic", "polyclinic", "lab", "scan"] as MedicalSubtype[]).map((s) => (
-                                <SelectItem key={s} value={s} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                                <SelectItem key={s} value={s} className="text-white focus:bg-[#10B981]/10 focus:text-[#10B981]">
                                   {medicalSubtypeLabels[lang][s]}
                                 </SelectItem>
                               ))}
@@ -454,7 +454,7 @@ export default function AuthPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
                               {["Cairo", "Alexandria", "Giza", "Mansoura", "Tanta", "Zagazig", "Ismailia", "Suez", "Port Said", "Luxor", "Aswan", "Sharm El Sheikh"].map((l) => (
-                                <SelectItem key={l} value={l} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">{l}</SelectItem>
+                                <SelectItem key={l} value={l} className="text-white focus:bg-[#10B981]/10 focus:text-[#10B981]">{l}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -470,12 +470,12 @@ export default function AuthPage() {
                           type={showPassword ? "text" : "password"}
                           value={signupData.password}
                           onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#D4A853] transition-colors"
+                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#10B981] transition-colors"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -489,11 +489,11 @@ export default function AuthPage() {
                         type="password"
                         value={signupData.confirmPassword}
                         onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
                       />
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20">
+                    <Button type="submit" className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20">
                       {t.signupBtn}
                     </Button>
                   </form>
