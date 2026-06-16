@@ -142,7 +142,7 @@ export default function Home() {
         </div>
 
         {/* Main List */}
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <main className="max-w-2xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
@@ -169,11 +169,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {sortedDoctors.map((doc) => (
               <div
                 key={doc.id}
-                className="bg-white rounded-2xl p-3 sm:p-4 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-3 sm:gap-4 items-start"
+                className="bg-white rounded-xl p-2 sm:p-2.5 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-start"
               >
                 {/* Avatar */}
                 <div className="relative shrink-0">
@@ -192,68 +192,52 @@ export default function Home() {
 
                 {/* Details */}
                 <div className="flex-1 w-full">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
-                    <div>
+                  <div className="flex items-start gap-2 mb-1">
+                    <div className="flex-1 min-w-0">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-xl font-bold text-[#0F172A] leading-tight mb-1 hover:text-[#D4A853] cursor-pointer transition-colors">
+                        <h3 className="text-lg font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
                           {doc.name}
                         </h3>
                       </Link>
-                      <p className="text-[#0F172A]/70 font-medium text-sm flex items-center gap-1.5">
-                        <HeartPulse className="w-4 h-4 text-[#D4A853]" />
+                      <p className="text-[#0F172A]/70 text-xs font-medium flex items-center gap-1 mt-0.5">
+                        <HeartPulse className="w-3.5 h-3.5 text-[#D4A853]" />
                         {t.specialties[doc.specialty] ?? doc.specialty}
                       </p>
                     </div>
-
-                    {/* Distance Highlight */}
-                    <div className="bg-[#F8FAFC] px-3 py-1.5 rounded-xl border border-gray-200 flex items-center gap-1.5 self-start shrink-0">
-                      <Navigation className="w-4 h-4 text-[#D4A853] fill-[#D4A853]/20" />
-                      <span className="font-bold text-[#0F172A] text-sm">
-                        {doc.distance}
-                      </span>
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                        {isRTL ? "بعيد" : "away"}
-                      </span>
+                    <div className="bg-[#F8FAFC] px-2 py-0.5 rounded-lg border border-gray-200 flex items-center gap-1 shrink-0">
+                      <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
+                      <span className="font-bold text-[#0F172A] text-[11px]">{doc.distance}</span>
                     </div>
                   </div>
 
-                  {/* Info Pills */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 mb-3 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100">
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <span className="text-gray-400">
-                        {isRTL ? "الرسوم:" : "Fee:"}
-                      </span>
-                      <span className="text-[#0F172A] font-bold">
-                        {doc.fee} {t.dashboard.egp}
-                      </span>
-                    </div>
-                    <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300"></div>
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <span>{t.locations[doc.location] ?? doc.location}</span>
-                    </div>
-                    <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300"></div>
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <CalendarDays className="w-4 h-4 text-gray-400" />
-                      <span className="text-[#D4A853] font-semibold">
-                        {doc.nextAvailable}
-                      </span>
-                    </div>
+                  {/* Info Pills — compact inline row */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
+                    <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
+                    <span className="text-gray-300">·</span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-gray-400" />
+                      {t.locations[doc.location] ?? doc.location}
+                    </span>
+                    <span className="text-gray-300">·</span>
+                    <span className="flex items-center gap-1 text-[#D4A853] font-semibold">
+                      <CalendarDays className="w-3 h-3" />
+                      {doc.nextAvailable}
+                    </span>
                   </div>
 
                 </div>
 
                 {/* Actions */}
-                <div className="w-full sm:w-[100px] flex flex-col gap-1.5 shrink-0 sm:border-l border-gray-100 sm:pl-3 sm:py-1 mt-2 sm:mt-0">
+                <div className="w-full sm:w-[80px] flex flex-col gap-1 shrink-0 sm:border-l border-gray-100 sm:pl-2 sm:py-0.5 mt-1 sm:mt-0">
                   <Link href={`/doctor/${doc.id}`}>
-                    <Button className="w-full bg-[#0F172A] text-white rounded-xl py-2.5 font-semibold text-sm hover:bg-[#1E293B] shadow-sm hover:shadow-md transition-all active:scale-[0.98] h-auto">
+                    <Button className="w-full bg-[#0F172A] text-white rounded-lg py-2 font-semibold text-xs hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-auto">
                       {isRTL ? "احجز" : "Book"}
                     </Button>
                   </Link>
                   <Link href={`/doctor/${doc.id}`}>
                     <Button
                       variant="outline"
-                      className="w-full bg-white text-[#0F172A] rounded-xl py-2 font-semibold text-sm border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                      className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
                     >
                       {isRTL ? "الملف" : "Profile"}
                     </Button>
@@ -262,7 +246,7 @@ export default function Home() {
                     href={doc.mapUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 text-xs font-medium text-[#D4A853] hover:text-[#c49a4a] underline underline-offset-2 decoration-[#D4A853]/40 hover:decoration-[#D4A853] transition-colors py-1"
+                    className="flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] transition-colors py-0.5"
                   >
                     <Navigation className="w-3 h-3" />
                     {isRTL ? "الخريطة" : "Map"}
