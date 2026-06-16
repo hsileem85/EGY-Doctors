@@ -1,4 +1,4 @@
-import { HeartPulse, Newspaper, Search, Info } from "lucide-react";
+import { Newspaper, Search, Info } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -9,16 +9,47 @@ export function Navbar() {
   return (
     <nav className="bg-[#0F172A] border-b border-[#1E293B] z-50 w-full">
       <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2" data-testid="link-home">
-          <div className="w-8 h-8 rounded-lg bg-[#D4A853] flex items-center justify-center">
-            <HeartPulse className="w-5 h-5 text-[#0F172A]" />
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight font-brand">
-            {lang === "ar" ? "إجي دكتورز" : "EGY"}
-            <span className="text-[#D4A853]">
-              {lang === "ar" ? "" : " Doctors"}
+        <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
+          {lang === "ar" ? (
+            <span className="text-xl font-bold text-white tracking-tight font-brand">
+              إجي <span className="text-[#D4A853]">دكتورز</span>
             </span>
-          </span>
+          ) : (
+            <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
+              <span className="text-white">EG</span>
+              {/* Stethoscope Y */}
+              <svg viewBox="0 0 28 36" className="inline-block w-[22px] h-[30px] ml-[1px]" fill="none">
+                {/* Glow / drop shadow */}
+                <defs>
+                  <filter id="stethoscopeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#D4A853" floodOpacity="0.3"/>
+                  </filter>
+                </defs>
+                {/* Left binaural tube — wide Y */}
+                <path d="M14 19 C10 15, 6 11, 3 6" stroke="#D4A853" strokeWidth="4" strokeLinecap="round" fill="none" filter="url(#stethoscopeGlow)"/>
+                {/* Right binaural tube — wide Y */}
+                <path d="M14 19 C18 15, 22 11, 25 6" stroke="#D4A853" strokeWidth="4" strokeLinecap="round" fill="none" filter="url(#stethoscopeGlow)"/>
+                {/* Bottom stem */}
+                <path d="M14 19 L14 27" stroke="#D4A853" strokeWidth="4" strokeLinecap="round" filter="url(#stethoscopeGlow)"/>
+                {/* Chest piece / diaphragm */}
+                <circle cx="14" cy="31" r="5.5" fill="#D4A853" filter="url(#stethoscopeGlow)"/>
+                <circle cx="14" cy="31" r="3.2" fill="white"/>
+                {/* Left ear tip */}
+                <circle cx="3" cy="4" r="3.5" fill="white"/>
+                <circle cx="3" cy="4" r="2" fill="#D4A853"/>
+                {/* Right ear tip */}
+                <circle cx="25" cy="4" r="3.5" fill="white"/>
+                <circle cx="25" cy="4" r="2" fill="#D4A853"/>
+                {/* Connector node */}
+                <circle cx="14" cy="19" r="3" fill="#D4A853" filter="url(#stethoscopeGlow)"/>
+                <circle cx="14" cy="19" r="1.5" fill="white"/>
+                {/* Tubing highlight lines */}
+                <path d="M14 19 C10 15, 6 11, 3 6" stroke="white" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.3"/>
+                <path d="M14 19 C18 15, 22 11, 25 6" stroke="white" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.3"/>
+              </svg>
+              <span className="text-[#D4A853]"> Doctors</span>
+            </span>
+          )}
         </Link>
         <div className="flex items-center gap-4">
           {/* Desktop Nav Links */}
