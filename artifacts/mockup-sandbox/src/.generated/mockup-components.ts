@@ -3,13 +3,16 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/hero-homepage/ConversationalOnboarding.tsx": () => import("../components/mockups/hero-homepage/ConversationalOnboarding.tsx"),
   "./components/mockups/hero-homepage/DarkSlateElectric.tsx": () => import("../components/mockups/hero-homepage/DarkSlateElectric.tsx"),
+  "./components/mockups/hero-homepage/EditorialFormal.tsx": () => import("../components/mockups/hero-homepage/EditorialFormal.tsx"),
   "./components/mockups/hero-homepage/EditorialSplit.tsx": () => import("../components/mockups/hero-homepage/EditorialSplit.tsx"),
   "./components/mockups/hero-homepage/HealthHubDashboard.tsx": () => import("../components/mockups/hero-homepage/HealthHubDashboard.tsx"),
   "./components/mockups/hero-homepage/ImmersiveFloating.tsx": () => import("../components/mockups/hero-homepage/ImmersiveFloating.tsx"),
   "./components/mockups/hero-homepage/ImpressiveRedesign.tsx": () => import("../components/mockups/hero-homepage/ImpressiveRedesign.tsx"),
   "./components/mockups/hero-homepage/MapFirstDiscovery.tsx": () => import("../components/mockups/hero-homepage/MapFirstDiscovery.tsx"),
   "./components/mockups/hero-homepage/MinimalistCommandLine.tsx": () => import("../components/mockups/hero-homepage/MinimalistCommandLine.tsx"),
+  "./components/mockups/hero-homepage/PlayfulEnergetic.tsx": () => import("../components/mockups/hero-homepage/PlayfulEnergetic.tsx"),
   "./components/mockups/hero-homepage/RoyalBlueGold.tsx": () => import("../components/mockups/hero-homepage/RoyalBlueGold.tsx"),
   "./components/mockups/hero-homepage/SocialProofLed.tsx": () => import("../components/mockups/hero-homepage/SocialProofLed.tsx"),
+  "./components/mockups/hero-homepage/WarmClinical.tsx": () => import("../components/mockups/hero-homepage/WarmClinical.tsx"),
   "./components/mockups/hero-homepage/WarmCoralSand.tsx": () => import("../components/mockups/hero-homepage/WarmCoralSand.tsx")
 };
