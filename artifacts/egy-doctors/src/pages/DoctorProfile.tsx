@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useParams, useSearch } from "wouter";
-import { Calendar, MapPin, Star, Stethoscope, Clock, CheckCircle2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useParams } from "wouter";
+import { Calendar, MapPin, Star, Stethoscope, Clock, CheckCircle2, ChevronLeft } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,22 +9,79 @@ import { Label } from "@/components/ui/label";
 import { doctors } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
 
+/* ── helpers: turn doctor.slots into a real schedule ── */
+function buildSchedule(slots: string[]) {
+  const schedule: Record<string, string[]> = {};
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  slots.forEach((slot) => {
+    const time = slot.replace(/^.*?\s/, "");
+    let dateKey: string;
+    if (slot.startsWith("Today")) dateKey = fmt(today);
+    else if (slot.startsWith("Tomorrow")) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + 1);
+      dateKey = fmt(d);
+    } else {
+      dateKey = fmt(today);
+    }
+    if (!schedule[dateKey]) schedule[dateKey] = [];
+    schedule[dateKey].push(time);
+  });
+
+  // fill extra days with demo slots so the calendar has options
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const key = fmt(d);
+    if (!schedule[key]) schedule[key] = [];
+    if (i > 0 && schedule[key].length === 0) {
+      schedule[key] = i % 2 === 0
+        ? ["9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"]
+        : ["10:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"];
+    }
+  }
+  return schedule;
+}
+
+function fmtDateLabel(dateStr: string, lang: string) {
+  const date = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const isToday = date.toDateString() === today.toDateString();
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+
+  const weekday = date.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "short" });
+  const dayNum = date.getDate();
+  const month = date.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" });
+
+  if (isToday) return { label: lang === "ar" ? "اليوم" : "Today", sub: `${weekday} ${dayNum}` };
+  if (isTomorrow) return { label: lang === "ar" ? "غداً" : "Tomorrow", sub: `${weekday} ${dayNum}` };
+  return { label: weekday, sub: `${dayNum} ${month}` };
+}
+
 export default function DoctorProfile() {
   const { id } = useParams();
-  const searchString = useSearch();
-  const searchParams = new URLSearchParams(searchString);
-  const preselectedSlot = searchParams.get("slot");
-  const { t } = useLanguage();
+  const { t, lang, dir } = useLanguage();
+  const isRTL = dir === "rtl";
 
-  const doctor = doctors.find(d => d.id === id);
+  const doctor = doctors.find((d) => d.id === id);
 
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(preselectedSlot || null);
-  const [bookingStep, setBookingStep] = useState<"slots" | "form" | "success">(
-    preselectedSlot ? "form" : "slots"
-  );
+  const [bookingStep, setBookingStep] = useState<"calendar" | "slots" | "form" | "success">("calendar");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [patientName, setPatientName] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const schedule = useMemo(() => (doctor ? buildSchedule(doctor.slots) : {}), [doctor]);
+  const availableDates = useMemo(
+    () => Object.keys(schedule).filter((d) => schedule[d].length > 0).sort(),
+    [schedule]
+  );
 
   if (!doctor) {
     return (
@@ -39,12 +96,17 @@ export default function DoctorProfile() {
   const specialty = t.specialties[doctor.specialty] ?? doctor.specialty;
   const location = t.locations[doctor.location] ?? doctor.location;
 
-  const handleSlotClick = (slot: string) => {
-    setSelectedSlot(slot);
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+    setBookingStep("slots");
+  };
+
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
     setBookingStep("form");
   };
 
-  const handleConfirmBooking = (e: React.FormEvent) => {
+  const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!patientName || !patientPhone) return;
     setIsSubmitting(true);
@@ -54,12 +116,19 @@ export default function DoctorProfile() {
     }, 1000);
   };
 
+  const resetBooking = () => {
+    setBookingStep("calendar");
+    setSelectedDate(null);
+    setSelectedTime(null);
+    setPatientName("");
+    setPatientPhone("");
+  };
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-10 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* Left Column */}
+          {/* ── Left Column ── */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white rounded-2xl border shadow-sm p-8 flex flex-col md:flex-row gap-8">
               <img
@@ -111,67 +180,114 @@ export default function DoctorProfile() {
             </div>
           </div>
 
-          {/* Right Column - Booking Widget */}
+          {/* ── Right Column — Booking Widget ── */}
           <div className="lg:col-span-1">
             <Card className="sticky top-24 border-primary/20 shadow-md">
-              <div className="bg-primary text-primary-foreground p-4 rounded-t-xl">
+              {/* Header */}
+              <div className="bg-[#0F172A] text-white p-4 rounded-t-xl">
                 <h3 className="font-bold text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+                  <Calendar className="h-5 w-5 text-[#D4A853]" />
                   {t.profile.bookAppointment}
                 </h3>
               </div>
+
               <CardContent className="p-6">
-                {bookingStep === "slots" && (
+                {/* Step 1: Calendar — pick a day */}
+                {bookingStep === "calendar" && (
                   <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <p className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
                       <Clock className="h-4 w-4 text-gray-400" />
-                      {t.profile.availableSlots}
+                      {t.profile.selectDay}
                     </p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                      {availableDates.map((dateStr) => {
+                        const { label, sub } = fmtDateLabel(dateStr, lang);
+                        const isActive = selectedDate === dateStr;
+                        return (
+                          <button
+                            key={dateStr}
+                            onClick={() => handleDateSelect(dateStr)}
+                            className={`flex flex-col items-center justify-center min-w-[4.5rem] h-16 rounded-lg border transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-[#D4A853] text-white border-[#D4A853]"
+                                : "bg-white border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
+                            }`}
+                          >
+                            <span className="text-xs font-bold">{label}</span>
+                            <span className="text-[10px] opacity-80">{sub}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Time slots for selected day */}
+                {bookingStep === "slots" && selectedDate && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
+                          {fmtDateLabel(selectedDate, lang).label}
+                        </p>
+                        <p className="font-bold text-gray-900">
+                          {fmtDateLabel(selectedDate, lang).sub}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setBookingStep("calendar")}
+                        className="text-xs text-[#D4A853] hover:underline flex items-center gap-1"
+                      >
+                        <ChevronLeft className={`h-3 w-3 ${isRTL ? "" : "rotate-180"}`} />
+                        {t.profile.changeDay}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">{t.profile.selectTime}</p>
                     <div className="grid grid-cols-2 gap-3">
-                      {doctor.slots.map((slot, i) => (
+                      {schedule[selectedDate]?.map((time, i) => (
                         <Button
                           key={i}
                           variant="outline"
-                          className="h-12 border-gray-200 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all text-sm font-medium"
-                          onClick={() => handleSlotClick(slot)}
-                          data-testid={`button-select-slot-${i}`}
+                          className="h-12 border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 hover:text-[#D4A853] transition-all text-sm font-medium"
+                          onClick={() => handleTimeSelect(time)}
                         >
-                          {slot}
+                          {time}
                         </Button>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {bookingStep === "form" && (
+                {/* Step 3: Patient form */}
+                {bookingStep === "form" && selectedDate && selectedTime && (
                   <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b">
                       <div>
                         <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
+                          {fmtDateLabel(selectedDate, lang).label} · {selectedTime}
+                        </p>
+                        <p className="font-bold text-gray-900">
                           {t.profile.selectedSlot}
                         </p>
-                        <p className="font-bold text-gray-900">{selectedSlot}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
                         onClick={() => setBookingStep("slots")}
-                        className="text-primary h-8 px-2"
+                        className="text-xs text-[#D4A853] hover:underline flex items-center gap-1"
                       >
-                        {t.profile.change}
-                      </Button>
+                        <ChevronLeft className={`h-3 w-3 ${isRTL ? "" : "rotate-180"}`} />
+                        {t.profile.changeTime}
+                      </button>
                     </div>
 
-                    <form onSubmit={handleConfirmBooking} className="space-y-4">
+                    <form onSubmit={handleConfirm} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="name">{t.profile.patientName}</Label>
                         <Input
                           id="name"
                           placeholder={t.profile.fullName}
                           value={patientName}
-                          onChange={e => setPatientName(e.target.value)}
+                          onChange={(e) => setPatientName(e.target.value)}
                           required
-                          data-testid="input-patient-name"
                         />
                       </div>
                       <div className="space-y-2">
@@ -181,9 +297,8 @@ export default function DoctorProfile() {
                           type="tel"
                           placeholder="01xxxxxxxxx"
                           value={patientPhone}
-                          onChange={e => setPatientPhone(e.target.value)}
+                          onChange={(e) => setPatientPhone(e.target.value)}
                           required
-                          data-testid="input-patient-phone"
                         />
                       </div>
 
@@ -205,9 +320,8 @@ export default function DoctorProfile() {
 
                       <Button
                         type="submit"
-                        className="w-full mt-4 h-12 text-base font-semibold"
+                        className="w-full mt-4 h-12 text-base font-semibold bg-[#D4A853] hover:bg-[#c49a4a] text-white"
                         disabled={isSubmitting || !patientName || !patientPhone}
-                        data-testid="button-confirm-booking"
                       >
                         {isSubmitting ? t.profile.confirming : t.profile.confirmBooking}
                       </Button>
@@ -215,6 +329,7 @@ export default function DoctorProfile() {
                   </div>
                 )}
 
+                {/* Step 4: Success */}
                 {bookingStep === "success" && (
                   <div className="text-center py-6 animate-in zoom-in duration-300">
                     <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -223,9 +338,11 @@ export default function DoctorProfile() {
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingConfirmed}</h3>
                     <p className="text-gray-600 mb-6">
                       {t.profile.appointmentScheduled} <br />
-                      <span className="font-bold text-gray-900">{selectedSlot}</span>
+                      <span className="font-bold text-gray-900">
+                        {fmtDateLabel(selectedDate || "", lang).label} · {selectedTime}
+                      </span>
                     </p>
-                    <Button variant="outline" className="w-full" onClick={() => setBookingStep("slots")}>
+                    <Button variant="outline" className="w-full" onClick={resetBooking}>
                       {t.profile.bookAnother}
                     </Button>
                   </div>
