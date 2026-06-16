@@ -53,7 +53,7 @@ export default function MedicalCenterProfile() {
     toast({
       title: isRTL ? "تم حفظ الملف!" : "Profile Saved!",
       description: isRTL ? "تم حفظ تغييرات ملف مركزك بنجاح." : "Your center profile changes have been saved successfully.",
-      className: "bg-green-50 text-green-900 border-green-200",
+      className: "bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20",
     });
     setTimeout(() => setLocation("/medical-center/dashboard"), 1500);
   };

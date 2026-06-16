@@ -60,7 +60,7 @@ export default function DoctorProfileSetup() {
     toast({
       title,
       description,
-      className: 'bg-green-50 text-green-900 border-green-200'
+      className: 'bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20'
     });
     setTimeout(() => {
       setLocation('/dashboard');

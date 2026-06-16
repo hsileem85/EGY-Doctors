@@ -191,7 +191,7 @@ export default function PatientEMR() {
                           variant="outline"
                           className={
                             med.status === "active"
-                              ? "text-green-700 border-green-200 bg-green-50"
+                              ? "text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5"
                               : "text-gray-500 border-gray-200 bg-gray-50"
                           }
                         >
@@ -296,7 +296,7 @@ export default function PatientEMR() {
                             variant="outline"
                             className={
                               lab.result === "Normal"
-                                ? "text-green-700 border-green-200 bg-green-50"
+                                ? "text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5"
                                 : "text-amber-700 border-amber-200 bg-amber-50"
                             }
                           >
@@ -339,7 +339,7 @@ export default function PatientEMR() {
                             variant="outline"
                             className={
                               scan.result === "No abnormalities"
-                                ? "text-green-700 border-green-200 bg-green-50"
+                                ? "text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5"
                                 : "text-amber-700 border-amber-200 bg-amber-50"
                             }
                           >

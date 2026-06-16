@@ -235,7 +235,7 @@ export default function Home() {
                     <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300"></div>
                     <div className="flex items-center gap-1.5 font-medium">
                       <CalendarDays className="w-4 h-4 text-gray-400" />
-                      <span className="text-green-600 font-semibold">
+                      <span className="text-[#D4A853] font-semibold">
                         {doc.nextAvailable}
                       </span>
                     </div>

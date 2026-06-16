@@ -46,8 +46,8 @@ export default function PatientAuth() {
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <Card className="w-full max-w-md text-center py-8">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-[#D4A853]" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">
               {dir === "rtl" ? "تم تسجيل الدخول بنجاح!" : "Login Successful!"}

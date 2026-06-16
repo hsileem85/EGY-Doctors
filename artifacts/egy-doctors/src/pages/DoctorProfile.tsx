@@ -92,7 +92,7 @@ export default function DoctorProfile() {
                   </div>
                   <div className="hidden sm:block w-px bg-gray-200"></div>
                   <div className="flex items-center gap-2">
-                    <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold uppercase tracking-wide">
+                    <span className="bg-[#D4A853]/10 text-[#D4A853] px-2 py-1 rounded text-xs font-bold uppercase tracking-wide">
                       {t.profile.fee}
                     </span>
                     <span>{doctor.fee} {t.dashboard.egp}</span>
@@ -194,7 +194,7 @@ export default function DoctorProfile() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">{t.profile.bookingFee}</span>
-                          <span className="text-green-600 font-semibold">{t.profile.free}</span>
+                          <span className="text-[#D4A853] font-semibold">{t.profile.free}</span>
                         </div>
                         <div className="w-full h-px bg-gray-100 my-2"></div>
                         <div className="flex justify-between text-base font-bold">
@@ -217,8 +217,8 @@ export default function DoctorProfile() {
 
                 {bookingStep === "success" && (
                   <div className="text-center py-6 animate-in zoom-in duration-300">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle2 className="h-8 w-8 text-green-600" />
+                    <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 className="h-8 w-8 text-[#D4A853]" />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingConfirmed}</h3>
                     <p className="text-gray-600 mb-6">
