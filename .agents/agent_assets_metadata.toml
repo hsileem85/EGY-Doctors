@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "7RhUnI5vYUCegF1S3fM4R"
@@ -30,3 +29,27 @@ id = "AUx5yuZDGlP41yOd2VyK-"
 uri = "file://artifacts/mockup-sandbox/public/images/patient-family.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "n4r-zYOvrLfMNBB4IfNv8"
+uri = "file://screenshots/rbg-map-first.jpg"
+type = "image"
+title = "RBG 1: Map-First Discovery"
+
+[[outputs]]
+id = "95Rp08kSjzyn86qqBnNRH"
+uri = "file://screenshots/rbg-minimalist.jpg"
+type = "image"
+title = "RBG 2: Minimalist Command-Line"
+
+[[outputs]]
+id = "9kgnPFiG9dnmOaHlh0PLp"
+uri = "file://screenshots/rbg-conversational.jpg"
+type = "image"
+title = "RBG 3: Conversational Onboarding"
+
+[[outputs]]
+id = "US6YzNYHkQvM6GHfsaox_"
+uri = "file://screenshots/rbg-health-hub.jpg"
+type = "image"
+title = "RBG 4: Health Hub Dashboard"
