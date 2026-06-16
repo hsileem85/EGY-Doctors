@@ -240,19 +240,35 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Info Pills — compact inline row */}
+                  {/* Fee + Next Available */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
                     <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
-                    <span className="text-gray-300">·</span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-gray-400" />
-                      {t.locations[doc.location] ?? doc.location}
-                    </span>
                     <span className="text-gray-300">·</span>
                     <span className="flex items-center gap-1 text-[#D4A853] font-semibold">
                       <CalendarDays className="w-3 h-3" />
                       {doc.nextAvailable}
                     </span>
+                  </div>
+
+                  {/* Clinics */}
+                  <div className="flex flex-col gap-1 mb-1">
+                    {doc.clinics.map((clinic, i) => (
+                      <a
+                        key={i}
+                        href={clinic.mapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0 group"
+                      >
+                        <MapPin className="w-3 h-3 text-[#D4A853] shrink-0" />
+                        <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
+                        <span className="text-gray-400 mx-0.5">·</span>
+                        <span className="text-gray-500 truncate">{t.locations[clinic.location] ?? clinic.location}</span>
+                        <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    ))}
                   </div>
 
                 </div>
