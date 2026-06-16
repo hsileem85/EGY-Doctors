@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import { useParams } from "wouter";
-import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink, Building2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { doctors } from "@/lib/data";
+import { doctors, ClinicBranch } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
 
 /* ── build a 14-day schedule with varied slots for each day ── */
@@ -66,7 +66,14 @@ export default function DoctorProfile() {
   const isRTL = dir === "rtl";
 
   const doctor = doctors.find((d) => d.id === id);
-  const [bookingStep, setBookingStep] = useState<"calendar" | "slots" | "form" | "success">("calendar");
+
+  // If only 1 clinic, auto-select it and skip to calendar
+  const autoClinic = doctor?.clinics.length === 1 ? doctor.clinics[0] : null;
+
+  const [bookingStep, setBookingStep] = useState<"clinic" | "calendar" | "slots" | "form" | "success">(
+    autoClinic ? "calendar" : "clinic"
+  );
+  const [selectedClinic, setSelectedClinic] = useState<ClinicBranch | null>(autoClinic);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [patientName, setPatientName] = useState("");
@@ -85,6 +92,11 @@ export default function DoctorProfile() {
       </Layout>
     );
   }
+
+  const handleClinicSelect = (clinic: ClinicBranch) => {
+    setSelectedClinic(clinic);
+    setBookingStep("calendar");
+  };
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -107,7 +119,13 @@ export default function DoctorProfile() {
   };
 
   const resetBooking = () => {
-    setBookingStep("calendar");
+    if (autoClinic) {
+      setSelectedClinic(autoClinic);
+      setBookingStep("calendar");
+    } else {
+      setSelectedClinic(null);
+      setBookingStep("clinic");
+    }
     setSelectedDate(null);
     setSelectedTime(null);
     setPatientName("");
@@ -117,7 +135,7 @@ export default function DoctorProfile() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-10 max-w-4xl">
-        {/* ── Page Header with Back + Doctor Name ── */}
+        {/* ── Page Header ── */}
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => window.history.back()}
@@ -129,30 +147,105 @@ export default function DoctorProfile() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t.profile.bookAppointment}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {doctor.name} · {doctor.fee} {t.dashboard.egp}
+              {doctor.name} · {selectedClinic ? `${selectedClinic.fee} ${t.dashboard.egp}` : `${doctor.fee} ${t.dashboard.egp}`}
             </p>
-            <a
-              href={doctor.mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-[#D4A853] hover:text-[#c49a4a] hover:underline mt-1"
-            >
-              <MapPin className="h-3 w-3" />
-              {doctor.clinicAddress}
-              <ExternalLink className="h-3 w-3 opacity-60" />
-            </a>
+            {selectedClinic && (
+              <a
+                href={selectedClinic.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-[#D4A853] hover:text-[#c49a4a] hover:underline mt-1"
+              >
+                <MapPin className="h-3 w-3" />
+                {selectedClinic.name} · {selectedClinic.address}
+                <ExternalLink className="h-3 w-3 opacity-60" />
+              </a>
+            )}
           </div>
         </div>
 
-        {/* ── Smart Calendar Card ── */}
+        {/* ── Booking Steps Progress (when clinic has been chosen) ── */}
+        {selectedClinic && bookingStep !== "success" && (
+          <div className="flex items-center gap-2 mb-6 text-xs text-gray-500">
+            <span className={`flex items-center gap-1 ${bookingStep !== "clinic" ? "text-[#D4A853] font-semibold" : ""}`}>
+              <Building2 className="h-3.5 w-3.5" />
+              {selectedClinic.name}
+            </span>
+            <ChevronLeft className="h-3.5 w-3.5 rotate-180 text-gray-300" />
+            <span className={selectedDate ? "text-[#D4A853] font-semibold" : ""}>
+              {selectedDate ? fmtDateInfo(selectedDate, lang).label : (isRTL ? "اختر اليوم" : "Select Day")}
+            </span>
+            <ChevronLeft className="h-3.5 w-3.5 rotate-180 text-gray-300" />
+            <span className={selectedTime ? "text-[#D4A853] font-semibold" : ""}>
+              {selectedTime ?? (isRTL ? "اختر الوقت" : "Select Time")}
+            </span>
+          </div>
+        )}
+
+        {/* ── Smart Booking Card ── */}
         <Card className="border-primary/20 shadow-md">
           <CardContent className="p-6">
-            {/* Step 1: Calendar — all days */}
-            {bookingStep === "calendar" && (
+
+            {/* Step 0: Clinic Selection */}
+            {bookingStep === "clinic" && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="flex items-center gap-2 mb-6">
-                  <Calendar className="h-5 w-5 text-[#D4A853]" />
-                  <h2 className="text-lg font-bold text-gray-900">{t.profile.selectDay}</h2>
+                  <Building2 className="h-5 w-5 text-[#D4A853]" />
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {isRTL ? "اختر العيادة" : "Select a Clinic"}
+                  </h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-5">
+                  {isRTL
+                    ? `لدى ${doctor.name} ${doctor.clinics.length} عيادات — اختر الأقرب إليك`
+                    : `${doctor.name} has ${doctor.clinics.length} clinics — pick the one most convenient for you`}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {doctor.clinics.map((clinic, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleClinicSelect(clinic)}
+                      className="w-full text-left flex items-start gap-4 p-4 rounded-xl border border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 transition-all group"
+                    >
+                      <div className="mt-0.5 w-9 h-9 rounded-lg bg-[#D4A853]/10 group-hover:bg-[#D4A853]/20 flex items-center justify-center shrink-0 transition-colors">
+                        <Building2 className="h-4.5 w-4.5 text-[#D4A853]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 group-hover:text-[#D4A853] transition-colors">
+                          {clinic.name}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {t.locations[clinic.location] ?? clinic.location} · {clinic.address}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-sm font-bold text-gray-900">{clinic.fee}</span>
+                        <span className="text-xs text-gray-500 ml-1">{t.dashboard.egp}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Calendar */}
+            {bookingStep === "calendar" && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-[#D4A853]" />
+                    <h2 className="text-lg font-bold text-gray-900">{t.profile.selectDay}</h2>
+                  </div>
+                  {!autoClinic && (
+                    <button
+                      onClick={() => setBookingStep("clinic")}
+                      className="text-sm text-[#D4A853] hover:underline flex items-center gap-1"
+                    >
+                      <ChevronLeft className={`h-4 w-4 ${isRTL ? "" : "rotate-180"}`} />
+                      {isRTL ? "تغيير العيادة" : "Change Clinic"}
+                    </button>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {availableDates.map((dateStr) => {
@@ -176,7 +269,7 @@ export default function DoctorProfile() {
               </div>
             )}
 
-            {/* Step 2: Time slots for selected day */}
+            {/* Step 2: Time slots */}
             {bookingStep === "slots" && selectedDate && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="flex items-center justify-between mb-6">
@@ -211,10 +304,14 @@ export default function DoctorProfile() {
             )}
 
             {/* Step 3: Patient form */}
-            {bookingStep === "form" && selectedDate && selectedTime && (
+            {bookingStep === "form" && selectedDate && selectedTime && selectedClinic && (
               <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="flex items-center justify-between mb-6 pb-4 border-b">
                   <div>
+                    <p className="text-xs text-gray-500 font-medium flex items-center gap-1 mb-1">
+                      <Building2 className="h-3.5 w-3.5 text-[#D4A853]" />
+                      {selectedClinic.name}
+                    </p>
                     <h2 className="text-lg font-bold text-gray-900">
                       {fmtDateInfo(selectedDate, lang).fullDate}
                     </h2>
@@ -257,7 +354,7 @@ export default function DoctorProfile() {
                   <div className="pt-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t.profile.consultationFee}</span>
-                      <span className="font-semibold">{doctor.fee} {t.dashboard.egp}</span>
+                      <span className="font-semibold">{selectedClinic.fee} {t.dashboard.egp}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t.profile.bookingFee}</span>
@@ -266,7 +363,7 @@ export default function DoctorProfile() {
                     <div className="w-full h-px bg-gray-100 my-2"></div>
                     <div className="flex justify-between text-base font-bold">
                       <span>{t.profile.payAtClinic}</span>
-                      <span>{doctor.fee} {t.dashboard.egp}</span>
+                      <span>{selectedClinic.fee} {t.dashboard.egp}</span>
                     </div>
                   </div>
 
@@ -282,17 +379,21 @@ export default function DoctorProfile() {
             )}
 
             {/* Step 4: Success */}
-            {bookingStep === "success" && (
+            {bookingStep === "success" && selectedClinic && (
               <div className="text-center py-6 animate-in zoom-in duration-300">
                 <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle2 className="h-8 w-8 text-[#D4A853]" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingConfirmed}</h3>
-                <p className="text-gray-600 mb-2">
+                <p className="text-gray-600 mb-1">
                   {t.profile.appointmentScheduled}
                 </p>
-                <p className="font-bold text-gray-900 mb-6">
+                <p className="font-bold text-gray-900 mb-1">
                   {fmtDateInfo(selectedDate || "", lang).fullDate} · {selectedTime}
+                </p>
+                <p className="text-sm text-gray-500 mb-6 flex items-center justify-center gap-1">
+                  <Building2 className="h-3.5 w-3.5 text-[#D4A853]" />
+                  {selectedClinic.name} · {t.locations[selectedClinic.location] ?? selectedClinic.location}
                 </p>
                 <Button variant="outline" className="w-full" onClick={resetBooking}>
                   {t.profile.bookAnother}
