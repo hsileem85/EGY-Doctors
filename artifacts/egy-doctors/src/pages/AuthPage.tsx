@@ -42,6 +42,7 @@ export default function AuthPage() {
     specialty: "",
     location: "",
     medicalSubtype: "" as MedicalSubtype | "",
+    syndicateMembership: "",
     password: "",
     confirmPassword: "",
   });
@@ -122,6 +123,7 @@ export default function AuthPage() {
     nationalId: isRTL ? "الرقم القومي (اختياري)" : "National ID (Optional)",
     specialty: isRTL ? "التخصص" : "Specialty",
     location: isRTL ? "الموقع" : "Location",
+    syndicateMembership: isRTL ? "رقم عضوية النقابة الطبية" : "Medical Syndicate Membership Number",
     centerType: isRTL ? "نوع المركز" : "Center Type",
     confirmPassword: isRTL ? "تأكيد كلمة المرور" : "Confirm Password",
     loginBtn: isRTL ? "تسجيل الدخول" : "Sign In",
@@ -419,6 +421,16 @@ export default function AuthPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signupSyndicate" className="text-gray-300">{t.syndicateMembership}</Label>
+                          <Input
+                            id="signupSyndicate"
+                            value={signupData.syndicateMembership}
+                            onChange={(e) => setSignupData({ ...signupData, syndicateMembership: e.target.value })}
+                            placeholder={isRTL ? "أدخل رقم عضوية النقابة" : "Enter syndicate membership number"}
+                            className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          />
                         </div>
                       </>
                     )}
