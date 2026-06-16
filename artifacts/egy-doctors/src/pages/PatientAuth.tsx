@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Stethoscope, Eye, EyeOff, CheckCircle2, Heart, Shield, CalendarDays } from "lucide-react";
+import { Stethoscope, Eye, EyeOff, CheckCircle2, Heart, Shield, CalendarDays, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,12 +136,25 @@ export default function PatientAuth() {
         <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
           <Card className="w-full max-w-lg border-[#334155] bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl shadow-black/40">
             <CardContent className="p-6 lg:p-8">
-              {/* Mobile logo */}
-              <div className="lg:hidden flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-                  <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+              {/* Mobile logo + back */}
+              <div className="lg:hidden flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
+                    <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+                  </div>
+                  <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
                 </div>
-                <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
+                <Link href="/" className="text-gray-400 hover:text-[#D4A853] transition-colors">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </div>
+
+              {/* Desktop back button */}
+              <div className="hidden lg:flex items-center mb-4">
+                <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>{dir === "rtl" ? "العودة للرئيسية" : "Back to Home"}</span>
+                </Link>
               </div>
 
               <Tabs defaultValue="login" className="w-full">
@@ -157,11 +170,11 @@ export default function PatientAuth() {
                 {/* Login Tab */}
                 <TabsContent value="login">
                   <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="text-center mb-6">
-                      <h2 className="text-xl font-bold text-white">
+                    <div className="mb-6">
+                      <h2 className="text-xl font-bold text-white text-start">
                         {dir === "rtl" ? "تسجيل دخول المريض" : "Patient Login"}
                       </h2>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-gray-400 mt-1 text-start">
                         {dir === "rtl"
                           ? "سجل دخولك لحجز المواعيد وإدارة تاريخك الصحي."
                           : "Sign in to book appointments and manage your health history."}
@@ -224,11 +237,11 @@ export default function PatientAuth() {
                 {/* Sign Up Tab */}
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="text-center mb-6">
-                      <h2 className="text-xl font-bold text-white">
+                    <div className="mb-6">
+                      <h2 className="text-xl font-bold text-white text-start">
                         {dir === "rtl" ? "إنشاء حساب مريض" : "Patient Sign Up"}
                       </h2>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-gray-400 mt-1 text-start">
                         {dir === "rtl"
                           ? "أنشئ حسابك الآن وابدأ في الحجز مع أفضل الأطباء."
                           : "Create your account now and start booking with top doctors."}

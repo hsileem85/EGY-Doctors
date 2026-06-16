@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Stethoscope, Eye, EyeOff, CheckCircle2, Shield, CalendarDays, Award } from "lucide-react";
+import { Stethoscope, Eye, EyeOff, CheckCircle2, Shield, CalendarDays, Award, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,12 +161,25 @@ export default function DoctorAuth() {
           <Card className="w-full max-w-lg border-[#334155] bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl shadow-black/40">
             <Tabs defaultValue="login" className="w-full">
               <CardHeader className="text-center pb-0 pt-6 px-6">
-                {/* Mobile logo */}
-                <div className="lg:hidden flex items-center gap-3 mb-4 justify-center">
-                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-                    <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+                {/* Mobile logo + back */}
+                <div className="lg:hidden flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
+                      <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+                    </div>
+                    <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
                   </div>
-                  <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
+                  <Link href="/" className="text-gray-400 hover:text-[#D4A853] transition-colors">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Link>
+                </div>
+
+                {/* Desktop back button */}
+                <div className="hidden lg:flex items-center mb-4">
+                  <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>{dir === "rtl" ? "العودة للرئيسية" : "Back to Home"}</span>
+                  </Link>
                 </div>
 
                 <TabsList className="grid w-full grid-cols-2 bg-[#0F172A]/60 border border-[#334155] p-1">
@@ -183,11 +196,11 @@ export default function DoctorAuth() {
                 {/* Login Tab */}
                 <TabsContent value="login">
                   <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="text-center mb-6">
-                      <h2 className="text-xl font-bold text-white">
+                    <div className="mb-6">
+                      <h2 className="text-xl font-bold text-white text-start">
                         {dir === "rtl" ? "تسجيل دخول الطبيب" : "Doctor Login"}
                       </h2>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-gray-400 mt-1 text-start">
                         {dir === "rtl"
                           ? "سجل دخولك لإدارة عيادتك والمواعيد."
                           : "Sign in to manage your clinic and appointments."}
@@ -249,11 +262,11 @@ export default function DoctorAuth() {
 
                 {/* Sign Up Tab with 2-step wizard */}
                 <TabsContent value="signup">
-                  <div className="text-center mb-4">
-                    <h2 className="text-xl font-bold text-white">
+                  <div className="mb-4">
+                    <h2 className="text-xl font-bold text-white text-start">
                       {dir === "rtl" ? "إنشاء حساب طبيب" : "Doctor Sign Up"}
                     </h2>
-                    <p className="text-sm text-gray-400 mt-1 font-medium">
+                    <p className="text-sm text-gray-400 mt-1 font-medium text-start">
                       {dir === "rtl"
                         ? `الخطوة ${signupStep} من 2: ${signupStep === 1 ? "بيانات الحساب" : "المعلومات المهنية"}`
                         : `Step ${signupStep} of 2: ${signupStep === 1 ? "Account Details" : "Professional Info"}`}

@@ -1,4 +1,4 @@
-import { HeartPulse } from "lucide-react";
+import { HeartPulse, Newspaper, Search, Info } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -21,6 +21,39 @@ export function Navbar() {
           </span>
         </Link>
         <div className="flex items-center gap-4">
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center gap-1">
+            <Link href="/search">
+              <Button
+                variant="ghost"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                {lang === "ar" ? "البحث" : "Search"}
+              </Button>
+            </Link>
+            <Link href="/magazine">
+              <Button
+                variant="ghost"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+              >
+                <Newspaper className="h-4 w-4 mr-1" />
+                {lang === "ar" ? "المجلة" : "Magazine"}
+              </Button>
+            </Link>
+            <Link href="/about">
+              <Button
+                variant="ghost"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+              >
+                <Info className="h-4 w-4 mr-1" />
+                {lang === "ar" ? "من نحن" : "About"}
+              </Button>
+            </Link>
+          </div>
+
+          <div className="w-px h-6 bg-[#334155] hidden md:block" />
+
           <button
             onClick={() => setLang(lang === "en" ? "ar" : "en")}
             data-testid="button-toggle-language"

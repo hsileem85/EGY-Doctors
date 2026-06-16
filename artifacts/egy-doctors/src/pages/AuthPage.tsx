@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Stethoscope, Eye, EyeOff, CheckCircle2, Building2, User, Shield, Heart } from "lucide-react";
+import { Stethoscope, Eye, EyeOff, CheckCircle2, Building2, User, Shield, Heart, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,12 +229,25 @@ export default function AuthPage() {
         <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
           <Card className="w-full max-w-lg border-[#334155] bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl shadow-black/40">
             <CardContent className="p-6 lg:p-8">
-              {/* Mobile logo */}
-              <div className="lg:hidden flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-                  <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+              {/* Mobile logo + back */}
+              <div className="lg:hidden flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
+                    <Stethoscope className="h-5 w-5 text-[#D4A853]" />
+                  </div>
+                  <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
                 </div>
-                <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
+                <Link href="/" className="text-gray-400 hover:text-[#D4A853] transition-colors">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </div>
+
+              {/* Desktop back button */}
+              <div className="hidden lg:flex items-center mb-4">
+                <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>{isRTL ? "العودة للرئيسية" : "Back to Home"}</span>
+                </Link>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -260,9 +273,9 @@ export default function AuthPage() {
                 {/* Sign In */}
                 <TabsContent value="signin">
                   <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="text-center mb-6">
-                      <h2 className="text-xl font-bold text-white">{t.signInTitle}</h2>
-                      <p className="text-sm text-gray-400 mt-1">{t.signInSubtitle}</p>
+                    <div className="mb-6">
+                      <h2 className="text-xl font-bold text-white text-start">{t.signInTitle}</h2>
+                      <p className="text-sm text-gray-400 mt-1 text-start">{t.signInSubtitle}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -312,9 +325,9 @@ export default function AuthPage() {
                 {/* Sign Up */}
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="text-center mb-6">
-                      <h2 className="text-xl font-bold text-white">{t.signUpTitle}</h2>
-                      <p className="text-sm text-gray-400 mt-1">{t.signUpSubtitle}</p>
+                    <div className="mb-6">
+                      <h2 className="text-xl font-bold text-white text-start">{t.signUpTitle}</h2>
+                      <p className="text-sm text-gray-400 mt-1 text-start">{t.signUpSubtitle}</p>
                     </div>
 
                     {/* Common fields */}
@@ -488,7 +501,7 @@ export default function AuthPage() {
               </Tabs>
 
               {/* Footer text */}
-              <div className="mt-6 text-center text-xs text-gray-500">
+              <div className="mt-6 text-start text-xs text-gray-500">
                 {isRTL
                   ? "بالتسجيل، أنت توافق على شروط الخدمة وسياسة الخصوصية"
                   : "By signing up, you agree to our Terms of Service and Privacy Policy"}
