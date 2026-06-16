@@ -269,9 +269,19 @@ export default function AuthPage() {
                 {/* Sign In */}
                 <TabsContent value="signin">
                   <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <h2 className="text-xl font-bold text-white text-start">{t.signInTitle}</h2>
                       <p className="text-sm text-gray-400 mt-1 text-start">{t.signInSubtitle}</p>
+                    </div>
+
+                    {/* Who are you? */}
+                    <div className="mb-2">
+                      <p className="text-sm font-medium text-gray-300 mb-3">{t.whoAreYou}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <TypeButton type="patient" icon={User} label={t.patient} />
+                        <TypeButton type="doctor" icon={Stethoscope} label={t.doctor} />
+                        <TypeButton type="medical" icon={Building2} label={t.medical} />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
