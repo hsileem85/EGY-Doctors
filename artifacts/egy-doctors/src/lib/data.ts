@@ -14,6 +14,7 @@ export interface Doctor {
   bio: string;
   image: string;
   clinicAddress: string;
+  mapUrl: string;
   slots: string[];
   distance: string;
   rating: number;
@@ -42,6 +43,7 @@ export const doctors: Doctor[] = [
     bio: "Senior Consultant Cardiologist with 15 years of experience specializing in heart failure and preventive cardiology.",
     image: "https://randomuser.me/api/portraits/men/32.jpg",
     clinicAddress: "15 South Teseen St, 4th Floor, New Cairo",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=15+South+Teseen+St,+New+Cairo,+Egypt",
     slots: ["Today 4:00 PM", "Tomorrow 9:00 AM", "Thu 5:30 PM", "Fri 11:00 AM"],
     distance: "1.2 km",
     rating: 4.9,
@@ -59,6 +61,7 @@ export const doctors: Doctor[] = [
     bio: "Expert dermatologist specializing in cosmetic dermatology, laser treatments, and skin conditions.",
     image: "https://randomuser.me/api/portraits/women/44.jpg",
     clinicAddress: "8A 26th of July Corridor, Zamalek",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=8A+26th+of+July+Corridor,+Zamalek,+Cairo,+Egypt",
     slots: ["Today 2:00 PM", "Tomorrow 1:00 PM", "Wed 6:00 PM", "Sat 10:00 AM"],
     distance: "2.5 km",
     rating: 4.8,
@@ -76,6 +79,7 @@ export const doctors: Doctor[] = [
     bio: "Consultant Orthopedic Surgeon focusing on sports injuries and joint replacement surgeries.",
     image: "https://randomuser.me/api/portraits/men/65.jpg",
     clinicAddress: "45 Road 9, Maadi",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=45+Road+9,+Maadi,+Cairo,+Egypt",
     slots: ["Today 5:00 PM", "Tomorrow 4:30 PM", "Thu 2:00 PM", "Mon 12:00 PM"],
     distance: "3.8 km",
     rating: 4.9,
@@ -93,6 +97,7 @@ export const doctors: Doctor[] = [
     bio: "Compassionate pediatrician dedicated to child health, development, and vaccination programs.",
     image: "https://randomuser.me/api/portraits/women/68.jpg",
     clinicAddress: "12 El Hegaz St, Heliopolis",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=12+El+Hegaz+St,+Heliopolis,+Cairo,+Egypt",
     slots: ["Today 10:00 AM", "Tomorrow 11:30 AM", "Wed 9:00 AM", "Sun 3:00 PM"],
     distance: "5.1 km",
     rating: 4.7,
@@ -110,6 +115,7 @@ export const doctors: Doctor[] = [
     bio: "Renowned neurologist treating complex neurological disorders, migraines, and epilepsy.",
     image: "https://randomuser.me/api/portraits/men/82.jpg",
     clinicAddress: "22 Mossadak St, Dokki",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=22+Mossadak+St,+Dokki,+Giza,+Egypt",
     slots: ["Today 6:00 PM", "Tomorrow 7:00 PM", "Thu 8:00 PM", "Fri 4:00 PM"],
     distance: "4.2 km",
     rating: 4.8,

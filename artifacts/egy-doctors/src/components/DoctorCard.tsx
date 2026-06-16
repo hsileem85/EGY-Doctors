@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, Stethoscope, Star } from "lucide-react";
+import { MapPin, Stethoscope, Star, Navigation, Calendar, ArrowRight } from "lucide-react";
 import { Doctor } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,30 +73,62 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
       {/* Actions */}
       <div className="mt-auto pt-3 border-t border-gray-100">
         {showSlots ? (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 -mb-1 scrollbar-hide">
-              {doctor.slots.slice(0, 3).map((slot, i) => (
-                <Link key={i} href={`/doctor/${doctor.id}?slot=${encodeURIComponent(slot)}`}>
+          <div className="flex flex-col gap-3">
+            {/* Row 1: Distance + Book + Profile */}
+            <div className="flex items-center justify-between gap-3">
+              {/* Distance with map link */}
+              <a
+                href={doctor.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-[#D4A853] transition-colors"
+              >
+                <Navigation className="h-3.5 w-3.5 text-[#D4A853]" />
+                <span className="font-medium">{doctor.distance}</span>
+                <span className="text-xs text-gray-400 uppercase">{isRTL ? "متباعد" : "Away"}</span>
+              </a>
+
+              {/* Book + Profile buttons */}
+              <div className="flex items-center gap-2">
+                {/* Calendar slot selector */}
+                <div className="relative group">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="whitespace-nowrap text-xs h-8 px-2.5"
-                    data-testid={`button-book-slot-${doctor.id}-${i}`}
+                    className="h-9 px-3 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
                   >
-                    {slot}
+                    <Calendar className="h-4 w-4 mr-1.5" />
+                    {isRTL ? "الحجز" : "Book"}
+                  </Button>
+                  {/* Dropdown slots */}
+                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 p-2 hidden group-hover:block z-20">
+                    <p className="text-xs text-gray-500 px-2 py-1 mb-1">{isRTL ? "اختر موعد" : "Pick a slot"}</p>
+                    {doctor.slots.slice(0, 4).map((slot, i) => (
+                      <Link key={i} href={`/doctor/${doctor.id}?slot=${encodeURIComponent(slot)}`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-sm h-8 hover:bg-primary/5 hover:text-primary"
+                        >
+                          {slot}
+                        </Button>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <Link href={`/doctor/${doctor.id}`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 h-9 px-4 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
+                    data-testid={`link-doctor-profile-${doctor.id}`}
+                  >
+                    {t.card.viewProfile}
                   </Button>
                 </Link>
-              ))}
+              </div>
             </div>
-            <Link href={`/doctor/${doctor.id}`}>
-              <Button
-                size="sm"
-                className="shrink-0 h-8"
-                data-testid={`link-doctor-profile-${doctor.id}`}
-              >
-                {t.card.viewProfile}
-              </Button>
-            </Link>
           </div>
         ) : (
           <Link href={`/doctor/${doctor.id}`}>
