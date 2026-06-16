@@ -142,7 +142,7 @@ export default function Home() {
         </div>
 
         {/* Main List */}
-        <main className="max-w-2xl mx-auto px-4 py-8">
+        <main className="max-w-3xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
@@ -228,29 +228,31 @@ export default function Home() {
                 </div>
 
                 {/* Actions */}
-                <div className="w-full sm:w-[80px] flex flex-col gap-1 shrink-0 sm:border-l border-gray-100 sm:pl-2 sm:py-0.5 mt-1 sm:mt-0">
+                <div className="w-full sm:w-[170px] flex flex-col gap-1.5 shrink-0 sm:border-l border-gray-100 sm:pl-3 sm:py-0 mt-1 sm:mt-0">
                   <Link href={`/doctor/${doc.id}`}>
                     <Button className="w-full bg-[#0F172A] text-white rounded-lg py-2 font-semibold text-xs hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-auto">
                       {isRTL ? "احجز" : "Book"}
                     </Button>
                   </Link>
-                  <Link href={`/doctor/${doc.id}`}>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                  <div className="flex gap-1.5">
+                    <a
+                      href={doc.mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/5 hover:bg-[#D4A853]/10 rounded-lg border border-[#D4A853]/20 hover:border-[#D4A853]/40 py-1.5 transition-colors"
                     >
-                      {isRTL ? "الملف" : "Profile"}
-                    </Button>
-                  </Link>
-                  <a
-                    href={doc.mapUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] transition-colors py-0.5"
-                  >
-                    <Navigation className="w-3 h-3" />
-                    {isRTL ? "الخريطة" : "Map"}
-                  </a>
+                      <Navigation className="w-3 h-3" />
+                      {isRTL ? "الخريطة" : "Map"}
+                    </a>
+                    <Link href={`/doctor/${doc.id}`} className="flex-1">
+                      <Button
+                        variant="outline"
+                        className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                      >
+                        {isRTL ? "الملف" : "Profile"}
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
