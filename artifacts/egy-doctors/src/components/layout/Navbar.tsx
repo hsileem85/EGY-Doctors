@@ -18,29 +18,19 @@ export function Navbar() {
             <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
               <span className="text-white">EG</span>
               {/* Stethoscope Y */}
-              <svg viewBox="0 0 24 36" className="inline-block w-[36px] h-[44px] ml-[1px]" fill="none">
-                {/* Left Y arm - thick stroke */}
-                <path d="M12 16 C10 13, 7 9, 4 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-                {/* Right Y arm - thick stroke */}
-                <path d="M12 16 C14 13, 17 9, 20 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-                {/* Bottom stem - thick stroke */}
-                <path d="M12 16 L12 25" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-                {/* Chest piece / bell - large filled circle */}
-                <circle cx="12" cy="29" r="6" fill="#D4A853"/>
-                <circle cx="12" cy="29" r="3.5" fill="white"/>
-                {/* Left ear tip - large filled */}
-                <circle cx="4" cy="3" r="4" fill="#D4A853"/>
-                <circle cx="4" cy="3" r="2" fill="white"/>
-                {/* Right ear tip - large filled */}
-                <circle cx="20" cy="3" r="4" fill="#D4A853"/>
-                <circle cx="20" cy="3" r="2" fill="white"/>
-                {/* Connector joint */}
-                <circle cx="12" cy="16" r="3.5" fill="#D4A853"/>
-                <circle cx="12" cy="16" r="1.5" fill="white"/>
-                {/* White highlight on tubes for depth */}
-                <path d="M12 16 C10 13, 7 9, 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
-                <path d="M12 16 C14 13, 17 9, 20 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
-                <path d="M12 16 L12 25" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+              <svg viewBox="0 0 18 24" className="inline-block w-[20px] h-[26px] ml-[1px]" fill="none">
+                {/* Thick Y arms + bottom tube */}
+                <path d="M9 12 C7 9, 5 6, 4 4" stroke="#D4A853" strokeWidth="3" strokeLinecap="round" fill="none"/>
+                <path d="M9 12 C11 9, 13 6, 14 4" stroke="#D4A853" strokeWidth="3" strokeLinecap="round" fill="none"/>
+                <path d="M9 12 L9 18" stroke="#D4A853" strokeWidth="3" strokeLinecap="round"/>
+                {/* Chest piece at bottom */}
+                <circle cx="9" cy="21" r="4.5" fill="#D4A853"/>
+                <circle cx="9" cy="21" r="2" fill="white"/>
+                {/* Ear tips at top */}
+                <circle cx="4" cy="3" r="3" fill="#D4A853"/>
+                <circle cx="14" cy="3" r="3" fill="#D4A853"/>
+                {/* Center joint */}
+                <circle cx="9" cy="12" r="2.5" fill="#D4A853"/>
               </svg>
               <span className="text-[#D4A853]"> Doctors</span>
             </span>
