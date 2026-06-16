@@ -79,13 +79,17 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
               href={doctor.mapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm font-medium text-[#D4A853] hover:text-[#c49a4a] hover:underline transition-colors"
+              className="flex items-center gap-2 text-sm font-medium bg-[#D4A853]/5 hover:bg-[#D4A853]/10 text-[#D4A853] border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-2 transition-colors"
+              title={isRTL ? "افتح في خرائط Google" : "Open in Google Maps"}
             >
               <Navigation className="h-3.5 w-3.5" />
               <span>{doctor.distance}</span>
-              <span className="text-xs text-gray-400 font-normal uppercase">
-                {isRTL ? "متباعد" : "Away"}
+              <span className="text-[10px] font-normal uppercase tracking-wider text-[#D4A853]/70">
+                {isRTL ? "افتح الخريطة" : "Map"}
               </span>
+              <svg className="h-3 w-3 ml-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
             </a>
 
             {/* Buttons */}

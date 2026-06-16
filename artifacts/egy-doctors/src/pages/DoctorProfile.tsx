@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams } from "wouter";
-import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -131,6 +131,16 @@ export default function DoctorProfile() {
             <p className="text-sm text-gray-500 mt-0.5">
               {doctor.name} · {doctor.fee} {t.dashboard.egp}
             </p>
+            <a
+              href={doctor.mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-[#D4A853] hover:text-[#c49a4a] hover:underline mt-1"
+            >
+              <MapPin className="h-3 w-3" />
+              {doctor.clinicAddress}
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </a>
           </div>
         </div>
 
