@@ -28,9 +28,11 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-bold text-gray-900 text-base leading-tight">
-              {doctor.name}
-            </h3>
+            <Link href={`/profile/${doctor.id}`}>
+              <h3 className="font-bold text-gray-900 text-base leading-tight hover:text-primary transition-colors cursor-pointer">
+                {doctor.name}
+              </h3>
+            </Link>
             <Badge
               variant="secondary"
               className="bg-primary/5 text-primary hover:bg-primary/10 border-0 text-xs px-2 py-0.5 shrink-0 font-semibold"
