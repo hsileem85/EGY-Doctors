@@ -77,6 +77,36 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Hero Text */}
+            <div className="text-center py-2">
+              <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5 mb-4">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+                <span className="text-xs font-medium text-gray-300 tracking-wide">
+                  {isRTL ? "المنصة الطبية الأولى في مصر" : "Egypt's #1 Medical Booking Platform"}
+                </span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-3">
+                {isRTL ? (
+                  <>
+                    ابحث واحجز مع{" "}
+                    <span className="text-[#D4A853]">أفضل الأطباء</span>{" "}
+                    في مصر
+                  </>
+                ) : (
+                  <>
+                    Find &amp; Book the{" "}
+                    <span className="text-[#D4A853]">Best Doctors</span>{" "}
+                    in Egypt
+                  </>
+                )}
+              </h1>
+              <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
+                {isRTL
+                  ? "تواصل مع أكثر من 2,500 طبيب موثق. اقرأ التقييمات، قارن الأسعار، واحجز في ثوانٍ."
+                  : "Connect with 2,500+ verified medical professionals. Read reviews, compare fees, and book in seconds."}
+              </p>
+            </div>
+
             {/* Single Pill Search */}
             <form
               onSubmit={handleSearch}
