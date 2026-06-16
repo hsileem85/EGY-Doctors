@@ -142,7 +142,7 @@ export default function Home() {
         </div>
 
         {/* Main List */}
-        <main className="max-w-3xl mx-auto px-4 py-5">
+        <main className="max-w-5xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
