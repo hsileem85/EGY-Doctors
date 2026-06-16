@@ -62,13 +62,18 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         {doctor.bio}
       </p>
 
-      {/* Location */}
-      <div className="flex items-start gap-1.5 text-gray-500 text-sm mb-4">
-        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-        <span className="line-clamp-1">
+      {/* Location — clickable address that opens Maps */}
+      <a
+        href={doctor.mapUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-start gap-1.5 text-sm text-gray-500 hover:text-[#D4A853] transition-colors mb-4 group"
+      >
+        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 group-hover:text-[#D4A853]" />
+        <span className="line-clamp-1 group-hover:underline">
           {location} {isRTL ? "\u00b7" : "\u00b7"} {doctor.clinicAddress}
         </span>
-      </div>
+      </a>
 
       {/* ── Bottom Action Area ── */}
       <div className="mt-auto pt-3 border-t border-gray-100">
