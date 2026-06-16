@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { useLanguage } from "@/context/LanguageContext";
 
 export function Footer() {
@@ -19,9 +20,9 @@ export function Footer() {
           <a href="#" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-terms">
             {t.footer.terms}
           </a>
-          <a href="#" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-contact">
+          <Link href="/contact" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-contact">
             {t.footer.contact}
-          </a>
+          </Link>
         </div>
       </div>
     </footer>

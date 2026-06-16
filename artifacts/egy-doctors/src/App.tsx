@@ -18,6 +18,7 @@ import PatientEMR from "@/pages/PatientEMR";
 import MedicalCenterDashboard from "@/pages/MedicalCenterDashboard";
 import MedicalCenterProfile from "@/pages/MedicalCenterProfile";
 import Magazine from "@/pages/Magazine";
+import ContactUs from "@/pages/ContactUs";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/medical-center/dashboard" component={MedicalCenterDashboard} />
       <Route path="/medical-center/profile-setup" component={MedicalCenterProfile} />
       <Route path="/magazine" component={Magazine} />
+      <Route path="/contact" component={ContactUs} />
       <Route component={NotFound} />
     </Switch>
   );
