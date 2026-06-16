@@ -30,7 +30,7 @@ export default function AuthPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
 
-  const [userType, setUserType] = useState<UserType>("patient");
+  const [userType, setUserType] = useState<UserType>("doctor");
 
   const [loginData, setLoginData] = useState({ phone: "", password: "" });
 
@@ -266,16 +266,6 @@ export default function AuthPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* User Type Selector */}
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-gray-300 mb-3">{t.whoAreYou}</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <TypeButton type="patient" icon={User} label={t.patient} />
-                    <TypeButton type="doctor" icon={Stethoscope} label={t.doctor} />
-                    <TypeButton type="medical" icon={Building2} label={t.medical} />
-                  </div>
-                </div>
-
                 {/* Sign In */}
                 <TabsContent value="signin">
                   <form onSubmit={handleLogin} className="space-y-4">
@@ -331,9 +321,19 @@ export default function AuthPage() {
                 {/* Sign Up */}
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <h2 className="text-xl font-bold text-white text-start">{t.signUpTitle}</h2>
                       <p className="text-sm text-gray-400 mt-1 text-start">{t.signUpSubtitle}</p>
+                    </div>
+
+                    {/* Who are you? */}
+                    <div className="mb-2">
+                      <p className="text-sm font-medium text-gray-300 mb-3">{t.whoAreYou}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <TypeButton type="patient" icon={User} label={t.patient} />
+                        <TypeButton type="doctor" icon={Stethoscope} label={t.doctor} />
+                        <TypeButton type="medical" icon={Building2} label={t.medical} />
+                      </div>
                     </div>
 
                     {/* Common fields */}
