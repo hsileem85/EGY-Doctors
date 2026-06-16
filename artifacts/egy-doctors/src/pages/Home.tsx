@@ -142,7 +142,7 @@ export default function Home() {
         </div>
 
         {/* Main List */}
-        <main className="max-w-4xl mx-auto px-4 py-10">
+        <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
@@ -173,13 +173,13 @@ export default function Home() {
             {sortedDoctors.map((doc) => (
               <div
                 key={doc.id}
-                className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-5 sm:gap-6 items-start"
+                className="bg-white rounded-2xl p-3 sm:p-4 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-3 sm:gap-4 items-start"
               >
                 {/* Avatar */}
                 <div className="relative shrink-0">
                   <img
                     src={doc.image}
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-sm border border-gray-100"
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shadow-sm border border-gray-100"
                     alt={doc.name}
                   />
                   <div className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm border border-gray-100">
@@ -244,7 +244,7 @@ export default function Home() {
                 </div>
 
                 {/* Actions */}
-                <div className="w-full sm:w-[120px] flex flex-col gap-2 shrink-0 sm:border-l border-gray-100 sm:pl-4 sm:py-1 mt-2 sm:mt-0">
+                <div className="w-full sm:w-[100px] flex flex-col gap-1.5 shrink-0 sm:border-l border-gray-100 sm:pl-3 sm:py-1 mt-2 sm:mt-0">
                   <Link href={`/doctor/${doc.id}`}>
                     <Button className="w-full bg-[#0F172A] text-white rounded-xl py-2.5 font-semibold text-sm hover:bg-[#1E293B] shadow-sm hover:shadow-md transition-all active:scale-[0.98] h-auto">
                       {isRTL ? "احجز" : "Book"}
