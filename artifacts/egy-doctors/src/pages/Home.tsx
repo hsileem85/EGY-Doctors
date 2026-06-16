@@ -244,7 +244,7 @@ export default function Home() {
                       <Navigation className="w-3 h-3" />
                       {isRTL ? "الخريطة" : "Map"}
                     </a>
-                    <Link href={`/doctor/${doc.id}`} className="flex-1">
+                    <Link href={`/profile/${doc.id}`} className="flex-1">
                       <Button
                         variant="outline"
                         className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
