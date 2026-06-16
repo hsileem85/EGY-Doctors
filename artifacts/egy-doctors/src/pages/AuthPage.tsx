@@ -47,11 +47,15 @@ export default function AuthPage() {
     confirmPassword: "",
   });
 
-  // Read tab from URL query
+  // Read tab and type from URL query
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("tab") === "signup") {
       setActiveTab("signup");
+    }
+    const typeParam = params.get("type");
+    if (typeParam === "doctor" || typeParam === "medical" || typeParam === "patient") {
+      setUserType(typeParam);
     }
   }, []);
 
