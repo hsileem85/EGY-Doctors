@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,297 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /admin/doctors:
+    get:
+      operationId: listDoctors
+      tags: [admin]
+      summary: List all doctors
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Doctor"
+  /admin/doctors/pending:
+    get:
+      operationId: listPendingDoctors
+      tags: [admin]
+      summary: List pending doctors
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Doctor"
+  /admin/doctors/{id}/approve:
+    patch:
+      operationId: approveDoctor
+      tags: [admin]
+      summary: Approve a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+  /admin/doctors/{id}/reject:
+    patch:
+      operationId: rejectDoctor
+      tags: [admin]
+      summary: Reject a doctor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+  /admin/doctors/{id}/onboarding:
+    patch:
+      operationId: updateDoctorOnboarding
+      tags: [admin]
+      summary: Update doctor onboarding status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+  /admin/specialties:
+    get:
+      operationId: listSpecialties
+      tags: [admin]
+      summary: List all specialties
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Specialty"
+    post:
+      operationId: createSpecialty
+      tags: [admin]
+      summary: Create a specialty
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpecialtyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Specialty"
+  /admin/specialties/{id}:
+    put:
+      operationId: updateSpecialty
+      tags: [admin]
+      summary: Update a specialty
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpecialtyUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Specialty"
+    delete:
+      operationId: deleteSpecialty
+      tags: [admin]
+      summary: Delete a specialty
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: No Content
+  /admin/cities:
+    get:
+      operationId: listCities
+      tags: [admin]
+      summary: List all cities
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/City"
+    post:
+      operationId: createCity
+      tags: [admin]
+      summary: Create a city
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CityInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/City"
+  /admin/cities/{id}:
+    put:
+      operationId: updateCity
+      tags: [admin]
+      summary: Update a city
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CityUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/City"
+    delete:
+      operationId: deleteCity
+      tags: [admin]
+      summary: Delete a city
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: No Content
+  /admin/areas:
+    get:
+      operationId: listAreas
+      tags: [admin]
+      summary: List all areas
+      parameters:
+        - name: cityId
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Area"
+    post:
+      operationId: createArea
+      tags: [admin]
+      summary: Create an area
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AreaInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Area"
+  /admin/areas/{id}:
+    put:
+      operationId: updateArea
+      tags: [admin]
+      summary: Update an area
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AreaUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Area"
+    delete:
+      operationId: deleteArea
+      tags: [admin]
+      summary: Delete an area
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: No Content
 components:
   schemas:
     HealthStatus:
@@ -33,4 +326,150 @@ components:
           type: string
       required:
         - status
-
+    Doctor:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        name: { type: string }
+        specialtyId: { type: [integer, "null"] }
+        cityId: { type: [integer, "null"] }
+        areaId: { type: [integer, "null"] }
+        clinicAddress: { type: [string, "null"] }
+        bio: { type: [string, "null"] }
+        image: { type: [string, "null"] }
+        fee: { type: [integer, "null"] }
+        experience: { type: [integer, "null"] }
+        license: { type: [string, "null"] }
+        rating: { type: number }
+        reviews: { type: integer }
+        accountStatus: { type: string }
+        onboardingStatus: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - userId
+        - name
+        - accountStatus
+        - onboardingStatus
+        - createdAt
+        - updatedAt
+    OnboardingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+      required:
+        - status
+    Specialty:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameAr: { type: string }
+        description: { type: [string, "null"] }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - name
+        - nameAr
+        - displayOrder
+        - isActive
+        - createdAt
+        - updatedAt
+    SpecialtyInput:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: string }
+        description: { type: string }
+        displayOrder: { type: integer }
+      required:
+        - name
+        - nameAr
+    SpecialtyUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: string }
+        description: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+    City:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - name
+        - nameAr
+        - displayOrder
+        - isActive
+        - createdAt
+        - updatedAt
+    CityInput:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+      required:
+        - name
+        - nameAr
+    CityUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+    Area:
+      type: object
+      properties:
+        id: { type: integer }
+        cityId: { type: integer }
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - cityId
+        - name
+        - nameAr
+        - displayOrder
+        - isActive
+        - createdAt
+        - updatedAt
+    AreaInput:
+      type: object
+      properties:
+        cityId: { type: integer }
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+      required:
+        - cityId
+        - name
+        - nameAr
+    AreaUpdate:
+      type: object
+      properties:
+        cityId: { type: integer }
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }

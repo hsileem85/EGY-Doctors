@@ -1,4 +1,4 @@
-import { Newspaper, Search, Info } from "lucide-react";
+import { Newspaper, Search, Info, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -64,6 +64,15 @@ export function Navbar() {
               >
                 <Info className="h-4 w-4 mr-1" />
                 {lang === "ar" ? "من نحن" : "About"}
+              </Button>
+            </Link>
+            <Link href="/admin">
+              <Button
+                variant="ghost"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+              >
+                <ShieldCheck className="h-4 w-4 mr-1" />
+                {lang === "ar" ? "الإدارة" : "Admin"}
               </Button>
             </Link>
           </div>
