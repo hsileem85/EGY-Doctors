@@ -13,7 +13,7 @@ export default function PatientAuth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [loginData, setLoginData] = useState({ phone: "", password: "" });
   const [signupData, setSignupData] = useState({
     fullName: "",
     email: "",
@@ -182,18 +182,18 @@ export default function PatientAuth() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="loginEmail" className="text-gray-300">
-                        {dir === "rtl" ? "البريد الإلكتروني" : "Email"}
+                      <Label htmlFor="loginPhone" className="text-gray-300">
+                        {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
                       </Label>
                       <Input
-                        id="loginEmail"
-                        type="email"
-                        value={loginData.email}
+                        id="loginPhone"
+                        type="tel"
+                        value={loginData.phone}
                         onChange={(e) =>
-                          setLoginData({ ...loginData, email: e.target.value })
+                          setLoginData({ ...loginData, phone: e.target.value })
                         }
-                        placeholder={dir === "rtl" ? "patient@example.com" : "patient@example.com"}
-                        data-testid="input-patient-login-email"
+                        placeholder={dir === "rtl" ? "01xxxxxxxxx" : "01xxxxxxxxx"}
+                        data-testid="input-patient-login-phone"
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>

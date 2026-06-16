@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { specialties, locations } from "@/lib/data";
 
 export default function DoctorRegister() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +27,7 @@ export default function DoctorRegister() {
     location: "",
     experience: "",
     license: "",
+    syndicateMembership: "",
     agreeTerms: false
   });
 
@@ -206,6 +207,18 @@ export default function DoctorRegister() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="syndicateMembership">
+                  {lang === "ar" ? "رقم عضوية النقابة الطبية" : "Medical Syndicate Membership Number"}
+                </Label>
+                <Input 
+                  id="syndicateMembership" 
+                  value={formData.syndicateMembership} 
+                  onChange={e => setFormData({...formData, syndicateMembership: e.target.value})} 
+                  data-testid="input-register-syndicate"
+                />
+              </div>
+
               <div className="flex items-center space-x-2 space-x-reverse mt-4 pt-2">
                 <Checkbox 
                   id="terms" 
@@ -225,7 +238,7 @@ export default function DoctorRegister() {
                 <Button 
                   type="submit"
                   className="w-2/3" 
-                  disabled={!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.agreeTerms}
+                  disabled={!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.syndicateMembership || !formData.agreeTerms}
                   data-testid="button-register-submit"
                 >
                   {t.register.register}

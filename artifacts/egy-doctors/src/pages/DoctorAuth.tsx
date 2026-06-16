@@ -17,7 +17,7 @@ export default function DoctorAuth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [loginData, setLoginData] = useState({ phone: "", password: "" });
 
   const [signupStep, setSignupStep] = useState(1);
   const [signupData, setSignupData] = useState({
@@ -30,6 +30,7 @@ export default function DoctorAuth() {
     location: "",
     experience: "",
     license: "",
+    syndicateMembership: "",
     agreeTerms: false,
   });
 
@@ -41,7 +42,6 @@ export default function DoctorAuth() {
   const handleNext = () => {
     if (
       signupData.fullName &&
-      signupData.email &&
       signupData.phone &&
       signupData.password &&
       signupData.password === signupData.confirmPassword
@@ -57,6 +57,7 @@ export default function DoctorAuth() {
       signupData.location &&
       signupData.experience &&
       signupData.license &&
+      signupData.syndicateMembership &&
       signupData.agreeTerms
     ) {
       setIsSuccess(true);
@@ -208,18 +209,18 @@ export default function DoctorAuth() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="loginEmail" className="text-gray-300">
-                        {dir === "rtl" ? "البريد الإلكتروني" : "Email"}
+                      <Label htmlFor="loginPhone" className="text-gray-300">
+                        {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
                       </Label>
                       <Input
-                        id="loginEmail"
-                        type="email"
-                        value={loginData.email}
+                        id="loginPhone"
+                        type="tel"
+                        value={loginData.phone}
                         onChange={(e) =>
-                          setLoginData({ ...loginData, email: e.target.value })
+                          setLoginData({ ...loginData, phone: e.target.value })
                         }
-                        placeholder={dir === "rtl" ? "doctor@example.com" : "doctor@example.com"}
-                        data-testid="input-login-email"
+                        placeholder={dir === "rtl" ? "01xxxxxxxxx" : "01xxxxxxxxx"}
+                        data-testid="input-login-phone"
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
@@ -308,24 +309,8 @@ export default function DoctorAuth() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="signupEmail" className="text-gray-300">
-                          {dir === "rtl" ? "البريد الإلكتروني" : "Email"}
-                        </Label>
-                        <Input
-                          id="signupEmail"
-                          type="email"
-                          value={signupData.email}
-                          onChange={(e) =>
-                            setSignupData({ ...signupData, email: e.target.value })
-                          }
-                          data-testid="input-signup-email"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
                         <Label htmlFor="signupPhone" className="text-gray-300">
-                          {dir === "rtl" ? "رقم الهاتف" : "Phone"}
+                          {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
                         </Label>
                         <Input
                           id="signupPhone"
@@ -335,6 +320,22 @@ export default function DoctorAuth() {
                             setSignupData({ ...signupData, phone: e.target.value })
                           }
                           data-testid="input-signup-phone"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signupEmail" className="text-gray-300">
+                          {dir === "rtl" ? "البريد الإلكتروني (اختياري)" : "Email (Optional)"}
+                        </Label>
+                        <Input
+                          id="signupEmail"
+                          type="email"
+                          value={signupData.email}
+                          onChange={(e) =>
+                            setSignupData({ ...signupData, email: e.target.value })
+                          }
+                          data-testid="input-signup-email"
                           className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                         />
                       </div>
@@ -389,7 +390,6 @@ export default function DoctorAuth() {
                         className="w-full mt-2 bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20"
                         disabled={
                           !signupData.fullName ||
-                          !signupData.email ||
                           !signupData.phone ||
                           !signupData.password ||
                           signupData.password !== signupData.confirmPassword
@@ -485,6 +485,21 @@ export default function DoctorAuth() {
                         />
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="signupSyndicate" className="text-gray-300">
+                          {dir === "rtl" ? "رقم عضوية النقابة الطبية" : "Medical Syndicate Membership Number"}
+                        </Label>
+                        <Input
+                          id="signupSyndicate"
+                          value={signupData.syndicateMembership}
+                          onChange={(e) =>
+                            setSignupData({ ...signupData, syndicateMembership: e.target.value })
+                          }
+                          data-testid="input-signup-syndicate"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        />
+                      </div>
+
                       <div className="flex items-center space-x-2 space-x-reverse mt-2 pt-2">
                         <Checkbox
                           id="signupTerms"
@@ -522,6 +537,7 @@ export default function DoctorAuth() {
                             !signupData.location ||
                             !signupData.experience ||
                             !signupData.license ||
+                            !signupData.syndicateMembership ||
                             !signupData.agreeTerms
                           }
                           data-testid="button-signup-submit"

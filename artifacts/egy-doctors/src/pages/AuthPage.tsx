@@ -32,7 +32,7 @@ export default function AuthPage() {
 
   const [userType, setUserType] = useState<UserType>("patient");
 
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [loginData, setLoginData] = useState({ phone: "", password: "" });
 
   const [signupData, setSignupData] = useState({
     fullName: "",
@@ -279,13 +279,13 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="loginEmail" className="text-gray-300">{t.email}</Label>
+                      <Label htmlFor="loginPhone" className="text-gray-300">{isRTL ? "رقم الهاتف" : "Phone Number"}</Label>
                       <Input
-                        id="loginEmail"
-                        type="email"
-                        value={loginData.email}
-                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                        placeholder="user@example.com"
+                        id="loginPhone"
+                        type="tel"
+                        value={loginData.phone}
+                        onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
+                        placeholder="01xxxxxxxxx"
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>

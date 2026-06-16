@@ -114,7 +114,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                 </Button>
               </Link>
 
-              <Link href={`/doctor/${doctor.id}`}>
+              <Link href={`/profile/${doctor.id}`}>
                 <Button
                   variant="outline"
                   size="sm"
