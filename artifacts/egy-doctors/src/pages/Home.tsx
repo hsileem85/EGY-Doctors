@@ -51,20 +51,20 @@ export default function Home() {
         <header className="bg-[#0F172A] pt-5 pb-7 px-4 shadow-md sticky top-0 z-40">
           <div className="max-w-5xl mx-auto flex flex-col gap-4">
             {/* Location indicator */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <div className="inline-flex items-center gap-2.5 bg-[#1E293B]/80 border border-[#334155] px-5 py-2.5 rounded-full text-white backdrop-blur-sm">
-                <Navigation className="w-5 h-5 text-[#D4A853] fill-[#D4A853]/20" />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+              <div className="inline-flex items-center gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm">
+                <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-400 font-medium leading-none mb-0.5">
+                  <span className="text-[8px] text-gray-400 font-medium leading-none">
                     {isRTL ? "الموقع الحالي" : "Current Location"}
                   </span>
-                  <span className="text-sm font-bold tracking-wide">
+                  <span className="text-[10px] font-bold tracking-wide">
                     {isRTL ? "المعادي، محافظة القاهرة" : "Maadi, Cairo Governorate"}
                   </span>
                 </div>
                 <button
                   onClick={() => setIsDetecting(true)}
-                  className="ml-3 pl-3 border-l border-[#334155] text-xs text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors"
+                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors"
                 >
                   {isDetecting
                     ? isRTL
