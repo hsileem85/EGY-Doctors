@@ -69,21 +69,28 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         {doctor.bio}
       </p>
 
-      {/* Location — clickable address that opens Maps */}
-      <a
-        href={doctor.mapUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-start gap-1.5 text-sm text-[#D4A853] hover:text-[#c49a4a] underline underline-offset-2 decoration-[#D4A853]/40 hover:decoration-[#D4A853] transition-colors mb-4 group"
-      >
-        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-        <span className="line-clamp-1">
-          {location} {isRTL ? "\u00b7" : "\u00b7"} {doctor.clinicAddress}
-        </span>
-        <svg className="h-3 w-3 mt-0.5 shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-        </svg>
-      </a>
+      {/* Clinics */}
+      <div className="mb-4 space-y-1.5">
+        {doctor.clinics.map((clinic, i) => (
+          <a
+            key={i}
+            href={clinic.mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 group"
+          >
+            <span className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 text-gray-700 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0">
+              <MapPin className="h-3 w-3 text-[#D4A853] shrink-0" />
+              <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
+              <span className="text-gray-400 mx-0.5">·</span>
+              <span className="text-gray-500 truncate">{t.locations[clinic.location] ?? clinic.location}</span>
+              <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </span>
+          </a>
+        ))}
+      </div>
 
       {/* ── Bottom Action Area ── */}
       <div className="mt-auto pt-3 border-t border-gray-100">

@@ -11,6 +11,14 @@ export interface Review {
   text: string;
 }
 
+export interface ClinicBranch {
+  name: string;
+  location: Location;
+  address: string;
+  mapUrl: string;
+  fee: number;
+}
+
 export interface Doctor {
   id: string;
   name: string;
@@ -23,6 +31,7 @@ export interface Doctor {
   image: string;
   clinicAddress: string;
   mapUrl: string;
+  clinics: ClinicBranch[];
   slots: string[];
   distance: string;
   rating: number;
@@ -53,6 +62,10 @@ export const doctors: Doctor[] = [
     image: "https://randomuser.me/api/portraits/men/32.jpg",
     clinicAddress: "15 South Teseen St, 4th Floor, New Cairo",
     mapUrl: "https://www.google.com/maps/search/?api=1&query=15+South+Teseen+St,+New+Cairo,+Egypt",
+    clinics: [
+      { name: "Heart Care Clinic", location: "New Cairo", address: "15 South Teseen St, 4th Floor", mapUrl: "https://www.google.com/maps/search/?api=1&query=15+South+Teseen+St,+New+Cairo,+Egypt", fee: 450 },
+      { name: "Cairo Heart Center", location: "Heliopolis", address: "3 Merghany St, Heliopolis", mapUrl: "https://www.google.com/maps/search/?api=1&query=3+Merghany+St,+Heliopolis,+Cairo,+Egypt", fee: 500 },
+    ],
     slots: ["Today 4:00 PM", "Tomorrow 9:00 AM", "Thu 5:30 PM", "Fri 11:00 AM"],
     distance: "1.2 km",
     rating: 4.9,
@@ -78,6 +91,10 @@ export const doctors: Doctor[] = [
     image: "https://randomuser.me/api/portraits/women/44.jpg",
     clinicAddress: "8A 26th of July Corridor, Zamalek",
     mapUrl: "https://www.google.com/maps/search/?api=1&query=8A+26th+of+July+Corridor,+Zamalek,+Cairo,+Egypt",
+    clinics: [
+      { name: "Skin & Glow Clinic", location: "Zamalek", address: "8A 26th of July Corridor", mapUrl: "https://www.google.com/maps/search/?api=1&query=8A+26th+of+July+Corridor,+Zamalek,+Cairo,+Egypt", fee: 350 },
+      { name: "DermaCare Maadi", location: "Maadi", address: "7 Road 233, Maadi", mapUrl: "https://www.google.com/maps/search/?api=1&query=7+Road+233,+Maadi,+Cairo,+Egypt", fee: 350 },
+    ],
     slots: ["Today 2:00 PM", "Tomorrow 1:00 PM", "Wed 6:00 PM", "Sat 10:00 AM"],
     distance: "2.5 km",
     rating: 4.8,
@@ -101,6 +118,9 @@ export const doctors: Doctor[] = [
     image: "https://randomuser.me/api/portraits/men/65.jpg",
     clinicAddress: "45 Road 9, Maadi",
     mapUrl: "https://www.google.com/maps/search/?api=1&query=45+Road+9,+Maadi,+Cairo,+Egypt",
+    clinics: [
+      { name: "Maadi Ortho Center", location: "Maadi", address: "45 Road 9, Maadi", mapUrl: "https://www.google.com/maps/search/?api=1&query=45+Road+9,+Maadi,+Cairo,+Egypt", fee: 400 },
+    ],
     slots: ["Today 5:00 PM", "Tomorrow 4:30 PM", "Thu 2:00 PM", "Mon 12:00 PM"],
     distance: "3.8 km",
     rating: 4.9,
@@ -124,6 +144,10 @@ export const doctors: Doctor[] = [
     image: "https://randomuser.me/api/portraits/women/68.jpg",
     clinicAddress: "12 El Hegaz St, Heliopolis",
     mapUrl: "https://www.google.com/maps/search/?api=1&query=12+El+Hegaz+St,+Heliopolis,+Cairo,+Egypt",
+    clinics: [
+      { name: "Little Stars Clinic", location: "Heliopolis", address: "12 El Hegaz St, Heliopolis", mapUrl: "https://www.google.com/maps/search/?api=1&query=12+El+Hegaz+St,+Heliopolis,+Cairo,+Egypt", fee: 300 },
+      { name: "Kids Care New Cairo", location: "New Cairo", address: "90 North 90 St, New Cairo", mapUrl: "https://www.google.com/maps/search/?api=1&query=90+North+90+St,+New+Cairo,+Egypt", fee: 300 },
+    ],
     slots: ["Today 10:00 AM", "Tomorrow 11:30 AM", "Wed 9:00 AM", "Sun 3:00 PM"],
     distance: "5.1 km",
     rating: 4.7,
@@ -146,6 +170,9 @@ export const doctors: Doctor[] = [
     image: "https://randomuser.me/api/portraits/men/82.jpg",
     clinicAddress: "22 Mossadak St, Dokki",
     mapUrl: "https://www.google.com/maps/search/?api=1&query=22+Mossadak+St,+Dokki,+Giza,+Egypt",
+    clinics: [
+      { name: "Neurology & Brain Clinic", location: "Dokki", address: "22 Mossadak St, Dokki", mapUrl: "https://www.google.com/maps/search/?api=1&query=22+Mossadak+St,+Dokki,+Giza,+Egypt", fee: 500 },
+    ],
     slots: ["Today 6:00 PM", "Tomorrow 7:00 PM", "Thu 8:00 PM", "Fri 4:00 PM"],
     distance: "4.2 km",
     rating: 4.8,
