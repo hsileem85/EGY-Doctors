@@ -135,7 +135,7 @@ export default function DoctorProfile() {
               href={doctor.mapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-[#10B981] hover:text-[#c49a4a] hover:underline mt-1"
+              className="inline-flex items-center gap-1.5 text-xs text-[#D4A853] hover:text-[#c49a4a] hover:underline mt-1"
             >
               <MapPin className="h-3 w-3" />
               {doctor.clinicAddress}
@@ -151,7 +151,7 @@ export default function DoctorProfile() {
             {bookingStep === "calendar" && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="flex items-center gap-2 mb-6">
-                  <Calendar className="h-5 w-5 text-[#10B981]" />
+                  <Calendar className="h-5 w-5 text-[#D4A853]" />
                   <h2 className="text-lg font-bold text-gray-900">{t.profile.selectDay}</h2>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -162,7 +162,7 @@ export default function DoctorProfile() {
                       <button
                         key={dateStr}
                         onClick={() => handleDateSelect(dateStr)}
-                        className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 hover:border-[#10B981] hover:bg-[#10B981]/5 hover:text-[#10B981] transition-all cursor-pointer text-center"
+                        className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 hover:text-[#D4A853] transition-all cursor-pointer text-center"
                       >
                         <span className="text-sm font-bold">{label}</span>
                         <span className="text-xs text-gray-500 mt-0.5">{sub}</span>
@@ -181,14 +181,14 @@ export default function DoctorProfile() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-[#10B981]" />
+                    <Calendar className="h-5 w-5 text-[#D4A853]" />
                     <h2 className="text-lg font-bold text-gray-900">
                       {fmtDateInfo(selectedDate, lang).fullDate}
                     </h2>
                   </div>
                   <button
                     onClick={() => setBookingStep("calendar")}
-                    className="text-sm text-[#10B981] hover:underline flex items-center gap-1"
+                    className="text-sm text-[#D4A853] hover:underline flex items-center gap-1"
                   >
                     <ChevronLeft className={`h-4 w-4 ${isRTL ? "" : "rotate-180"}`} />
                     {t.profile.changeDay}
@@ -200,7 +200,7 @@ export default function DoctorProfile() {
                     <Button
                       key={i}
                       variant="outline"
-                      className="h-12 border-gray-200 hover:border-[#10B981] hover:bg-[#10B981]/5 hover:text-[#10B981] transition-all text-sm font-medium"
+                      className="h-12 border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 hover:text-[#D4A853] transition-all text-sm font-medium"
                       onClick={() => handleTimeSelect(time)}
                     >
                       {time}
@@ -218,13 +218,13 @@ export default function DoctorProfile() {
                     <h2 className="text-lg font-bold text-gray-900">
                       {fmtDateInfo(selectedDate, lang).fullDate}
                     </h2>
-                    <p className="text-sm text-[#10B981] font-medium mt-0.5">
+                    <p className="text-sm text-[#D4A853] font-medium mt-0.5">
                       {selectedTime}
                     </p>
                   </div>
                   <button
                     onClick={() => setBookingStep("slots")}
-                    className="text-sm text-[#10B981] hover:underline flex items-center gap-1"
+                    className="text-sm text-[#D4A853] hover:underline flex items-center gap-1"
                   >
                     <ChevronLeft className={`h-4 w-4 ${isRTL ? "" : "rotate-180"}`} />
                     {t.profile.changeTime}
@@ -261,7 +261,7 @@ export default function DoctorProfile() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t.profile.bookingFee}</span>
-                      <span className="text-[#10B981] font-semibold">{t.profile.free}</span>
+                      <span className="text-[#D4A853] font-semibold">{t.profile.free}</span>
                     </div>
                     <div className="w-full h-px bg-gray-100 my-2"></div>
                     <div className="flex justify-between text-base font-bold">
@@ -272,7 +272,7 @@ export default function DoctorProfile() {
 
                   <Button
                     type="submit"
-                    className="w-full mt-4 h-12 text-base font-semibold bg-[#10B981] hover:bg-[#c49a4a] text-white"
+                    className="w-full mt-4 h-12 text-base font-semibold bg-[#D4A853] hover:bg-[#c49a4a] text-white"
                     disabled={isSubmitting || !patientName || !patientPhone}
                   >
                     {isSubmitting ? t.profile.confirming : t.profile.confirmBooking}
@@ -284,8 +284,8 @@ export default function DoctorProfile() {
             {/* Step 4: Success */}
             {bookingStep === "success" && (
               <div className="text-center py-6 animate-in zoom-in duration-300">
-                <div className="w-16 h-16 bg-[#10B981]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="h-8 w-8 text-[#10B981]" />
+                <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-[#D4A853]" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingConfirmed}</h3>
                 <p className="text-gray-600 mb-2">

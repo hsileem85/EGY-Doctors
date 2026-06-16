@@ -47,8 +47,8 @@ export default function DoctorRegister() {
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <Card className="w-full max-w-md text-center py-8">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-[#10B981]/10 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-[#10B981]" />
+            <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-[#D4A853]" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">{t.register.successTitle}</h2>
             <p className="text-gray-500 mb-6">{t.register.successDesc}</p>

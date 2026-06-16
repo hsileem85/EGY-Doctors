@@ -75,7 +75,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-gray-900">{appointments.length}</div>
-                  <p className="text-xs text-[#10B981] mt-1 font-medium">{t.dashboard.sinceYesterday}</p>
+                  <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.sinceYesterday}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -87,7 +87,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-gray-900">1,248</div>
-                  <p className="text-xs text-[#10B981] mt-1 font-medium">{t.dashboard.vsLastMonthViews}</p>
+                  <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthViews}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -101,7 +101,7 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold text-gray-900">
                     12,400 <span className="text-lg font-normal text-gray-500">{t.dashboard.egp}</span>
                   </div>
-                  <p className="text-xs text-[#10B981] mt-1 font-medium">{t.dashboard.vsLastMonthEarnings}</p>
+                  <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthEarnings}</p>
                 </CardContent>
               </Card>
             </div>
@@ -140,7 +140,7 @@ export default function Dashboard() {
                         <TableCell className="text-gray-600">{apt.date}</TableCell>
                         <TableCell className="text-gray-600">{apt.time}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-[#10B981]/5 text-[#10B981] border-[#10B981]/20">
+                          <Badge variant="outline" className="bg-[#D4A853]/5 text-[#D4A853] border-[#D4A853]/20">
                             {t.dashboard.confirmed}
                           </Badge>
                         </TableCell>

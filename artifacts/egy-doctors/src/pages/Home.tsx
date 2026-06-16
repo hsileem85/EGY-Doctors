@@ -53,7 +53,7 @@ export default function Home() {
             {/* Location indicator */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               <div className="inline-flex items-center gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm">
-                <Navigation className="w-3 h-3 text-[#10B981] fill-[#10B981]/20" />
+                <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
                 <div className="flex flex-col">
                   <span className="text-[8px] text-gray-400 font-medium leading-none">
                     {isRTL ? "الموقع الحالي" : "Current Location"}
@@ -64,7 +64,7 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => setIsDetecting(true)}
-                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#10B981] hover:text-[#059669] font-semibold tracking-wide uppercase transition-colors"
+                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors"
                 >
                   {isDetecting
                     ? isRTL
@@ -119,7 +119,7 @@ export default function Home() {
 
               <Button
                 type="submit"
-                className="bg-[#10B981] text-[#0F172A] font-bold rounded-xl sm:rounded-full px-8 h-12 sm:h-14 mt-2 sm:mt-0 sm:ml-2 hover:bg-[#059669] transition-colors shadow-sm flex items-center justify-center gap-2 text-sm sm:text-base border-none"
+                className="bg-[#D4A853] text-[#0F172A] font-bold rounded-xl sm:rounded-full px-8 h-12 sm:h-14 mt-2 sm:mt-0 sm:ml-2 hover:bg-[#C49A48] transition-colors shadow-sm flex items-center justify-center gap-2 text-sm sm:text-base border-none"
               >
                 {isRTL ? "ابحث عن الأطباء" : "Find Doctors"}
               </Button>
@@ -132,7 +132,7 @@ export default function Home() {
           <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
             {stats.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
-                <span className="text-[#10B981] font-bold">{s.value}</span>
+                <span className="text-[#D4A853] font-bold">{s.value}</span>
                 <span className="font-medium text-gray-400 uppercase text-[11px] sm:text-xs tracking-wider">
                   {isRTL ? s.labelAr : s.label}
                 </span>
@@ -183,8 +183,8 @@ export default function Home() {
                     alt={doc.name}
                   />
                   <div className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm border border-gray-100">
-                    <div className="bg-[#10B981]/10 text-[#0F172A] font-bold text-xs px-2 py-0.5 rounded-md flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-[#10B981] text-[#10B981]" />
+                    <div className="bg-[#D4A853]/10 text-[#0F172A] font-bold text-xs px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
                       {doc.rating}
                     </div>
                   </div>
@@ -195,17 +195,17 @@ export default function Home() {
                   <div className="flex items-start gap-2 mb-1">
                     <div className="flex-1 min-w-0">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-lg font-bold text-[#0F172A] leading-tight hover:text-[#10B981] cursor-pointer transition-colors truncate">
+                        <h3 className="text-lg font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
                           {doc.name}
                         </h3>
                       </Link>
                       <p className="text-[#0F172A]/70 text-xs font-medium flex items-center gap-1 mt-0.5">
-                        <HeartPulse className="w-3.5 h-3.5 text-[#10B981]" />
+                        <HeartPulse className="w-3.5 h-3.5 text-[#D4A853]" />
                         {t.specialties[doc.specialty] ?? doc.specialty}
                       </p>
                     </div>
                     <div className="bg-[#F8FAFC] px-2 py-0.5 rounded-lg border border-gray-200 flex items-center gap-1 shrink-0">
-                      <Navigation className="w-3 h-3 text-[#10B981] fill-[#10B981]/20" />
+                      <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
                       <span className="font-bold text-[#0F172A] text-[11px]">{doc.distance}</span>
                     </div>
                   </div>
@@ -219,7 +219,7 @@ export default function Home() {
                       {t.locations[doc.location] ?? doc.location}
                     </span>
                     <span className="text-gray-300">·</span>
-                    <span className="flex items-center gap-1 text-[#10B981] font-semibold">
+                    <span className="flex items-center gap-1 text-[#D4A853] font-semibold">
                       <CalendarDays className="w-3 h-3" />
                       {doc.nextAvailable}
                     </span>
@@ -239,7 +239,7 @@ export default function Home() {
                       href={doc.mapUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium text-[#10B981] hover:text-[#c49a4a] bg-[#10B981]/5 hover:bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 py-1.5 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/5 hover:bg-[#D4A853]/10 rounded-lg border border-[#D4A853]/20 hover:border-[#D4A853]/40 py-1.5 transition-colors"
                     >
                       <Navigation className="w-3 h-3" />
                       {isRTL ? "الخريطة" : "Map"}

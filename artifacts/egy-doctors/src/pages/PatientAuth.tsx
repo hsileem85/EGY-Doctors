@@ -44,12 +44,12 @@ export default function PatientAuth() {
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#10B981]/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
 
-        <Card className="w-full max-w-md text-center py-10 border-[#10B981]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
+        <Card className="w-full max-w-md text-center py-10 border-[#D4A853]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 bg-[#10B981]/20 rounded-full flex items-center justify-center mb-2 border border-[#10B981]/30">
-              <CheckCircle2 className="w-10 h-10 text-[#10B981]" />
+            <div className="w-20 h-20 bg-[#D4A853]/20 rounded-full flex items-center justify-center mb-2 border border-[#D4A853]/30">
+              <CheckCircle2 className="w-10 h-10 text-[#D4A853]" />
             </div>
             <h2 className="text-2xl font-bold text-white">
               {dir === "rtl" ? "تم تسجيل الدخول بنجاح!" : "Login Successful!"}
@@ -60,7 +60,7 @@ export default function PatientAuth() {
                 : "Welcome to EGY Doctors. Your Electronic Medical Record has been created. You can now track appointments and your health history."}
             </p>
             <Link href="/patient/dashboard">
-              <Button className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold">
+              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold">
                 {dir === "rtl" ? "الذهاب إلى لوحة التحكم" : "Go to Dashboard"}
               </Button>
             </Link>
@@ -74,8 +74,8 @@ export default function PatientAuth() {
     <div className="min-h-screen bg-[#0F172A] flex items-stretch justify-center relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#10B981]/5 rounded-full blur-[100px]" />
+        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#D4A853]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#D4A853]/5 rounded-full blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#1E293B]/30 rounded-full blur-[80px]" />
       </div>
 
@@ -84,12 +84,12 @@ export default function PatientAuth() {
         {/* Left brand panel */}
         <div className="hidden lg:flex lg:w-5/12 flex-col justify-center p-12">
           <Link href="/" className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
-              <Stethoscope className="h-6 w-6 text-[#10B981]" />
+            <div className="w-12 h-12 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
+              <Stethoscope className="h-6 w-6 text-[#D4A853]" />
             </div>
             <div>
               <span className="text-2xl font-bold text-white tracking-tight font-brand">EGY Doctors</span>
-              <p className="text-xs text-[#10B981] tracking-wider">{dir === "rtl" ? "إجي دكتورز" : "EGY Doctors"}</p>
+              <p className="text-xs text-[#D4A853] tracking-wider">{dir === "rtl" ? "إجي دكتورز" : "EGY Doctors"}</p>
             </div>
           </Link>
 
@@ -106,24 +106,24 @@ export default function PatientAuth() {
 
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
-                <Shield className="h-4 w-4 text-[#10B981]" />
+              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
+                <Shield className="h-4 w-4 text-[#D4A853]" />
               </div>
               <span className="text-sm">
                 {dir === "rtl" ? "بياناتك آمنة ومشفرة" : "Your data is secure and encrypted"}
               </span>
             </div>
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
-                <CalendarDays className="h-4 w-4 text-[#10B981]" />
+              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
+                <CalendarDays className="h-4 w-4 text-[#D4A853]" />
               </div>
               <span className="text-sm">
                 {dir === "rtl" ? "احجز مواعيدك في ثواني" : "Book appointments in seconds"}
               </span>
             </div>
             <div className="flex items-center gap-3 text-gray-300">
-              <div className="w-8 h-8 rounded-full bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
-                <Heart className="h-4 w-4 text-[#10B981]" />
+              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
+                <Heart className="h-4 w-4 text-[#D4A853]" />
               </div>
               <span className="text-sm">
                 {dir === "rtl" ? "تتبع الأدوية والتحاليل" : "Track medications and lab results"}
@@ -139,19 +139,19 @@ export default function PatientAuth() {
               {/* Mobile logo + back */}
               <div className="lg:hidden flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
-                    <Stethoscope className="h-5 w-5 text-[#10B981]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
+                    <Stethoscope className="h-5 w-5 text-[#D4A853]" />
                   </div>
                   <span className="text-xl font-bold text-white font-brand">EGY Doctors</span>
                 </div>
-                <Link href="/" className="text-gray-400 hover:text-[#10B981] transition-colors">
+                <Link href="/" className="text-gray-400 hover:text-[#D4A853] transition-colors">
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </div>
 
               {/* Desktop back button */}
               <div className="hidden lg:flex items-center mb-4">
-                <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#10B981] transition-colors">
+                <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
                   <ArrowLeft className="h-4 w-4" />
                   <span>{dir === "rtl" ? "العودة للرئيسية" : "Back to Home"}</span>
                 </Link>
@@ -159,10 +159,10 @@ export default function PatientAuth() {
 
               <Tabs defaultValue="login" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#0F172A]/60 border border-[#334155] p-1">
-                  <TabsTrigger value="login" className="data-[state=active]:bg-[#10B981] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
+                  <TabsTrigger value="login" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
                     {dir === "rtl" ? "تسجيل الدخول" : "Login"}
                   </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-[#10B981] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
                     {dir === "rtl" ? "إنشاء حساب" : "Sign Up"}
                   </TabsTrigger>
                 </TabsList>
@@ -194,7 +194,7 @@ export default function PatientAuth() {
                         }
                         placeholder={dir === "rtl" ? "patient@example.com" : "patient@example.com"}
                         data-testid="input-patient-login-email"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
@@ -211,12 +211,12 @@ export default function PatientAuth() {
                             setLoginData({ ...loginData, password: e.target.value })
                           }
                           data-testid="input-patient-login-password"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#10B981] transition-colors"
+                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#D4A853] transition-colors"
                           data-testid="button-patient-toggle-password"
                         >
                           {showPassword ? (
@@ -228,7 +228,7 @@ export default function PatientAuth() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20" data-testid="button-patient-login">
+                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20" data-testid="button-patient-login">
                       {dir === "rtl" ? "تسجيل الدخول" : "Login"}
                     </Button>
                   </form>
@@ -259,7 +259,7 @@ export default function PatientAuth() {
                           setSignupData({ ...signupData, fullName: e.target.value })
                         }
                         data-testid="input-patient-signup-fullname"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
@@ -275,7 +275,7 @@ export default function PatientAuth() {
                           setSignupData({ ...signupData, email: e.target.value })
                         }
                         data-testid="input-patient-signup-email"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
@@ -291,7 +291,7 @@ export default function PatientAuth() {
                           setSignupData({ ...signupData, phone: e.target.value })
                         }
                         data-testid="input-patient-signup-phone"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
@@ -311,7 +311,7 @@ export default function PatientAuth() {
                         }}
                         placeholder={dir === "rtl" ? "14 رقم" : "14 digits"}
                         data-testid="input-patient-signup-nationalid"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                       <p className="text-xs text-gray-500">
                         {dir === "rtl"
@@ -333,12 +333,12 @@ export default function PatientAuth() {
                             setSignupData({ ...signupData, password: e.target.value })
                           }
                           data-testid="input-patient-signup-password"
-                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#10B981] transition-colors"
+                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#D4A853] transition-colors"
                         >
                           {showPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -361,11 +361,11 @@ export default function PatientAuth() {
                           setSignupData({ ...signupData, confirmPassword: e.target.value })
                         }
                         data-testid="input-patient-signup-confirm"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#10B981] focus:ring-[#10B981]/20"
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#10B981] text-[#0F172A] hover:bg-[#10B981]/90 font-semibold shadow-lg shadow-[#10B981]/20" data-testid="button-patient-signup">
+                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20" data-testid="button-patient-signup">
                       {dir === "rtl" ? "إنشاء حساب" : "Sign Up"}
                     </Button>
                   </form>

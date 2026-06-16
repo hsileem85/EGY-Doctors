@@ -120,8 +120,8 @@ export default function PatientDashboard() {
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
-                    <Stethoscope className="h-5 w-5 text-[#10B981]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 flex items-center justify-center">
+                    <Stethoscope className="h-5 w-5 text-[#D4A853]" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{isRTL ? "زيارات" : "Visits"}</p>
@@ -153,7 +153,7 @@ export default function PatientDashboard() {
                             <p className="font-medium text-sm">{apt.doctor}</p>
                             <p className="text-xs text-gray-500">{apt.specialty} &middot; {apt.date} &middot; {apt.time}</p>
                           </div>
-                          <Badge variant="outline" className="text-[#10B981] border-[#10B981]/20 bg-[#10B981]/5">
+                          <Badge variant="outline" className="text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5">
                             {apt.status === "confirmed" ? (isRTL ? "مؤكد" : "Confirmed") : apt.status}
                           </Badge>
                         </div>
