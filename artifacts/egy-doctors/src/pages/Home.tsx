@@ -48,8 +48,8 @@ export default function Home() {
     <Layout>
       <div className="min-h-screen bg-[#F1F5F9] font-sans pb-20">
         {/* Header: Location & Search */}
-        <header className="bg-[#0F172A] pt-8 pb-10 px-4 shadow-md sticky top-0 z-40">
-          <div className="max-w-5xl mx-auto flex flex-col gap-6">
+        <header className="bg-[#0F172A] pt-5 pb-7 px-4 shadow-md sticky top-0 z-40">
+          <div className="max-w-5xl mx-auto flex flex-col gap-4">
             {/* Location indicator */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <div className="inline-flex items-center gap-2.5 bg-[#1E293B]/80 border border-[#334155] px-5 py-2.5 rounded-full text-white backdrop-blur-sm">
@@ -128,7 +128,7 @@ export default function Home() {
         </header>
 
         {/* Stats Strip */}
-        <div className="bg-[#1E293B] border-b border-[#334155] py-4">
+        <div className="bg-[#1E293B] border-b border-[#334155] py-2.5">
           <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
             {stats.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
@@ -142,7 +142,7 @@ export default function Home() {
         </div>
 
         {/* Main List */}
-        <main className="max-w-3xl mx-auto px-4 py-8">
+        <main className="max-w-3xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
