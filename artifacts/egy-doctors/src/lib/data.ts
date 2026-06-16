@@ -15,6 +15,10 @@ export interface Doctor {
   image: string;
   clinicAddress: string;
   slots: string[];
+  distance: string;
+  rating: number;
+  reviews: number;
+  nextAvailable: string;
 }
 
 export interface Appointment {
@@ -38,7 +42,11 @@ export const doctors: Doctor[] = [
     bio: "Senior Consultant Cardiologist with 15 years of experience specializing in heart failure and preventive cardiology.",
     image: "https://randomuser.me/api/portraits/men/32.jpg",
     clinicAddress: "15 South Teseen St, 4th Floor, New Cairo",
-    slots: ["Today 4:00 PM", "Tomorrow 9:00 AM", "Thu 5:30 PM", "Fri 11:00 AM"]
+    slots: ["Today 4:00 PM", "Tomorrow 9:00 AM", "Thu 5:30 PM", "Fri 11:00 AM"],
+    distance: "1.2 km",
+    rating: 4.9,
+    reviews: 128,
+    nextAvailable: "Today, 4:00 PM"
   },
   {
     id: "2",
@@ -51,7 +59,11 @@ export const doctors: Doctor[] = [
     bio: "Expert dermatologist specializing in cosmetic dermatology, laser treatments, and skin conditions.",
     image: "https://randomuser.me/api/portraits/women/44.jpg",
     clinicAddress: "8A 26th of July Corridor, Zamalek",
-    slots: ["Today 2:00 PM", "Tomorrow 1:00 PM", "Wed 6:00 PM", "Sat 10:00 AM"]
+    slots: ["Today 2:00 PM", "Tomorrow 1:00 PM", "Wed 6:00 PM", "Sat 10:00 AM"],
+    distance: "2.5 km",
+    rating: 4.8,
+    reviews: 96,
+    nextAvailable: "Tomorrow, 10:30 AM"
   },
   {
     id: "3",
@@ -64,7 +76,11 @@ export const doctors: Doctor[] = [
     bio: "Consultant Orthopedic Surgeon focusing on sports injuries and joint replacement surgeries.",
     image: "https://randomuser.me/api/portraits/men/65.jpg",
     clinicAddress: "45 Road 9, Maadi",
-    slots: ["Today 5:00 PM", "Tomorrow 4:30 PM", "Thu 2:00 PM", "Mon 12:00 PM"]
+    slots: ["Today 5:00 PM", "Tomorrow 4:30 PM", "Thu 2:00 PM", "Mon 12:00 PM"],
+    distance: "3.8 km",
+    rating: 4.9,
+    reviews: 154,
+    nextAvailable: "Today, 7:15 PM"
   },
   {
     id: "4",
@@ -77,7 +93,11 @@ export const doctors: Doctor[] = [
     bio: "Compassionate pediatrician dedicated to child health, development, and vaccination programs.",
     image: "https://randomuser.me/api/portraits/women/68.jpg",
     clinicAddress: "12 El Hegaz St, Heliopolis",
-    slots: ["Today 10:00 AM", "Tomorrow 11:30 AM", "Wed 9:00 AM", "Sun 3:00 PM"]
+    slots: ["Today 10:00 AM", "Tomorrow 11:30 AM", "Wed 9:00 AM", "Sun 3:00 PM"],
+    distance: "5.1 km",
+    rating: 4.7,
+    reviews: 82,
+    nextAvailable: "Wed, 9:00 AM"
   },
   {
     id: "5",
@@ -90,7 +110,11 @@ export const doctors: Doctor[] = [
     bio: "Renowned neurologist treating complex neurological disorders, migraines, and epilepsy.",
     image: "https://randomuser.me/api/portraits/men/82.jpg",
     clinicAddress: "22 Mossadak St, Dokki",
-    slots: ["Today 6:00 PM", "Tomorrow 7:00 PM", "Thu 8:00 PM", "Fri 4:00 PM"]
+    slots: ["Today 6:00 PM", "Tomorrow 7:00 PM", "Thu 8:00 PM", "Fri 4:00 PM"],
+    distance: "4.2 km",
+    rating: 4.8,
+    reviews: 110,
+    nextAvailable: "Today, 6:00 PM"
   }
 ];
 
@@ -107,3 +131,9 @@ export const specialties: Specialty[] = ["Cardiology", "Dermatology", "Orthopedi
 export const locations: Location[] = ["New Cairo", "Zamalek", "Maadi", "Heliopolis", "Dokki"];
 export const governorates: Governorate[] = ["Cairo", "Giza", "Alexandria"];
 export const insuranceNetworks: InsuranceNetwork[] = ["Cigna", "AXA", "MetLife", "Bupa", "None"];
+export const stats = [
+  { value: "2,500+", label: "Verified Doctors", labelAr: "طبيب معتمد" },
+  { value: "150K+", label: "Happy Patients", labelAr: "مريض سعيد" },
+  { value: "50+", label: "Medical Partners", labelAr: "شريك طبي" },
+  { value: "4.9/5", label: "Average Rating", labelAr: "متوسط التقييم" }
+];

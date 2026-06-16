@@ -1,341 +1,278 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Search, MapPin, Stethoscope, Building2, Shield, User, LogIn, UserPlus, FlaskConical, Scan } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Layout } from "@/components/layout/Layout";
-import { DoctorCard } from "@/components/DoctorCard";
-import { doctors, specialties, locations, governorates, insuranceNetworks } from "@/lib/data";
-import { useLanguage } from "@/context/LanguageContext";
 import { Link } from "wouter";
+import {
+  Search,
+  MapPin,
+  HeartPulse,
+  Star,
+  Navigation,
+  CalendarDays,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Layout } from "@/components/layout/Layout";
+import { doctors, specialties, stats } from "@/lib/data";
+import { useLanguage } from "@/context/LanguageContext";
+
+type SortOption = "nearest" | "rating" | "fee";
 
 export default function Home() {
   const [_, setLocation] = useLocation();
   const [doctorName, setDoctorName] = useState("");
   const [specialty, setSpecialty] = useState<string>("");
-  const [governorate, setGovernorate] = useState<string>("");
-  const [city, setCity] = useState<string>("");
-  const [insurance, setInsurance] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortOption>("nearest");
+  const [isDetecting, setIsDetecting] = useState(false);
   const { t, dir } = useLanguage();
+  const isRTL = dir === "rtl";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (doctorName.trim()) params.set("q", doctorName.trim());
     if (specialty) params.set("specialty", specialty);
-    if (governorate) params.set("governorate", governorate);
-    if (city) params.set("location", city);
-    if (insurance) params.set("insurance", insurance);
     setLocation(`/search?${params.toString()}`);
   };
 
-  const featuredDoctors = doctors.slice(0, 3);
+  const sortedDoctors = [...doctors].sort((a, b) => {
+    if (sortBy === "nearest") {
+      const distA = parseFloat(a.distance);
+      const distB = parseFloat(b.distance);
+      return distA - distB;
+    }
+    if (sortBy === "rating") return b.rating - a.rating;
+    if (sortBy === "fee") return a.fee - b.fee;
+    return 0;
+  });
 
   return (
     <Layout>
-      {/* Hero - Immersive Floating Search */}
-      <section className="relative overflow-hidden">
-        {/* Full-bleed background */}
-        <div className="absolute inset-0">
-          <img
-            src={`${import.meta.env.BASE_URL}hero-bg.png`}
-            alt="Modern hospital interior"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(158,65%,15%)]/60 via-[hsl(158,65%,20%)]/50 to-[hsl(158,65%,25%)]/70"></div>
-        </div>
+      <div className="min-h-screen bg-[#F1F5F9] font-sans pb-20">
+        {/* Header: Location & Search */}
+        <header className="bg-[#0F172A] pt-8 pb-10 px-4 shadow-md sticky top-0 z-40">
+          <div className="max-w-5xl mx-auto flex flex-col gap-6">
+            {/* Location indicator */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="inline-flex items-center gap-2.5 bg-[#1E293B]/80 border border-[#334155] px-5 py-2.5 rounded-full text-white backdrop-blur-sm">
+                <Navigation className="w-5 h-5 text-[#D4A853] fill-[#D4A853]/20" />
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-400 font-medium leading-none mb-0.5">
+                    {isRTL ? "الموقع الحالي" : "Current Location"}
+                  </span>
+                  <span className="text-sm font-bold tracking-wide">
+                    {isRTL ? "المعادي، محافظة القاهرة" : "Maadi, Cairo Governorate"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsDetecting(true)}
+                  className="ml-3 pl-3 border-l border-[#334155] text-xs text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors"
+                >
+                  {isDetecting
+                    ? isRTL
+                      ? "جاري التحديد..."
+                      : "Detecting..."
+                    : isRTL
+                      ? "تغيير"
+                      : "Change"}
+                </button>
+              </div>
+            </div>
 
-        <div className="relative container mx-auto px-4 py-16 lg:py-24 flex flex-col items-center justify-center text-center">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight max-w-4xl">
-            {t.home.heroTitle}
-          </h1>
-          <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl">
-            {t.home.heroSubtitle}
-          </p>
-
-          {/* Patient auth CTAs */}
-          <div className="flex items-center gap-3 mb-8">
-            <Link href="/auth">
-              <Button
-                variant="outline"
-                className="h-9 px-4 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white text-sm"
-                data-testid="hero-patient-login"
-              >
-                <LogIn className="h-4 w-4 me-2" />
-                {dir === "rtl" ? "تسجيل دخول" : "Sign In"}
-              </Button>
-            </Link>
-            <Link href="/auth?tab=signup">
-              <Button
-                className="h-9 px-4 bg-white text-primary hover:bg-white/90 text-sm"
-                data-testid="hero-patient-register"
-              >
-                <UserPlus className="h-4 w-4 me-2" />
-                {dir === "rtl" ? "إنشاء حساب" : "Sign Up"}
-              </Button>
-            </Link>
-          </div>
-
-          {/* Frosted glass floating search */}
-          <form onSubmit={handleSearch} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl">
-            <div>
-              <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">
-                {t.home.doctorName}
-              </label>
-              <div className="flex items-center gap-2 h-12 px-3 border border-white/20 rounded-lg bg-white/10">
-                <User className="h-4 w-4 text-white/60 shrink-0" />
-                <Input
+            {/* Single Pill Search */}
+            <form
+              onSubmit={handleSearch}
+              className="bg-white rounded-2xl sm:rounded-full p-2 flex flex-col sm:flex-row items-stretch sm:items-center shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+            >
+              <div className="flex items-center flex-1 h-12 sm:h-14 pl-4">
+                <Search className="w-5 h-5 text-gray-400 shrink-0" />
+                <input
                   type="text"
-                  placeholder={t.home.chooseDoctorName}
-                  className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 border-0 shadow-none focus-visible:ring-0 px-0 min-w-0"
+                  placeholder={
+                    isRTL
+                      ? "ابحث عن الأطباء، التخصصات، أو العيادات..."
+                      : "Search doctors, specialties, or clinics..."
+                  }
+                  className="flex-1 bg-transparent border-none outline-none px-3 text-[#0F172A] font-medium placeholder:font-normal placeholder:text-gray-400 w-full"
                   value={doctorName}
-                  onChange={e => setDoctorName(e.target.value)}
-                  data-testid="input-doctor-name"
+                  onChange={(e) => setDoctorName(e.target.value)}
                 />
               </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">
-                {t.home.specialty}
-              </label>
-              <div className="flex items-center gap-2 h-12 px-3 border border-white/20 rounded-lg bg-white/10">
-                <Stethoscope className="h-4 w-4 text-white/60 shrink-0" />
-                <Select value={specialty} onValueChange={setSpecialty}>
-                  <SelectTrigger className="flex-1 bg-transparent text-sm text-white border-0 shadow-none focus:ring-0 px-0 min-w-0 [&>span]:text-white/50 data-[state=open]:ring-0">
-                    <SelectValue placeholder={t.home.chooseSpecialty} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {specialties.map(s => (
-                      <SelectItem key={s} value={s}>{t.specialties[s] ?? s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="hidden sm:block h-8 w-[1px] bg-gray-200 mx-1"></div>
+
+              <div className="flex items-center flex-1 sm:flex-none sm:w-48 h-12 sm:h-14 px-4 border-t sm:border-t-0 border-gray-100">
+                <HeartPulse className="w-4 h-4 text-gray-400 shrink-0" />
+                <select
+                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                >
+                  <option value="">
+                    {isRTL ? "أي تخصص" : "Any Specialty"}
+                  </option>
+                  {specialties.map((s) => (
+                    <option key={s} value={s}>
+                      {t.specialties[s] ?? s}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">
-                {t.home.governorate}
-              </label>
-              <div className="flex items-center gap-2 h-12 px-3 border border-white/20 rounded-lg bg-white/10">
-                <Building2 className="h-4 w-4 text-white/60 shrink-0" />
-                <Select value={governorate} onValueChange={setGovernorate}>
-                  <SelectTrigger className="flex-1 bg-transparent text-sm text-white border-0 shadow-none focus:ring-0 px-0 min-w-0 [&>span]:text-white/50 data-[state=open]:ring-0">
-                    <SelectValue placeholder={t.home.chooseGovernorate} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {governorates.map(g => (
-                      <SelectItem key={g} value={g}>{t.governorates[g] ?? g}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">
-                {t.home.location}
-              </label>
-              <div className="flex items-center gap-2 h-12 px-3 border border-white/20 rounded-lg bg-white/10">
-                <MapPin className="h-4 w-4 text-white/60 shrink-0" />
-                <Select value={city} onValueChange={setCity}>
-                  <SelectTrigger className="flex-1 bg-transparent text-sm text-white border-0 shadow-none focus:ring-0 px-0 min-w-0 [&>span]:text-white/50 data-[state=open]:ring-0">
-                    <SelectValue placeholder={t.home.chooseCityOrArea} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map(l => (
-                      <SelectItem key={l} value={l}>{t.locations[l] ?? l}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5 block px-1">
-                {t.home.insurance}
-              </label>
-              <div className="flex items-center gap-2 h-12 px-3 border border-white/20 rounded-lg bg-white/10">
-                <Shield className="h-4 w-4 text-white/60 shrink-0" />
-                <Select value={insurance} onValueChange={setInsurance}>
-                  <SelectTrigger className="flex-1 bg-transparent text-sm text-white border-0 shadow-none focus:ring-0 px-0 min-w-0 [&>span]:text-white/50 data-[state=open]:ring-0">
-                    <SelectValue placeholder={t.home.chooseInsurance} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {insuranceNetworks.map(i => (
-                      <SelectItem key={i} value={i}>{t.insuranceNetworks[i] ?? i}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex items-end">
+
               <Button
                 type="submit"
-                className="w-full h-12 px-8 bg-white text-primary rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all shadow-lg"
-                data-testid="button-search"
+                className="bg-[#D4A853] text-[#0F172A] font-bold rounded-xl sm:rounded-full px-8 h-12 sm:h-14 mt-2 sm:mt-0 sm:ml-2 hover:bg-[#C49A48] transition-colors shadow-sm flex items-center justify-center gap-2 text-sm sm:text-base border-none"
               >
-                <Search className="h-5 w-5" />
-                {t.home.search}
+                {isRTL ? "ابحث عن الأطباء" : "Find Doctors"}
               </Button>
-            </div>
-          </form>
-        </div>
-      </section>
+            </form>
+          </div>
+        </header>
 
-      {/* Featured Specialists */}
-      <section className="py-20 bg-gray-50/50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-end mb-10">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">{t.home.featuredSpecialists}</h2>
-              <p className="text-gray-600">{t.home.featuredSubtitle}</p>
+        {/* Stats Strip */}
+        <div className="bg-[#1E293B] border-b border-[#334155] py-4">
+          <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
+            {stats.map((s) => (
+              <div key={s.label} className="flex items-center gap-2 tracking-wide">
+                <span className="text-[#D4A853] font-bold">{s.value}</span>
+                <span className="font-medium text-gray-400 uppercase text-[11px] sm:text-xs tracking-wider">
+                  {isRTL ? s.labelAr : s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main List */}
+        <main className="max-w-4xl mx-auto px-4 py-10">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
+              {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
+            </h1>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+              <span className="text-[#0F172A]">
+                {isRTL ? "ترتيب:" : "Sort by:"}
+              </span>
+              <select
+                className="bg-transparent border-none outline-none cursor-pointer font-bold text-[#0F172A]"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+              >
+                <option value="nearest">
+                  {isRTL ? "الأقرب أولاً" : "Nearest First"}
+                </option>
+                <option value="rating">
+                  {isRTL ? "الأعلى تقييماً" : "Highest Rated"}
+                </option>
+                <option value="fee">
+                  {isRTL ? "أقل رسوم" : "Lowest Fee"}
+                </option>
+              </select>
             </div>
-            <Button
-              variant="ghost"
-              className="text-primary hover:text-primary/80 hover:bg-primary/5 hidden md:flex"
-              onClick={() => setLocation("/search")}
-              data-testid="link-view-all"
-            >
-              {t.home.viewAll}
-            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredDoctors.map(doctor => (
-              <DoctorCard key={doctor.id} doctor={doctor} />
+          <div className="flex flex-col gap-4">
+            {sortedDoctors.map((doc) => (
+              <div
+                key={doc.id}
+                className="bg-white rounded-2xl p-5 sm:p-6 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-5 sm:gap-6 items-start"
+              >
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <img
+                    src={doc.image}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-sm border border-gray-100"
+                    alt={doc.name}
+                  />
+                  <div className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm border border-gray-100">
+                    <div className="bg-[#D4A853]/10 text-[#0F172A] font-bold text-xs px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
+                      {doc.rating}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 w-full">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
+                    <div>
+                      <Link href={`/doctor/${doc.id}`}>
+                        <h3 className="text-xl font-bold text-[#0F172A] leading-tight mb-1 hover:text-[#D4A853] cursor-pointer transition-colors">
+                          {doc.name}
+                        </h3>
+                      </Link>
+                      <p className="text-[#0F172A]/70 font-medium text-sm flex items-center gap-1.5">
+                        <HeartPulse className="w-4 h-4 text-[#D4A853]" />
+                        {t.specialties[doc.specialty] ?? doc.specialty}
+                      </p>
+                    </div>
+
+                    {/* Distance Highlight */}
+                    <div className="bg-[#F8FAFC] px-3 py-1.5 rounded-xl border border-gray-200 flex items-center gap-1.5 self-start shrink-0">
+                      <Navigation className="w-4 h-4 text-[#D4A853] fill-[#D4A853]/20" />
+                      <span className="font-bold text-[#0F172A] text-sm">
+                        {doc.distance}
+                      </span>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        {isRTL ? "بعيد" : "away"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Info Pills */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 mb-4 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <span className="text-gray-400">
+                        {isRTL ? "الرسوم:" : "Fee:"}
+                      </span>
+                      <span className="text-[#0F172A] font-bold">
+                        {doc.fee} {t.dashboard.egp}
+                      </span>
+                    </div>
+                    <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300"></div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <span>{t.locations[doc.location] ?? doc.location}</span>
+                    </div>
+                    <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300"></div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <CalendarDays className="w-4 h-4 text-gray-400" />
+                      <span className="text-green-600 font-semibold">
+                        {doc.nextAvailable}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="w-full sm:w-[140px] flex flex-col gap-2 shrink-0 sm:border-l border-gray-100 sm:pl-6 sm:py-2 mt-2 sm:mt-0">
+                  <Link href={`/doctor/${doc.id}`}>
+                    <Button className="w-full bg-[#0F172A] text-white rounded-xl py-3 font-semibold text-sm hover:bg-[#1E293B] shadow-sm hover:shadow-md transition-all active:scale-[0.98] h-auto">
+                      {isRTL ? "احجز" : "Book"}
+                    </Button>
+                  </Link>
+                  <Link href={`/doctor/${doc.id}`}>
+                    <Button
+                      variant="outline"
+                      className="w-full bg-white text-[#0F172A] rounded-xl py-2.5 font-semibold text-sm border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                    >
+                      {isRTL ? "الملف الشخصي" : "Profile"}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
 
-          <Button
-            variant="outline"
-            className="w-full mt-8 md:hidden text-primary border-primary/20 bg-white"
-            onClick={() => setLocation("/search")}
-          >
-            {t.home.viewAll}
-          </Button>
-        </div>
-      </section>
-
-      {/* Featured Medical Partners */}
-      <section className="py-16 bg-white border-t">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              {dir === "rtl" ? "شركاؤنا الطبية المميزة" : "Featured Medical Partners"}
-            </h2>
-            <p className="text-gray-600 max-w-xl mx-auto">
-              {dir === "rtl"
-                ? "مستشفيات، مراكز تحاليل، ومراكز أشعة معتمدة لتقديم أفضل رعاية صحية."
-                : "Trusted hospitals, labs, and radiology centers delivering top-tier care."}
-            </p>
+          <div className="mt-8 text-center">
+            <Button
+              variant="outline"
+              className="px-6 py-3 rounded-xl border-gray-300 text-gray-600 font-semibold text-sm hover:bg-white transition-colors bg-transparent h-auto"
+              onClick={() => setLocation("/search")}
+            >
+              {isRTL ? "تحميل المزيد من الأطباء" : "Load More Doctors"}
+            </Button>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Saudi German Hospital */}
-            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                  SGH
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    {dir === "rtl" ? "مستشفى سعودي ألماني" : "Saudi German Hospital"}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {dir === "rtl" ? "مستشفى متعدد التخصصات" : "Multi-Specialty Hospital"}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {dir === "rtl"
-                  ? "رعاية صحية شاملة بأحدث التقنيات وفريق طبي متخصص."
-                  : "Comprehensive care with cutting-edge technology and a team of 300+ specialists."}
-              </p>
-              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
-                <Building2 className="h-3 w-3" />
-                {dir === "rtl" ? "القاهرة · الإسكندرية" : "Cairo · Alexandria"}
-              </div>
-            </div>
-
-            {/* Dar Al Fouad */}
-            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-lg bg-emerald-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                  DAF
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    {dir === "rtl" ? "دار الفواد" : "Dar Al Fouad"}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {dir === "rtl" ? "مستشفى ومركز طبي" : "Hospital & Medical Center"}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {dir === "rtl"
-                  ? "مركز رعاية صحية متكامل مع تخصصات القلب والكبد والعظام."
-                  : "Full-service health center with heart, liver, and organ transplant specialties."}
-              </p>
-              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
-                <Building2 className="h-3 w-3" />
-                {dir === "rtl" ? "6 أوتوستا · القاهرة" : "6th of October · Cairo"}
-              </div>
-            </div>
-
-            {/* Alfa Lab */}
-            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-lg bg-amber-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                  AL
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    {dir === "rtl" ? "ألفا لاب" : "Alfa Lab"}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {dir === "rtl" ? "مراكز تحاليل" : "Laboratory Network"}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {dir === "rtl"
-                  ? "شبكة مراكز تحاليل رائدة بأحدث الأجهزة ونتائج دقيقة."
-                  : "A leading lab network with state-of-the-art equipment and accurate results."}
-              </p>
-              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
-                <FlaskConical className="h-3 w-3" />
-                {dir === "rtl" ? "40+ فرع · مصر" : "40+ Branches · Egypt"}
-              </div>
-            </div>
-
-            {/* Alfa Scan */}
-            <div className="group relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                  AS
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    {dir === "rtl" ? "ألفا سكان" : "Alfa Scan"}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {dir === "rtl" ? "مراكز أشعة ورنتجن" : "Radiology & Imaging"}
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {dir === "rtl"
-                  ? "أحدث أجهزة الأشعة التشخيصية مع فريق من أفضل الأطباء."
-                  : "Advanced diagnostic imaging with MRI, CT, and ultrasound by top radiologists."}
-              </p>
-              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
-                <Scan className="h-3 w-3" />
-                {dir === "rtl" ? "25+ فرع · مصر" : "25+ Branches · Egypt"}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        </main>
+      </div>
     </Layout>
   );
 }
