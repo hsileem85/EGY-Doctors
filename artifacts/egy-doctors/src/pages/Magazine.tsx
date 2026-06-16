@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   Heart, MessageCircle, Share2, Bookmark, BookmarkCheck,
-  PlayCircle, FileText, Stethoscope, MoreHorizontal, Send,
+  PlayCircle, FileText, MoreHorizontal, Send,
   Filter, TrendingUp, Clock, UserPlus, UserCheck, Newspaper
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -280,11 +280,25 @@ export default function Magazine() {
 
       {/* Hero Header */}
       <div className="bg-[#0F172A] border-b border-[#1E293B]">
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
-              <Stethoscope className="h-6 w-6 text-[#D4A853]" />
-            </div>
+        <div className="max-w-5xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-3">
+            {/* Stethoscope SVG Icon */}
+            <svg viewBox="0 0 24 36" className="w-8 h-10 shrink-0" fill="none">
+              <path d="M12 16 C10 13, 7 9, 4 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
+              <path d="M12 16 C14 13, 17 9, 20 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
+              <path d="M12 16 L12 25" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
+              <circle cx="12" cy="29" r="6" fill="#D4A853"/>
+              <circle cx="12" cy="29" r="3.5" fill="white"/>
+              <circle cx="4" cy="3" r="4" fill="#D4A853"/>
+              <circle cx="4" cy="3" r="2" fill="white"/>
+              <circle cx="20" cy="3" r="4" fill="#D4A853"/>
+              <circle cx="20" cy="3" r="2" fill="white"/>
+              <circle cx="12" cy="16" r="3.5" fill="#D4A853"/>
+              <circle cx="12" cy="16" r="1.5" fill="white"/>
+              <path d="M12 16 C10 13, 7 9, 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+              <path d="M12 16 C14 13, 17 9, 20 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+              <path d="M12 16 L12 25" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+            </svg>
             <div>
               <h1 className="text-2xl font-bold text-white">
                 {isRTL ? "ما يقوله الأطباء" : "What Doctors Say"}

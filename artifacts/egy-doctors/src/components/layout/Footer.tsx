@@ -13,18 +13,21 @@ export function Footer() {
           ) : (
             <p className="text-sm font-medium text-white font-brand flex items-center gap-0">
               EG
-              <svg viewBox="0 0 28 36" className="inline-block w-[14px] h-[18px] ml-[1px] mr-[1px]" fill="none">
-                <path d="M14 19 C10 15, 6 11, 3 6" stroke="#D4A853" strokeWidth="4" strokeLinecap="round" fill="none"/>
-                <path d="M14 19 C18 15, 22 11, 25 6" stroke="#D4A853" strokeWidth="4" strokeLinecap="round" fill="none"/>
-                <path d="M14 19 L14 27" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
-                <circle cx="14" cy="31" r="5.5" fill="#D4A853"/>
-                <circle cx="14" cy="31" r="3.2" fill="white"/>
-                <circle cx="3" cy="4" r="3.5" fill="white"/>
-                <circle cx="3" cy="4" r="2" fill="#D4A853"/>
-                <circle cx="25" cy="4" r="3.5" fill="white"/>
-                <circle cx="25" cy="4" r="2" fill="#D4A853"/>
-                <circle cx="14" cy="19" r="3" fill="#D4A853" filter="url(#stethoscopeGlow)"/>
-                <circle cx="14" cy="19" r="1.5" fill="white"/>
+              <svg viewBox="0 0 24 36" className="inline-block w-[18px] h-[22px] ml-[1px] mr-[1px]" fill="none">
+                <path d="M12 16 C10 13, 7 9, 4 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M12 16 C14 13, 17 9, 20 4" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M12 16 L12 25" stroke="#D4A853" strokeWidth="4" strokeLinecap="round"/>
+                <circle cx="12" cy="29" r="6" fill="#D4A853"/>
+                <circle cx="12" cy="29" r="3.5" fill="white"/>
+                <circle cx="4" cy="3" r="4" fill="#D4A853"/>
+                <circle cx="4" cy="3" r="2" fill="white"/>
+                <circle cx="20" cy="3" r="4" fill="#D4A853"/>
+                <circle cx="20" cy="3" r="2" fill="white"/>
+                <circle cx="12" cy="16" r="3.5" fill="#D4A853"/>
+                <circle cx="12" cy="16" r="1.5" fill="white"/>
+                <path d="M12 16 C10 13, 7 9, 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+                <path d="M12 16 C14 13, 17 9, 20 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+                <path d="M12 16 L12 25" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
               </svg>
               <span className="text-[#D4A853]"> Doctors</span>
             </p>
