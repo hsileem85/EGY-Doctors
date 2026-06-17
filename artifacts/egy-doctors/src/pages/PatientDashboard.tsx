@@ -1,34 +1,25 @@
-import { CalendarDays, FileText, Bell, User, Pill, FlaskConical, Scan, Stethoscope } from "lucide-react";
+import { CalendarDays, Bell, User, Pill, Stethoscope } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
-import { Link } from "wouter";
-
-// Mock patient data — will come from backend later
-const patient = {
-  name: "Amira Hassan",
-  age: 32,
-  bloodType: "O+",
-  nationalId: "2980515010****",
-};
+import { useAuth } from "@/context/AuthContext";
 
 const upcomingAppointments = [
   { id: 1, doctor: "Dr. Ahmed Youssef", specialty: "Cardiology", date: "2026-05-28", time: "10:00 AM", status: "confirmed" },
 ];
 
 const recentRecords = [
-  { id: 1, type: "appointment", title: "Cardiology Consultation", doctor: "Dr. Ahmed Youssef", date: "2026-05-20", icon: Stethoscope },
-  { id: 2, type: "lab", title: "Complete Blood Count (CBC)", doctor: "LabCare Center", date: "2026-05-18", icon: FlaskConical },
-  { id: 3, type: "scan", title: "Chest X-Ray", doctor: "ScanPro Radiology", date: "2026-05-15", icon: Scan },
-  { id: 4, type: "prescription", title: "Blood Pressure Medication", doctor: "Dr. Ahmed Youssef", date: "2026-05-20", icon: Pill },
+  { id: 1, title: "Cardiology Consultation", doctor: "Dr. Ahmed Youssef", date: "2026-05-20", icon: Stethoscope },
+  { id: 4, title: "Blood Pressure Medication", doctor: "Dr. Ahmed Youssef", date: "2026-05-20", icon: Pill },
 ];
 
 export default function PatientDashboard() {
   const { dir } = useLanguage();
-
+  const { user } = useAuth();
   const isRTL = dir === "rtl";
+
+  const firstName = user?.name?.split(" ")[0] ?? (isRTL ? "مريض" : "Patient");
 
   return (
     <Layout>
@@ -38,11 +29,11 @@ export default function PatientDashboard() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                A
+                {firstName[0]?.toUpperCase() ?? "P"}
               </div>
               <div>
-                <h3 className="font-bold text-sm">{patient.name}</h3>
-                <p className="text-xs text-gray-500">{isRTL ? "مريضة" : "Patient"}</p>
+                <h3 className="font-bold text-sm">{user?.name ?? firstName}</h3>
+                <p className="text-xs text-gray-500">{isRTL ? "مريض" : "Patient"}</p>
               </div>
             </div>
 
@@ -51,12 +42,6 @@ export default function PatientDashboard() {
                 <CalendarDays className="h-4 w-4" />
                 {isRTL ? "مواعيدي" : "My Appointments"}
               </span>
-              <Link href="/patient/emr">
-                <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
-                  <FileText className="h-4 w-4" />
-                  {isRTL ? "الملف الطبي (EMR)" : "Medical Record (EMR)"}
-                </span>
-              </Link>
               <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
                 <Bell className="h-4 w-4" />
                 {isRTL ? "التنبيهات" : "Reminders"}
@@ -74,7 +59,7 @@ export default function PatientDashboard() {
           <div className="max-w-5xl mx-auto">
             <div className="mb-8">
               <h1 className="text-2xl font-bold text-gray-900">
-                {isRTL ? "مرحباً يا أميرة" : `Welcome back, ${patient.name.split(" ")[0]}`}
+                {isRTL ? `مرحباً، ${firstName}` : `Welcome back, ${firstName}`}
               </h1>
               <p className="text-gray-500">
                 {isRTL
@@ -84,29 +69,7 @@ export default function PatientDashboard() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                    <FlaskConical className="h-5 w-5 text-red-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">{isRTL ? "تحاليل" : "Lab Tests"}</p>
-                    <p className="text-xl font-bold">12</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Scan className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">{isRTL ? "أشعة" : "Scans"}</p>
-                    <p className="text-xl font-bold">5</p>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <Card>
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
@@ -165,16 +128,11 @@ export default function PatientDashboard() {
 
               {/* Recent Medical Activity */}
               <Card>
-                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
+                    <Stethoscope className="h-4 w-4 text-primary" />
                     {isRTL ? "آخر النشاطات الطبية" : "Recent Medical Activity"}
                   </CardTitle>
-                  <Link href="/patient/emr">
-                    <Button variant="ghost" size="sm" className="text-primary h-7">
-                      {isRTL ? "عرض الكل" : "View All"}
-                    </Button>
-                  </Link>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -196,30 +154,6 @@ export default function PatientDashboard() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* EMR Preview Banner */}
-            <Card className="mt-6 bg-primary/5 border-primary/20">
-              <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">
-                    {isRTL ? "الملف الطبي الإلكتروني (EMR)" : "Electronic Medical Record (EMR)"}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {isRTL
-                      ? "جميع تحاليلك، أشعتك، وصفاتك، ومواعيدك في مكان واحد."
-                      : "All your lab tests, scans, prescriptions, and appointments in one place."}
-                  </p>
-                </div>
-                <Link href="/patient/emr">
-                  <Button className="shrink-0">
-                    {isRTL ? "فتح EMR" : "Open EMR"}
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
           </div>
         </main>
       </div>
