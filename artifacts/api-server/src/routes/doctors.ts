@@ -224,7 +224,7 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
   }
   let payload: { sub: number };
   try {
-    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { sub: number };
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
   } catch {
     res.status(401).json({ error: "Invalid token" });
     return;
@@ -274,7 +274,7 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
   }
   let payload: { sub: number };
   try {
-    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { sub: number };
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
   } catch {
     res.status(401).json({ error: "Invalid token" });
     return;
@@ -326,7 +326,7 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
   }
   let payload: { sub: number };
   try {
-    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { sub: number };
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
   } catch {
     res.status(401).json({ error: "Invalid token" });
     return;
@@ -373,7 +373,7 @@ router.delete("/doctor/clinics/:id", async (req, res): Promise<void> => {
   }
   let payload: { sub: number };
   try {
-    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { sub: number };
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
   } catch {
     res.status(401).json({ error: "Invalid token" });
     return;

@@ -308,7 +308,16 @@ router.post("/admin/areas", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db.insert(areasTable).values(parsed.data).returning();
+  let { displayOrder } = parsed.data;
+  if (displayOrder == null) {
+    const [result] = await db
+      .select({ maxOrder: max(areasTable.displayOrder) })
+      .from(areasTable)
+      .where(eq(areasTable.cityId, parsed.data.cityId));
+    displayOrder = (result?.maxOrder ?? 0) + 1;
+  }
+
+  const [row] = await db.insert(areasTable).values({ ...parsed.data, displayOrder }).returning();
   res.status(201).json(UpdateAreaResponse.parse(stringifyRow(row)));
 });
 

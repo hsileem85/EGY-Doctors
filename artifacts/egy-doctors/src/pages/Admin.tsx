@@ -585,15 +585,21 @@ function AreasSection({ lang }: { lang: string }) {
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ cityId: 0, name: "", nameAr: "", displayOrder: 0 });
+  const [form, setForm] = useState({ cityId: 0, name: "", nameAr: "", displayOrder: 1 });
+
+  const nextOrderForCity = (cityId: number) => {
+    const siblings = items.filter((i) => i.cityId === cityId);
+    return siblings.length > 0 ? Math.max(...siblings.map((i) => i.displayOrder)) + 1 : 1;
+  };
 
   const reset = () => {
-    setForm({ cityId: cities[0]?.id ?? 0, name: "", nameAr: "", displayOrder: 0 });
+    const firstCityId = cities[0]?.id ?? 0;
+    setForm({ cityId: firstCityId, name: "", nameAr: "", displayOrder: nextOrderForCity(firstCityId) });
     setEditId(null);
   };
 
   const handleSubmit = () => {
-    const payload = { ...form, cityId: Number(form.cityId), displayOrder: Number(form.displayOrder) };
+    const payload = { cityId: Number(form.cityId), name: form.name, nameAr: form.nameAr, displayOrder: Number(form.displayOrder) };
     if (editId) {
       update.mutate(
         { id: editId, data: payload },
@@ -623,7 +629,7 @@ function AreasSection({ lang }: { lang: string }) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-gray-900">{lang === "ar" ? "المناطق" : "Areas"}</h3>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o && !editId) reset(); }}>
           <DialogTrigger asChild>
             <Button className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={() => { reset(); setOpen(true); }}>
               <Plus className="w-4 h-4 mr-1" />
@@ -640,7 +646,10 @@ function AreasSection({ lang }: { lang: string }) {
               <select
                 className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
                 value={form.cityId}
-                onChange={(e) => setForm({ ...form, cityId: Number(e.target.value) })}
+                onChange={(e) => {
+                  const newCityId = Number(e.target.value);
+                  setForm((f) => ({ ...f, cityId: newCityId, displayOrder: editId ? f.displayOrder : nextOrderForCity(newCityId) }));
+                }}
               >
                 <option value="">{lang === "ar" ? "اختر المحافظة" : "Select City"}</option>
                 {cities.map((c) => (
@@ -649,8 +658,13 @@ function AreasSection({ lang }: { lang: string }) {
               </select>
               <Input placeholder={lang === "ar" ? "الاسم (إنجليزي)" : "Name (English)"} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               <Input placeholder={lang === "ar" ? "الاسم (عربي)" : "Name (Arabic)"} value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} />
-              <Input type="number" placeholder={lang === "ar" ? "ترتيب العرض" : "Display Order"} value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} />
-              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={handleSubmit} disabled={create.isPending || update.isPending}>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 font-medium">
+                  {lang === "ar" ? "ترتيب العرض" : "Display Order"}
+                </label>
+                <Input type="number" min={1} value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} />
+              </div>
+              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={handleSubmit} disabled={create.isPending || update.isPending || !form.name || !form.nameAr || !form.cityId}>
                 {editId ? (lang === "ar" ? "حفظ" : "Save") : (lang === "ar" ? "إضافة" : "Add")}
               </Button>
             </div>
@@ -665,10 +679,10 @@ function AreasSection({ lang }: { lang: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
                   <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
                   <TableHead>{lang === "ar" ? "الاسم (ع)" : "Name (AR)"}</TableHead>
                   <TableHead>{lang === "ar" ? "المحافظة" : "City"}</TableHead>
-                  <TableHead>{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
                   <TableHead>{lang === "ar" ? "الحالة" : "Status"}</TableHead>
                   <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
                 </TableRow>
@@ -676,10 +690,10 @@ function AreasSection({ lang }: { lang: string }) {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell className="font-mono text-sm text-gray-500 w-8">{item.displayOrder}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.nameAr}</TableCell>
                     <TableCell>{cities.find((c) => c.id === item.cityId)?.name ?? item.cityId}</TableCell>
-                    <TableCell>{item.displayOrder}</TableCell>
                     <TableCell>
                       <Badge variant={item.isActive === "true" ? "default" : "secondary"}>
                         {item.isActive === "true" ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "معطل" : "Inactive")}
