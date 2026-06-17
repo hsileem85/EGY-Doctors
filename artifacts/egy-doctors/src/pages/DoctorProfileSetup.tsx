@@ -84,7 +84,7 @@ export default function DoctorProfileSetup() {
   const { data: myProfile } = useQuery({
     queryKey: ["myDoctorProfile"],
     queryFn: getMyDoctorProfile,
-    enabled: !!user?.doctorId,
+    enabled: !!user && user.role === "doctor",
     retry: false,
   });
 
@@ -104,6 +104,8 @@ export default function DoctorProfileSetup() {
   useEffect(() => {
     if (!myProfile || profileLoaded) return;
     if (myProfile.specialtyId && apiSpecialties.length === 0) return;
+    const hasClinicsWithArea = myProfile.clinics?.some((c: { areaId?: number | null }) => c.areaId);
+    if (hasClinicsWithArea && apiAreas.length === 0) return;
 
     const matchedSpecialty = myProfile.specialtyId != null
       ? apiSpecialties.find(s => s.id === myProfile.specialtyId)
