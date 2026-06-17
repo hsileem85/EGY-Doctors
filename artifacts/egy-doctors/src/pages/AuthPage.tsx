@@ -154,14 +154,14 @@ export default function AuthPage() {
     <button
       type="button"
       onClick={() => setUserType(type)}
-      className={`flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
+      className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-lg border text-xs font-medium transition-all ${
         userType === type
           ? "border-[#D4A853] bg-[#D4A853]/10 text-[#D4A853] shadow-sm shadow-[#D4A853]/10"
           : "border-[#334155] text-gray-400 hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5"
       }`}
     >
       <Icon className="h-4 w-4" />
-      {label}
+      <span className="leading-tight text-center">{label}</span>
     </button>
   );
 
