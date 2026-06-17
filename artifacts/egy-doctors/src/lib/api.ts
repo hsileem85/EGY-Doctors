@@ -185,6 +185,7 @@ export function getMyDoctorProfile(): Promise<ApiDoctor & { clinics: ApiClinic[]
 export function updateDoctorProfile(data: {
   name?: string;
   bio?: string;
+  image?: string;
   specialtyId?: number;
   cityId?: number;
   areaId?: number;

@@ -283,6 +283,7 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
   const Schema = z.object({
     name: z.string().min(1).optional(),
     bio: z.string().optional().nullable(),
+    image: z.string().optional().nullable(),
     specialtyId: z.coerce.number().optional().nullable(),
     cityId: z.coerce.number().optional().nullable(),
     areaId: z.coerce.number().optional().nullable(),

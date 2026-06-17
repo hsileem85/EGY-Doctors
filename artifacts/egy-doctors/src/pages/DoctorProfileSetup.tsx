@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   Upload, Camera, Clock, ArrowLeft, MapPin,
@@ -100,6 +100,37 @@ export default function DoctorProfileSetup() {
   const [expandedId, setExpandedId] = useState<string>(() => clinics[0].id);
   const [deletedDbIds, setDeletedDbIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 400;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setImagePreview(compressed);
+    } catch {
+      toast({ title: isRTL ? "خطأ" : "Error", description: isRTL ? "تعذر معالجة الصورة" : "Could not process image", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     if (!myProfile || profileLoaded) return;
@@ -117,6 +148,10 @@ export default function DoctorProfileSetup() {
       qualificationDegree: "",
       bio: myProfile.bio ?? "",
     });
+
+    if (myProfile.image) {
+      setImagePreview(myProfile.image);
+    }
 
     if (myProfile.clinics && myProfile.clinics.length > 0) {
       const hydrated: Clinic[] = myProfile.clinics.map((c) => {
@@ -181,6 +216,7 @@ export default function DoctorProfileSetup() {
       await updateDoctorProfile({
         name: profile.fullName || undefined,
         bio: profile.bio || undefined,
+        image: imagePreview || undefined,
         specialtyId: selectedSpecialty?.id,
         cityId: firstClinicCity?.id,
         areaId: firstClinicAreaId,
@@ -265,12 +301,30 @@ export default function DoctorProfileSetup() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex flex-col items-center">
-                    <div className="relative w-32 h-32 bg-gray-100 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer group">
-                      <Camera className="w-8 h-8 text-gray-400 group-hover:text-primary transition-colors" />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                      data-testid="input-profile-photo"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-dashed border-gray-300 hover:border-primary/60 transition-colors cursor-pointer group focus:outline-none"
+                    >
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-400 group-hover:text-primary transition-colors" />
+                        </div>
+                      )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                         <Upload className="w-6 h-6 text-white" />
                       </div>
-                    </div>
+                    </button>
                     <span className="text-sm font-medium text-gray-600 mt-3">{t.profileSetup.uploadPhoto}</span>
                   </div>
 
