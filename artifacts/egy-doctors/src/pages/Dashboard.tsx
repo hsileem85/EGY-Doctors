@@ -173,7 +173,9 @@ export default function Dashboard() {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{t.dashboard.title}</h1>
-                <p className="text-gray-500">{t.dashboard.welcome}</p>
+                <p className="text-gray-500">
+                  {isRTL ? `مرحباً بك، ${doctorName}. هنا نظرة عامة على عيادتك.` : `Welcome back, ${doctorName}. Here's your clinic overview.`}
+                </p>
               </div>
               <Button
                 variant="outline"

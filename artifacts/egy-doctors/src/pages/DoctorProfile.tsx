@@ -4,9 +4,8 @@ import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, External
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getDoctor, bookAppointment, type ApiClinic } from "@/lib/api";
 
@@ -58,6 +57,7 @@ function fmtDateInfo(dateStr: string, lang: string) {
 export default function DoctorProfile() {
   const { id } = useParams();
   const { t, lang, dir } = useLanguage();
+  const { user } = useAuth();
   const isRTL = dir === "rtl";
 
   const { data: doctor, isLoading } = useQuery({
@@ -75,8 +75,6 @@ export default function DoctorProfile() {
   const [selectedClinic, setSelectedClinic] = useState<ApiClinic | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [patientName, setPatientName] = useState("");
-  const [patientPhone, setPatientPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const schedule = useMemo(() => buildSchedule(), []);
@@ -129,7 +127,7 @@ export default function DoctorProfile() {
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientName || !patientPhone || !selectedClinic || !selectedDate || !selectedTime) return;
+    if (!selectedClinic || !selectedDate || !selectedTime) return;
     setIsSubmitting(true);
     try {
       await bookAppointment({
@@ -137,8 +135,8 @@ export default function DoctorProfile() {
         clinicId: selectedClinic.id,
         appointmentDate: selectedDate,
         appointmentTime: selectedTime,
-        patientName,
-        patientPhone,
+        patientName: user?.name ?? "Guest",
+        patientPhone: user?.phone ?? "",
       });
       setBookingStep("success");
     } catch {
@@ -159,8 +157,6 @@ export default function DoctorProfile() {
     }
     setSelectedDate(null);
     setSelectedTime(null);
-    setPatientName("");
-    setPatientPhone("");
   };
 
   return (
@@ -353,28 +349,6 @@ export default function DoctorProfile() {
                 </div>
 
                 <form onSubmit={handleConfirm} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">{t.profile.patientName}</Label>
-                    <Input
-                      id="name"
-                      placeholder={t.profile.fullName}
-                      value={patientName}
-                      onChange={(e) => setPatientName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">{t.profile.phoneNumber}</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="01xxxxxxxxx"
-                      value={patientPhone}
-                      onChange={(e) => setPatientPhone(e.target.value)}
-                      required
-                    />
-                  </div>
-
                   <div className="pt-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t.profile.consultationFee}</span>
@@ -394,7 +368,7 @@ export default function DoctorProfile() {
                   <Button
                     type="submit"
                     className="w-full mt-4 h-12 text-base font-semibold bg-[#D4A853] hover:bg-[#c49a4a] text-white"
-                    disabled={isSubmitting || !patientName || !patientPhone}
+                    disabled={isSubmitting}
                   >
                     {isSubmitting ? t.profile.confirming : t.profile.confirmBooking}
                   </Button>
