@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListDoctors,
   useApproveDoctor,
@@ -22,7 +23,7 @@ import {
   getListCitiesQueryKey,
   getListAreasQueryKey,
 } from "@workspace/api-client-react";
-import { queryClient } from "@/lib/queryClient";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -58,11 +59,12 @@ import {
 } from "lucide-react";
 
 function useInvalidateAdmin() {
+  const qc = useQueryClient();
   return () => {
-    queryClient.invalidateQueries({ queryKey: getListDoctorsQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getListSpecialtiesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getListCitiesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getListAreasQueryKey() });
+    qc.invalidateQueries({ queryKey: getListDoctorsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListSpecialtiesQueryKey() });
+    qc.invalidateQueries({ queryKey: getListCitiesQueryKey() });
+    qc.invalidateQueries({ queryKey: getListAreasQueryKey() });
   };
 }
 
@@ -77,7 +79,12 @@ type TabId = (typeof tabs)[number]["id"];
 
 export default function Admin() {
   const { lang, t, dir } = useLanguage();
-  const [activeTab, setActiveTab] = useState<TabId>("doctors");
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  const params = new URLSearchParams(search);
+  const tabParam = params.get("tab") as TabId | null;
+  const activeTab: TabId = tabParam && tabs.some((t) => t.id === tabParam) ? tabParam : "doctors";
+  const setActiveTab = (id: TabId) => navigate(`/admin?tab=${id}`);
   const isRTL = dir === "rtl";
 
   return (
