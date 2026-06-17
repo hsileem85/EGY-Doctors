@@ -3,10 +3,12 @@ const API_BASE = "/api";
 export interface AuthUser {
   id: number;
   name: string;
+  nameAr?: string | null;
   phone: string;
   email?: string | null;
   role: "patient" | "doctor" | "medical_center" | "admin";
   doctorId?: number | null;
+  accountStatus?: string | null;
 }
 
 export interface ApiClinic {
@@ -113,6 +115,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export interface SignUpData {
   name: string;
+  nameAr?: string;
   phone: string;
   email?: string;
   nationalId?: string;

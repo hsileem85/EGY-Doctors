@@ -326,6 +326,59 @@ components:
           type: string
       required:
         - status
+    AuthUser:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameAr: { type: [string, "null"] }
+        phone: { type: string }
+        email: { type: [string, "null"] }
+        role: { type: string }
+        doctorId: { type: [integer, "null"] }
+        accountStatus: { type: [string, "null"] }
+      required:
+        - id
+        - name
+        - phone
+        - role
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required:
+        - token
+        - user
+    SignUpRequest:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: [string, "null"] }
+        phone: { type: string }
+        email: { type: [string, "null"] }
+        nationalId: { type: [string, "null"] }
+        syndicateNumber: { type: [string, "null"] }
+        password: { type: string }
+        role: { type: string, enum: [patient, doctor, medical_center] }
+        specialtyId: { type: [integer, "null"] }
+        cityId: { type: [integer, "null"] }
+        experience: { type: [integer, "null"] }
+        license: { type: [string, "null"] }
+      required:
+        - name
+        - phone
+        - password
+        - role
+    SignInRequest:
+      type: object
+      properties:
+        phone: { type: string }
+        password: { type: string }
+      required:
+        - phone
+        - password
     Doctor:
       type: object
       properties:
@@ -333,14 +386,19 @@ components:
         userId: { type: integer }
         name: { type: string }
         specialtyId: { type: [integer, "null"] }
+        specialtyName: { type: [string, "null"] }
         cityId: { type: [integer, "null"] }
+        cityName: { type: [string, "null"] }
         areaId: { type: [integer, "null"] }
+        areaName: { type: [string, "null"] }
         clinicAddress: { type: [string, "null"] }
         bio: { type: [string, "null"] }
         image: { type: [string, "null"] }
         fee: { type: [integer, "null"] }
         experience: { type: [integer, "null"] }
         license: { type: [string, "null"] }
+        syndicateNumber: { type: [string, "null"] }
+        email: { type: [string, "null"] }
         rating: { type: number }
         reviews: { type: integer }
         accountStatus: { type: string }

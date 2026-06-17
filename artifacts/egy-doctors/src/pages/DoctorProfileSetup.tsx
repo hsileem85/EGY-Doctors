@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   Upload, Camera, Clock, ArrowLeft, MapPin, GraduationCap,
@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { getSpecialties, getCities } from "@/lib/api";
+import { getSpecialties, getCities, getMyDoctorProfile } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 
 const DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
@@ -61,6 +62,7 @@ export default function DoctorProfileSetup() {
   const { t, dir } = useLanguage();
   const [pathname, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const isEditMode = pathname.includes("edit-profile");
   const isRTL = dir === "rtl";
 
@@ -73,27 +75,68 @@ export default function DoctorProfileSetup() {
     queryFn: getCities,
   });
 
+  const { data: myProfile } = useQuery({
+    queryKey: ["myDoctorProfile"],
+    queryFn: getMyDoctorProfile,
+    enabled: !!user?.doctorId,
+    retry: false,
+  });
+
   const [profile, setProfile] = useState({
-    fullName: "Dr. Ahmed Youssef",
-    specialty: "Cardiology",
-    subSpecialty: "Consultant Cardiologist",
-    experience: "15",
-    qualificationDegree: "MD, PhD, FRCS",
+    fullName: "",
+    specialty: "",
+    subSpecialty: "",
+    experience: "",
+    qualificationDegree: "",
     bio: "",
   });
 
-  const [clinics, setClinics] = useState<Clinic[]>([
-    makeClinic({
-      name: "Heart Care Clinic",
-      location: "New Cairo",
-      address: "15 South Teseen St, 4th Floor",
-      lat: "30.0444",
-      lng: "31.2357",
-      fee: "450",
-    }),
-  ]);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [clinics, setClinics] = useState<Clinic[]>([makeClinic()]);
+  const [expandedId, setExpandedId] = useState<string>(() => clinics[0].id);
 
-  const [expandedId, setExpandedId] = useState<string>(clinics[0].id);
+  useEffect(() => {
+    if (myProfile && !profileLoaded && (apiSpecialties.length > 0 || !myProfile.specialtyId)) {
+      const matchedSpecialty = myProfile.specialtyId != null
+        ? apiSpecialties.find(s => s.id === myProfile.specialtyId)
+        : undefined;
+      const matchedCity = myProfile.cityId != null
+        ? apiCities.find(c => c.id === myProfile.cityId)
+        : undefined;
+
+      setProfile({
+        fullName: myProfile.name || user?.name || "",
+        specialty: matchedSpecialty?.name ?? (myProfile as unknown as Record<string, string>).specialtyName ?? "",
+        subSpecialty: "",
+        experience: myProfile.experience != null ? String(myProfile.experience) : "",
+        qualificationDegree: "",
+        bio: myProfile.bio ?? "",
+      });
+
+      if (myProfile.clinics && myProfile.clinics.length > 0) {
+        const hydrated: Clinic[] = myProfile.clinics.map((c) => ({
+          id: String(c.id),
+          name: c.name ?? "",
+          location: matchedCity?.name ?? "",
+          address: c.address ?? "",
+          lat: "30.0444",
+          lng: "31.2357",
+          fee: c.fee != null ? String(c.fee) : "",
+          schedule: defaultSchedule(),
+        }));
+        setClinics(hydrated);
+        setExpandedId(hydrated[0].id);
+      }
+
+      setProfileLoaded(true);
+    } else if (!myProfile && !profileLoaded && user?.name) {
+      setProfile(prev => ({
+        ...prev,
+        fullName: user.name,
+      }));
+      setProfileLoaded(true);
+    }
+  }, [myProfile, user, profileLoaded, apiSpecialties, apiCities]);
 
   const addClinic = () => {
     const c = makeClinic();
@@ -481,15 +524,6 @@ export default function DoctorProfileSetup() {
                 );
               })}
 
-              {/* Add Clinic button (bottom) */}
-              <button
-                type="button"
-                onClick={addClinic}
-                className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 rounded-xl py-4 text-sm font-medium text-gray-500 hover:text-primary transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                {isRTL ? "إضافة عيادة أخرى" : "Add Another Clinic"}
-              </button>
             </div>
           </div>
         </div>

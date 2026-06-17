@@ -22,6 +22,7 @@ import {
   getListSpecialtiesQueryKey,
   getListCitiesQueryKey,
   getListAreasQueryKey,
+  type Doctor,
 } from "@workspace/api-client-react";
 
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ import {
   Pencil,
   Trash2,
   ShieldCheck,
+  Eye,
 } from "lucide-react";
 
 function useInvalidateAdmin() {
@@ -149,12 +151,64 @@ export default function Admin() {
 
 /* ─── Doctors Section ─── */
 
+type AdminDoctor = Doctor & {
+  specialtyName?: string | null;
+  cityName?: string | null;
+  areaName?: string | null;
+  email?: string | null;
+  syndicateNumber?: string | null;
+};
+
+function DoctorDetailModal({ doctor, lang, onClose }: {
+  doctor: AdminDoctor;
+  lang: string;
+  onClose: () => void;
+}) {
+  const isAr = lang === "ar";
+  const row = (label: string, value: string | number | null | undefined) => (
+    value != null && value !== "" ? (
+      <div className="flex gap-2 py-2 border-b border-gray-100 last:border-0">
+        <span className="text-xs font-medium text-gray-500 w-36 shrink-0">{label}</span>
+        <span className="text-sm text-gray-900 break-words">{String(value)}</span>
+      </div>
+    ) : null
+  );
+  return (
+    <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+            {doctor.name.charAt(0)}
+          </div>
+          {doctor.name}
+        </DialogTitle>
+      </DialogHeader>
+      <div className="space-y-1 pt-2">
+        {row(isAr ? "التخصص" : "Specialty", (doctor as unknown as Record<string, string>).specialtyName)}
+        {row(isAr ? "المدينة" : "City", (doctor as unknown as Record<string, string>).cityName)}
+        {row(isAr ? "المنطقة" : "Area", (doctor as unknown as Record<string, string>).areaName)}
+        {row(isAr ? "البريد الإلكتروني" : "Email", (doctor as unknown as Record<string, string>).email)}
+        {row(isAr ? "رقم الترخيص" : "License Number", doctor.license)}
+        {row(isAr ? "رقم النقابة" : "Syndicate Number", (doctor as unknown as Record<string, string>).syndicateNumber)}
+        {row(isAr ? "سنوات الخبرة" : "Experience (years)", doctor.experience)}
+        {row(isAr ? "رسوم الكشف" : "Consultation Fee (EGP)", doctor.fee)}
+        {row(isAr ? "عنوان العيادة" : "Clinic Address", doctor.clinicAddress)}
+        {row(isAr ? "النبذة التعريفية" : "Bio", doctor.bio)}
+        {row(isAr ? "حالة الحساب" : "Account Status", doctor.accountStatus)}
+        {row(isAr ? "حالة الإعداد" : "Onboarding Status", doctor.onboardingStatus)}
+        {row(isAr ? "تاريخ التسجيل" : "Registered", new Date(doctor.createdAt).toLocaleDateString())}
+      </div>
+    </DialogContent>
+  );
+}
+
 function DoctorsSection({ lang }: { lang: string }) {
   const { data: doctors = [], isLoading } = useListDoctors();
   const approve = useApproveDoctor();
   const reject = useRejectDoctor();
   const updateOnboarding = useUpdateDoctorOnboarding();
   const invalidate = useInvalidateAdmin();
+  const [selectedDoctor, setSelectedDoctor] = useState<AdminDoctor | null>(null as AdminDoctor | null);
 
   const pending = doctors.filter((d) => d.accountStatus === "pending");
   const approved = doctors.filter((d) => d.accountStatus === "approved");
@@ -197,88 +251,119 @@ function DoctorsSection({ lang }: { lang: string }) {
       </div>
 
       {/* Doctors Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900">
-            {lang === "ar" ? "قائمة الأطباء" : "Doctor List"}
-          </h3>
-        </div>
-        {isLoading ? (
-          <div className="p-8 text-center text-gray-500">{lang === "ar" ? "جاري التحميل..." : "Loading..."}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
-                  <TableHead>{lang === "ar" ? "الحساب" : "Account"}</TableHead>
-                  <TableHead>{lang === "ar" ? "الإعداد" : "Onboarding"}</TableHead>
-                  <TableHead>{lang === "ar" ? "التخصص" : "Specialty"}</TableHead>
-                  <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {doctors.map((doctor) => (
-                  <TableRow key={doctor.id}>
-                    <TableCell className="font-medium">{doctor.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusBadge(doctor.accountStatus)}>
-                        {doctor.accountStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusBadge(doctor.onboardingStatus)}>
-                        {doctor.onboardingStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-500">{doctor.specialtyId ?? "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {doctor.accountStatus === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => handleApprove(doctor.id)}
-                              disabled={approve.isPending}
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleReject(doctor.id)}
-                              disabled={reject.isPending}
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          onClick={() =>
-                            handleOnboarding(
-                              doctor.id,
-                              doctor.onboardingStatus === "pending" ? "approved" : "pending"
-                            )
-                          }
-                          disabled={updateOnboarding.isPending}
-                        >
-                          <Clock className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <Dialog open={!!selectedDoctor} onOpenChange={(open) => { if (!open) setSelectedDoctor(null); }}>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <h3 className="font-semibold text-gray-900">
+              {lang === "ar" ? "قائمة الأطباء" : "Doctor List"}
+            </h3>
           </div>
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-500">{lang === "ar" ? "جاري التحميل..." : "Loading..."}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
+                    <TableHead>{lang === "ar" ? "الحساب" : "Account"}</TableHead>
+                    <TableHead>{lang === "ar" ? "الإعداد" : "Onboarding"}</TableHead>
+                    <TableHead>{lang === "ar" ? "التخصص" : "Specialty"}</TableHead>
+                    <TableHead>{lang === "ar" ? "المدينة" : "City"}</TableHead>
+                    <TableHead>{lang === "ar" ? "الترخيص" : "License"}</TableHead>
+                    <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {doctors.map((doctor) => (
+                    <TableRow key={doctor.id}>
+                      <TableCell className="font-medium">{doctor.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={statusBadge(doctor.accountStatus)}>
+                          {doctor.accountStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={statusBadge(doctor.onboardingStatus)}>
+                          {doctor.onboardingStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {(doctor as unknown as Record<string, string>).specialtyName ?? "-"}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {(doctor as unknown as Record<string, string>).cityName ?? "-"}
+                      </TableCell>
+                      <TableCell className="text-gray-500 text-xs font-mono">
+                        {doctor.license ?? "-"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                            onClick={() => setSelectedDoctor(doctor as AdminDoctor)}
+                            title={lang === "ar" ? "عرض التفاصيل" : "View details"}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                          {doctor.accountStatus === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => handleApprove(doctor.id)}
+                                disabled={approve.isPending}
+                                title={lang === "ar" ? "قبول" : "Approve"}
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleReject(doctor.id)}
+                                disabled={reject.isPending}
+                                title={lang === "ar" ? "رفض" : "Reject"}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            onClick={() =>
+                              handleOnboarding(
+                                doctor.id,
+                                doctor.onboardingStatus === "pending" ? "approved" : "pending"
+                              )
+                            }
+                            disabled={updateOnboarding.isPending}
+                            title={lang === "ar" ? "تحديث الإعداد" : "Toggle onboarding"}
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+        {selectedDoctor && (
+          <DoctorDetailModal
+            doctor={selectedDoctor}
+            lang={lang}
+            onClose={() => setSelectedDoctor(null)}
+          />
         )}
-      </div>
+      </Dialog>
     </div>
   );
 }

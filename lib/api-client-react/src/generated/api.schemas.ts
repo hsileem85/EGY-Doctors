@@ -9,6 +9,63 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface AuthUser {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameAr?: string | null;
+  phone: string;
+  /** @nullable */
+  email?: string | null;
+  role: string;
+  /** @nullable */
+  doctorId?: number | null;
+  /** @nullable */
+  accountStatus?: string | null;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export type SignUpRequestRole = typeof SignUpRequestRole[keyof typeof SignUpRequestRole];
+
+
+export const SignUpRequestRole = {
+  patient: 'patient',
+  doctor: 'doctor',
+  medical_center: 'medical_center',
+} as const;
+
+export interface SignUpRequest {
+  name: string;
+  /** @nullable */
+  nameAr?: string | null;
+  phone: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  nationalId?: string | null;
+  /** @nullable */
+  syndicateNumber?: string | null;
+  password: string;
+  role: SignUpRequestRole;
+  /** @nullable */
+  specialtyId?: number | null;
+  /** @nullable */
+  cityId?: number | null;
+  /** @nullable */
+  experience?: number | null;
+  /** @nullable */
+  license?: string | null;
+}
+
+export interface SignInRequest {
+  phone: string;
+  password: string;
+}
+
 export interface Doctor {
   id: number;
   userId: number;
@@ -16,9 +73,15 @@ export interface Doctor {
   /** @nullable */
   specialtyId?: number | null;
   /** @nullable */
+  specialtyName?: string | null;
+  /** @nullable */
   cityId?: number | null;
   /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
   areaId?: number | null;
+  /** @nullable */
+  areaName?: string | null;
   /** @nullable */
   clinicAddress?: string | null;
   /** @nullable */
@@ -31,6 +94,10 @@ export interface Doctor {
   experience?: number | null;
   /** @nullable */
   license?: string | null;
+  /** @nullable */
+  syndicateNumber?: string | null;
+  /** @nullable */
+  email?: string | null;
   rating?: number;
   reviews?: number;
   accountStatus: string;

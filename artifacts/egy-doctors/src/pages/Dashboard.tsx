@@ -1,4 +1,4 @@
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,18 +27,92 @@ function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirm
   return <Badge variant="outline" className={map[status]}>{labels[status]}</Badge>;
 }
 
+function PendingScreen({ status, doctorName, signOut, isRTL }: {
+  status: string;
+  doctorName: string;
+  signOut: () => void;
+  isRTL: boolean;
+}) {
+  const isRejected = status === "rejected";
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md text-center">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isRejected ? "bg-red-100" : "bg-[#D4A853]/10"}`}>
+          {isRejected
+            ? <XCircle className="w-10 h-10 text-red-500" />
+            : <Clock className="w-10 h-10 text-[#D4A853]" />
+          }
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {isRejected
+            ? (isRTL ? "تم رفض طلبك" : "Application Not Approved")
+            : (isRTL ? "حسابك قيد المراجعة" : "Your Account is Under Review")
+          }
+        </h1>
+        <p className="text-gray-500 mb-2">
+          {isRTL ? `مرحباً، ${doctorName}` : `Hello, ${doctorName}`}
+        </p>
+        <p className="text-gray-500 mb-8 leading-relaxed">
+          {isRejected
+            ? (isRTL
+                ? "نأسف، لم يتم قبول طلب تسجيلك في الوقت الحالي. يرجى التواصل مع الدعم للمزيد من المعلومات."
+                : "We're sorry, your registration was not approved at this time. Please contact support for more information.")
+            : (isRTL
+                ? "شكراً لتسجيلك في EGY Doctors. يراجع فريقنا طلبك حالياً وسيتم إخطارك بالبريد الإلكتروني عند القبول."
+                : "Thank you for registering with EGY Doctors. Our team is reviewing your application and you'll be notified by email once approved.")
+          }
+        </p>
+        {!isRejected && (
+          <div className="bg-[#FEF9F0] border border-[#D4A853]/30 rounded-xl p-4 mb-8 text-sm text-left">
+            <p className="font-medium text-[#92400E] mb-2">
+              {isRTL ? "ما الذي يحدث الآن؟" : "What happens next?"}
+            </p>
+            <ul className="space-y-1 text-[#78350F]">
+              <li>✅ {isRTL ? "تم إنشاء حسابك بنجاح" : "Your account has been created"}</li>
+              <li>⏳ {isRTL ? "يراجع فريقنا بياناتك" : "Our team is reviewing your details"}</li>
+              <li>📧 {isRTL ? "ستصلك رسالة بريدية عند الموافقة" : "You'll get an email when approved"}</li>
+            </ul>
+          </div>
+        )}
+        <Button
+          variant="outline"
+          className="gap-2 text-gray-600"
+          onClick={signOut}
+          data-testid="button-pending-signout"
+        >
+          <LogOut className="w-4 h-4" />
+          {isRTL ? "تسجيل الخروج" : "Sign Out"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { t, dir } = useLanguage();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const isRTL = dir === "rtl";
+
+  const accountStatus = user?.accountStatus ?? "approved";
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments", user?.doctorId],
     queryFn: () => getAppointments({ doctorId: user?.doctorId ?? undefined }),
-    enabled: !!user?.doctorId,
+    enabled: !!user?.doctorId && accountStatus === "approved",
   });
 
   const doctorName = user?.name ?? "Doctor";
-  const specialty = "";
+
+  if (user?.role === "doctor" && (accountStatus === "pending" || accountStatus === "rejected")) {
+    return (
+      <PendingScreen
+        status={accountStatus}
+        doctorName={doctorName}
+        signOut={signOut}
+        isRTL={isRTL}
+      />
+    );
+  }
 
   return (
     <Layout>
@@ -52,7 +126,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="font-bold text-sm">{doctorName}</h3>
-                <p className="text-xs text-gray-500">{specialty}</p>
+                <p className="text-xs text-gray-500">{user?.nameAr ?? ""}</p>
               </div>
             </div>
 
@@ -78,9 +152,17 @@ export default function Dashboard() {
               <Link href="/edit-profile">
                 <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
                   <TrendingUp className="h-4 w-4" />
-                  {dir === "rtl" ? "تعديل الملف الشخصي" : "Edit Profile"}
+                  {isRTL ? "تعديل الملف الشخصي" : "Edit Profile"}
                 </span>
               </Link>
+              <button
+                onClick={signOut}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 font-medium text-sm transition-colors"
+                data-testid="button-dashboard-signout"
+              >
+                <LogOut className="h-4 w-4" />
+                {isRTL ? "تسجيل الخروج" : "Sign Out"}
+              </button>
             </nav>
           </div>
         </aside>
@@ -88,9 +170,20 @@ export default function Dashboard() {
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8">
           <div className="max-w-5xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">{t.dashboard.title}</h1>
-              <p className="text-gray-500">{t.dashboard.welcome}</p>
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{t.dashboard.title}</h1>
+                <p className="text-gray-500">{t.dashboard.welcome}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-gray-500 md:hidden"
+                onClick={signOut}
+              >
+                <LogOut className="h-4 w-4" />
+                {isRTL ? "خروج" : "Sign Out"}
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -164,7 +257,7 @@ export default function Dashboard() {
                     {isLoading ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8 text-gray-400">
-                          {dir === "rtl" ? "جار التحميل..." : "Loading..."}
+                          {isRTL ? "جار التحميل..." : "Loading..."}
                         </TableCell>
                       </TableRow>
                     ) : appointments.length === 0 ? (

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
 import { db, usersTable, doctorsTable, passwordResetTokensTable } from "@workspace/db";
+import { sendDoctorPendingEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
@@ -18,6 +19,7 @@ const router: IRouter = Router();
 router.post("/auth/signup", async (req, res): Promise<void> => {
   const Schema = z.object({
     name: z.string().min(1, "Name is required"),
+    nameAr: z.string().optional().nullable(),
     phone: z.string().min(7, "Valid phone required"),
     email: z.string().email().optional().nullable(),
     nationalId: z.string().optional().nullable(),
@@ -49,6 +51,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 
   const [user] = await db.insert(usersTable).values({
     name: d.name,
+    nameAr: d.nameAr ?? null,
     phone: d.phone,
     email: d.email ?? null,
     nationalId: d.nationalId ?? null,
@@ -58,6 +61,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
   }).returning();
 
   let doctorId: number | null = null;
+  let accountStatus: string | null = null;
   if (d.role === "doctor") {
     const [doc] = await db.insert(doctorsTable).values({
       userId: user.id,
@@ -68,12 +72,26 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       experience: d.experience ?? null,
     }).returning();
     doctorId = doc.id;
+    accountStatus = doc.accountStatus;
+
+    if (user.email) {
+      sendDoctorPendingEmail(user.email, user.name).catch(() => {});
+    }
   }
 
   const token = signToken(user.id, user.role);
   res.status(201).json({
     token,
-    user: { id: user.id, name: user.name, phone: user.phone, role: user.role, doctorId },
+    user: {
+      id: user.id,
+      name: user.name,
+      nameAr: user.nameAr ?? null,
+      phone: user.phone,
+      email: user.email ?? null,
+      role: user.role,
+      doctorId,
+      accountStatus,
+    },
   });
 });
 
@@ -104,16 +122,30 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
   }
 
   let doctorId: number | null = null;
+  let accountStatus: string | null = null;
   if (user.role === "doctor") {
-    const [doc] = await db.select({ id: doctorsTable.id }).from(doctorsTable)
+    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus })
+      .from(doctorsTable)
       .where(eq(doctorsTable.userId, user.id)).limit(1);
-    if (doc) doctorId = doc.id;
+    if (doc) {
+      doctorId = doc.id;
+      accountStatus = doc.accountStatus;
+    }
   }
 
   const token = signToken(user.id, user.role);
   res.json({
     token,
-    user: { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role, doctorId },
+    user: {
+      id: user.id,
+      name: user.name,
+      nameAr: user.nameAr ?? null,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      doctorId,
+      accountStatus,
+    },
   });
 });
 
@@ -140,13 +172,27 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   }
 
   let doctorId: number | null = null;
+  let accountStatus: string | null = null;
   if (user.role === "doctor") {
-    const [doc] = await db.select({ id: doctorsTable.id }).from(doctorsTable)
+    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus })
+      .from(doctorsTable)
       .where(eq(doctorsTable.userId, user.id)).limit(1);
-    if (doc) doctorId = doc.id;
+    if (doc) {
+      doctorId = doc.id;
+      accountStatus = doc.accountStatus;
+    }
   }
 
-  res.json({ id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role, doctorId });
+  res.json({
+    id: user.id,
+    name: user.name,
+    nameAr: user.nameAr ?? null,
+    phone: user.phone,
+    email: user.email,
+    role: user.role,
+    doctorId,
+    accountStatus,
+  });
 });
 
 /* ─── POST /auth/forgot-password ─── */

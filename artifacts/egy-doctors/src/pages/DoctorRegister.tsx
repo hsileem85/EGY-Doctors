@@ -20,6 +20,7 @@ export default function DoctorRegister() {
 
   const [formData, setFormData] = useState({
     fullName: "",
+    fullNameAr: "",
     email: "",
     phone: "",
     password: "",
@@ -47,15 +48,24 @@ export default function DoctorRegister() {
     }
   };
 
+  const selectedSpecialty = apiSpecialties.find(s => s.name === formData.specialty);
+  const selectedCity = apiCities.find(c => c.name === formData.location);
+
   const handleRegister = async () => {
     if (!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.agreeTerms) return;
     try {
       await apiSignUp({
         name: formData.fullName,
+        nameAr: formData.fullNameAr || undefined,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
         role: "doctor",
+        specialtyId: selectedSpecialty?.id,
+        cityId: selectedCity?.id,
+        experience: formData.experience ? Number(formData.experience) : undefined,
+        license: formData.license || undefined,
+        syndicateNumber: formData.syndicateMembership || undefined,
       });
       setIsSuccess(true);
     } catch {
@@ -111,6 +121,19 @@ export default function DoctorRegister() {
                   value={formData.fullName} 
                   onChange={e => setFormData({...formData, fullName: e.target.value})} 
                   data-testid="input-register-fullname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullNameAr">
+                  {lang === "ar" ? "الاسم باللغة العربية" : "Arabic Name"}
+                </Label>
+                <Input 
+                  id="fullNameAr"
+                  dir="rtl"
+                  placeholder="د. محمد أحمد"
+                  value={formData.fullNameAr} 
+                  onChange={e => setFormData({...formData, fullNameAr: e.target.value})} 
+                  data-testid="input-register-fullname-ar"
                 />
               </div>
               <div className="space-y-2">

@@ -13,9 +13,15 @@ export interface Doctor {
   /** @nullable */
   specialtyId?: number | null;
   /** @nullable */
+  specialtyName?: string | null;
+  /** @nullable */
   cityId?: number | null;
   /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
   areaId?: number | null;
+  /** @nullable */
+  areaName?: string | null;
   /** @nullable */
   clinicAddress?: string | null;
   /** @nullable */
@@ -28,6 +34,10 @@ export interface Doctor {
   experience?: number | null;
   /** @nullable */
   license?: string | null;
+  /** @nullable */
+  syndicateNumber?: string | null;
+  /** @nullable */
+  email?: string | null;
   rating?: number;
   reviews?: number;
   accountStatus: string;

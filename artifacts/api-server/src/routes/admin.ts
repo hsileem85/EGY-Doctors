@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, max } from "drizzle-orm";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable } from "@workspace/db";
+import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 function stringifyDates<T>(rows: T[]): T[] {
   return rows.map((row) => stringifyRow(row));
@@ -15,14 +16,10 @@ function stringifyRow<T>(row: T): T {
 
 import {
   ListDoctorsQueryParams,
-  ListDoctorsResponse,
   ApproveDoctorParams,
-  ApproveDoctorResponse,
   RejectDoctorParams,
-  RejectDoctorResponse,
   UpdateDoctorOnboardingParams,
   UpdateDoctorOnboardingBody,
-  UpdateDoctorOnboardingResponse,
   ListSpecialtiesResponse,
   CreateSpecialtyBody,
   UpdateSpecialtyParams,
@@ -48,25 +45,56 @@ const router: IRouter = Router();
 
 /* ─── Doctors ─── */
 
+async function listDoctorsWithDetails() {
+  const rows = await db
+    .select({
+      id: doctorsTable.id,
+      userId: doctorsTable.userId,
+      name: doctorsTable.name,
+      specialtyId: doctorsTable.specialtyId,
+      specialtyName: specialtiesTable.name,
+      cityId: doctorsTable.cityId,
+      cityName: citiesTable.name,
+      areaId: doctorsTable.areaId,
+      areaName: areasTable.name,
+      clinicAddress: doctorsTable.clinicAddress,
+      bio: doctorsTable.bio,
+      image: doctorsTable.image,
+      fee: doctorsTable.fee,
+      experience: doctorsTable.experience,
+      license: doctorsTable.license,
+      syndicateNumber: usersTable.syndicateNumber,
+      email: usersTable.email,
+      rating: doctorsTable.rating,
+      reviews: doctorsTable.reviews,
+      accountStatus: doctorsTable.accountStatus,
+      onboardingStatus: doctorsTable.onboardingStatus,
+      createdAt: doctorsTable.createdAt,
+      updatedAt: doctorsTable.updatedAt,
+    })
+    .from(doctorsTable)
+    .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
+    .leftJoin(areasTable, eq(doctorsTable.areaId, areasTable.id))
+    .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id));
+  return rows;
+}
+
 router.get("/admin/doctors", async (req, res): Promise<void> => {
   const params = ListDoctorsQueryParams.safeParse(req.query);
   const status = params.success ? params.data.status : undefined;
 
-  const query = db.select().from(doctorsTable);
-  const doctors = status != null
-    ? await query.where(eq(doctorsTable.accountStatus, status as "pending" | "approved" | "rejected"))
-    : await query;
+  const rows = await listDoctorsWithDetails();
+  const filtered = status != null
+    ? rows.filter((r) => r.accountStatus === status)
+    : rows;
 
-  res.json(ListDoctorsResponse.parse(stringifyDates(doctors)));
+  res.json(stringifyDates(filtered));
 });
 
 router.get("/admin/doctors/pending", async (_req, res): Promise<void> => {
-  const doctors = await db
-    .select()
-    .from(doctorsTable)
-    .where(eq(doctorsTable.accountStatus, "pending"));
-
-  res.json(ListDoctorsResponse.parse(stringifyDates(doctors)));
+  const rows = await listDoctorsWithDetails();
+  res.json(stringifyDates(rows.filter((r) => r.accountStatus === "pending")));
 });
 
 router.patch("/admin/doctors/:id/approve", async (req, res): Promise<void> => {
@@ -88,7 +116,16 @@ router.patch("/admin/doctors/:id/approve", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(ApproveDoctorResponse.parse(stringifyRow(doctor)));
+  const [user] = await db.select({ email: usersTable.email, name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.id, doctor.userId))
+    .limit(1);
+
+  if (user?.email) {
+    sendDoctorApprovedEmail(user.email, user.name).catch(() => {});
+  }
+
+  res.json(stringifyRow(doctor));
 });
 
 router.patch("/admin/doctors/:id/reject", async (req, res): Promise<void> => {
@@ -110,7 +147,7 @@ router.patch("/admin/doctors/:id/reject", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(RejectDoctorResponse.parse(stringifyRow(doctor)));
+  res.json(stringifyRow(doctor));
 });
 
 router.patch("/admin/doctors/:id/onboarding", async (req, res): Promise<void> => {
@@ -138,7 +175,7 @@ router.patch("/admin/doctors/:id/onboarding", async (req, res): Promise<void> =>
     return;
   }
 
-  res.json(UpdateDoctorOnboardingResponse.parse(stringifyRow(doctor)));
+  res.json(stringifyRow(doctor));
 });
 
 /* ─── Specialties ─── */

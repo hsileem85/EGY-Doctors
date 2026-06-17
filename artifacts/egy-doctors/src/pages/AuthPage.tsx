@@ -41,6 +41,7 @@ export default function AuthPage() {
 
   const [signupData, setSignupData] = useState({
     fullName: "",
+    fullNameAr: "",
     email: "",
     phone: "",
     nationalId: "",
@@ -101,14 +102,21 @@ export default function AuthPage() {
       return;
     }
     setIsLoading(true);
+    const selectedSpecialty = apiSpecialties.find(s => s.name === signupData.specialty);
+    const selectedCity = apiCities.find(c => c.name === signupData.location);
+
     try {
       const result = await signUp({
         name: signupData.fullName,
+        nameAr: signupData.fullNameAr || undefined,
         email: signupData.email,
         phone: signupData.phone,
         password: signupData.password,
         role: userType === "medical" ? "medical_center" : userType,
         nationalId: signupData.nationalId || undefined,
+        syndicateNumber: signupData.syndicateMembership || undefined,
+        specialtyId: userType === "doctor" ? selectedSpecialty?.id : undefined,
+        cityId: selectedCity?.id,
       });
       setRedirectPath(getRedirectFromRole(result.user.role, true));
       setIsSuccess(true);
@@ -511,6 +519,20 @@ export default function AuthPage() {
                         onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                         required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signupNameAr" className="text-gray-300">
+                        {isRTL ? "الاسم باللغة العربية" : "Arabic Name"}
+                      </Label>
+                      <Input
+                        id="signupNameAr"
+                        dir="rtl"
+                        placeholder="د. محمد أحمد"
+                        value={signupData.fullNameAr}
+                        onChange={(e) => setSignupData({ ...signupData, fullNameAr: e.target.value })}
+                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
