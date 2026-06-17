@@ -19,6 +19,7 @@ export interface ApiClinic {
   phone: string;
   fee: number;
   location: string;
+  areaId?: number | null;
   areaName: string;
 }
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
-  Upload, Camera, Clock, ArrowLeft, MapPin, GraduationCap,
-  Briefcase, LocateFixed, Plus, Trash2, ChevronDown, ChevronUp, Building2,
+  Upload, Camera, Clock, ArrowLeft, MapPin,
+  LocateFixed, Plus, Trash2, ChevronDown, ChevronUp, Building2,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { getSpecialties, getCities, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic } from "@/lib/api";
+import { getSpecialties, getCities, getAreas, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 
@@ -36,7 +36,8 @@ const defaultSchedule = (): ClinicSchedule => ({
 type Clinic = {
   id: string;
   name: string;
-  location: string;
+  cityName: string;
+  areaId: string;
   address: string;
   lat: string;
   lng: string;
@@ -48,10 +49,11 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
   return {
     id: Math.random().toString(36).slice(2),
     name: "",
-    location: "",
+    cityName: "",
+    areaId: "",
     address: "",
-    lat: "30.0444",
-    lng: "31.2357",
+    lat: "",
+    lng: "",
     fee: "",
     schedule: defaultSchedule(),
     ...overrides,
@@ -74,6 +76,10 @@ export default function DoctorProfileSetup() {
     queryKey: ["cities"],
     queryFn: getCities,
   });
+  const { data: apiAreas = [] } = useQuery({
+    queryKey: ["areas"],
+    queryFn: () => getAreas(),
+  });
 
   const { data: myProfile } = useQuery({
     queryKey: ["myDoctorProfile"],
@@ -85,8 +91,6 @@ export default function DoctorProfileSetup() {
   const [profile, setProfile] = useState({
     fullName: "",
     specialty: "",
-    subSpecialty: "",
-    experience: "",
     qualificationDegree: "",
     bio: "",
   });
@@ -98,47 +102,42 @@ export default function DoctorProfileSetup() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (myProfile && !profileLoaded && (apiSpecialties.length > 0 || !myProfile.specialtyId)) {
-      const matchedSpecialty = myProfile.specialtyId != null
-        ? apiSpecialties.find(s => s.id === myProfile.specialtyId)
-        : undefined;
-      const matchedCity = myProfile.cityId != null
-        ? apiCities.find(c => c.id === myProfile.cityId)
-        : undefined;
+    if (!myProfile || profileLoaded) return;
+    if (myProfile.specialtyId && apiSpecialties.length === 0) return;
 
-      setProfile({
-        fullName: myProfile.name || user?.name || "",
-        specialty: matchedSpecialty?.name ?? (myProfile as unknown as Record<string, string>).specialtyName ?? "",
-        subSpecialty: "",
-        experience: myProfile.experience != null ? String(myProfile.experience) : "",
-        qualificationDegree: "",
-        bio: myProfile.bio ?? "",
-      });
+    const matchedSpecialty = myProfile.specialtyId != null
+      ? apiSpecialties.find(s => s.id === myProfile.specialtyId)
+      : undefined;
 
-      if (myProfile.clinics && myProfile.clinics.length > 0) {
-        const hydrated: Clinic[] = myProfile.clinics.map((c) => ({
+    setProfile({
+      fullName: myProfile.name || user?.name || "",
+      specialty: matchedSpecialty?.name ?? "",
+      qualificationDegree: "",
+      bio: myProfile.bio ?? "",
+    });
+
+    if (myProfile.clinics && myProfile.clinics.length > 0) {
+      const hydrated: Clinic[] = myProfile.clinics.map((c) => {
+        const area = c.areaId ? apiAreas.find(a => a.id === c.areaId) : undefined;
+        const city = area ? apiCities.find(ci => ci.id === area.cityId) : undefined;
+        return {
           id: String(c.id),
           name: c.name ?? "",
-          location: matchedCity?.name ?? "",
+          cityName: city?.name ?? "",
+          areaId: c.areaId ? String(c.areaId) : "",
           address: c.address ?? "",
-          lat: "30.0444",
-          lng: "31.2357",
+          lat: "",
+          lng: "",
           fee: c.fee != null ? String(c.fee) : "",
           schedule: defaultSchedule(),
-        }));
-        setClinics(hydrated);
-        setExpandedId(hydrated[0].id);
-      }
-
-      setProfileLoaded(true);
-    } else if (!myProfile && !profileLoaded && user?.name) {
-      setProfile(prev => ({
-        ...prev,
-        fullName: user.name,
-      }));
-      setProfileLoaded(true);
+        };
+      });
+      setClinics(hydrated);
+      setExpandedId(hydrated[0].id);
     }
-  }, [myProfile, user, profileLoaded, apiSpecialties, apiCities]);
+
+    setProfileLoaded(true);
+  }, [myProfile, user, profileLoaded, apiSpecialties, apiCities, apiAreas]);
 
   const addClinic = () => {
     const c = makeClinic();
@@ -173,26 +172,28 @@ export default function DoctorProfileSetup() {
     setIsSaving(true);
     try {
       const selectedSpecialty = apiSpecialties.find(s => s.name === profile.specialty);
-      const firstClinicCity = apiCities.find(c => c.name === clinics[0]?.location);
+      const firstClinicAreaId = clinics[0]?.areaId ? parseInt(clinics[0].areaId, 10) : undefined;
+      const firstClinicArea = firstClinicAreaId ? apiAreas.find(a => a.id === firstClinicAreaId) : undefined;
+      const firstClinicCity = firstClinicArea ? apiCities.find(c => c.id === firstClinicArea.cityId) : undefined;
 
       await updateDoctorProfile({
         name: profile.fullName || undefined,
         bio: profile.bio || undefined,
         specialtyId: selectedSpecialty?.id,
         cityId: firstClinicCity?.id,
-        experience: profile.experience ? parseInt(profile.experience, 10) : undefined,
+        areaId: firstClinicAreaId,
       });
 
       await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
 
       await Promise.all(clinics.map(clinic => {
         const numId = parseInt(clinic.id, 10);
-        const cityForClinic = apiCities.find(c => c.name === clinic.location);
+        const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
         const data = {
           name: clinic.name || `Clinic`,
           address: clinic.address || undefined,
           fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
-          areaId: cityForClinic?.id,
+          areaId: areaId && !isNaN(areaId) ? areaId : undefined,
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
           lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
         };
@@ -290,32 +291,7 @@ export default function DoctorProfileSetup() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>{t.profileSetup.subSpecialty}</Label>
-                      <Input
-                        value={profile.subSpecialty}
-                        onChange={e => setProfile(p => ({ ...p, subSpecialty: e.target.value }))}
-                        placeholder="e.g. Consultant Cardiologist"
-                        data-testid="input-profile-subspecialty"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        {isRTL ? "سنوات الخبرة" : "Years of Experience"}
-                      </Label>
-                      <Input
-                        type="number"
-                        value={profile.experience}
-                        onChange={e => setProfile(p => ({ ...p, experience: e.target.value }))}
-                        placeholder="e.g. 15"
-                        data-testid="input-profile-experience"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <GraduationCap className="h-4 w-4 text-primary" />
-                        {isRTL ? "الدرجة العلمية" : "Qualification Degree"}
-                      </Label>
+                      <Label>{isRTL ? "الدرجة العلمية" : "Qualification Degree"}</Label>
                       <Input
                         value={profile.qualificationDegree}
                         onChange={e => setProfile(p => ({ ...p, qualificationDegree: e.target.value }))}
@@ -392,9 +368,10 @@ export default function DoctorProfileSetup() {
                           <p className="text-sm font-semibold text-gray-900">
                             {clinic.name || (isRTL ? `عيادة ${idx + 1}` : `Clinic ${idx + 1}`)}
                           </p>
-                          {clinic.location && (
+                          {(clinic.cityName || clinic.areaId) && (
                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3 h-3" />{clinic.location}
+                              <MapPin className="w-3 h-3" />
+                              {[clinic.cityName, apiAreas.find(a => String(a.id) === clinic.areaId)?.name].filter(Boolean).join(" · ")}
                             </p>
                           )}
                         </div>
@@ -433,11 +410,32 @@ export default function DoctorProfileSetup() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>{t.profileSetup.cityArea}</Label>
-                              <Select value={clinic.location} onValueChange={v => updateClinic(clinic.id, { location: v })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                              <Label>{isRTL ? "المحافظة" : "City / Governorate"}</Label>
+                              <Select
+                                value={clinic.cityName}
+                                onValueChange={v => updateClinic(clinic.id, { cityName: v, areaId: "" })}
+                              >
+                                <SelectTrigger><SelectValue placeholder={isRTL ? "اختر المحافظة" : "Select city"} /></SelectTrigger>
                                 <SelectContent>
-                                  {apiCities.map(c => <SelectItem key={c.id} value={c.name}>{t.locations[c.name] ?? t.governorates[c.name] ?? c.name}</SelectItem>)}
+                                  {apiCities.map(c => <SelectItem key={c.id} value={c.name}>{t.governorates[c.name] ?? c.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label>{isRTL ? "المنطقة" : "Area"}</Label>
+                              <Select
+                                value={clinic.areaId}
+                                onValueChange={v => updateClinic(clinic.id, { areaId: v })}
+                                disabled={!clinic.cityName}
+                              >
+                                <SelectTrigger><SelectValue placeholder={isRTL ? "اختر المنطقة" : "Select area"} /></SelectTrigger>
+                                <SelectContent className="max-h-48 overflow-y-auto">
+                                  {apiAreas
+                                    .filter(a => {
+                                      const city = apiCities.find(c => c.name === clinic.cityName);
+                                      return city ? a.cityId === city.id : false;
+                                    })
+                                    .map(a => <SelectItem key={a.id} value={String(a.id)}>{a.nameAr && isRTL ? a.nameAr : a.name}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
