@@ -537,7 +537,7 @@ export default function DoctorProfileSetup() {
                                   onValueChange={v => updateSchedule(clinic.id, day, "from", v)}
                                 >
                                   <SelectTrigger className="bg-white"><SelectValue placeholder={t.profileSetup.timeFrom} /></SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent className="max-h-48 overflow-y-auto">
                                     {Array.from({ length: 24 }).map((_, i) => {
                                       const time = `${i.toString().padStart(2, "0")}:00`;
                                       return <SelectItem key={time} value={time}>{time}</SelectItem>;
@@ -551,7 +551,7 @@ export default function DoctorProfileSetup() {
                                   onValueChange={v => updateSchedule(clinic.id, day, "to", v)}
                                 >
                                   <SelectTrigger className="bg-white"><SelectValue placeholder={t.profileSetup.timeTo} /></SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent className="max-h-48 overflow-y-auto">
                                     {Array.from({ length: 24 }).map((_, i) => {
                                       const time = `${i.toString().padStart(2, "0")}:00`;
                                       return <SelectItem key={time} value={time}>{time}</SelectItem>;
