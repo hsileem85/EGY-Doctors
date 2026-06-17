@@ -1,12 +1,12 @@
 import { Link } from "wouter";
 import { MapPin, Stethoscope, Star, Navigation, Calendar } from "lucide-react";
-import { Doctor } from "@/lib/data";
+import { type ApiDoctor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface DoctorCardProps {
-  doctor: Doctor;
+  doctor: ApiDoctor;
   showSlots?: boolean;
 }
 
@@ -15,7 +15,6 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
   const isRTL = dir === "rtl";
 
   const specialty = t.specialties[doctor.specialty] ?? doctor.specialty;
-  const location = t.locations[doctor.location] ?? doctor.location;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col">
@@ -47,7 +46,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         </div>
       </div>
 
-      {/* Rating — clickable, opens public profile */}
+      {/* Rating */}
       <Link href={`/profile/${doctor.id}`}>
         <div className="flex items-center gap-2 mb-3 cursor-pointer hover:opacity-80 transition-opacity">
           <div className="flex text-amber-400">
@@ -74,7 +73,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         {doctor.clinics.map((clinic, i) => (
           <a
             key={i}
-            href={clinic.mapUrl}
+            href={clinic.mapUrl || "#"}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 group"
@@ -82,8 +81,14 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             <span className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 text-gray-700 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0">
               <MapPin className="h-3 w-3 text-[#D4A853] shrink-0" />
               <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
-              <span className="text-gray-400 mx-0.5">·</span>
-              <span className="text-gray-500 truncate">{t.locations[clinic.location] ?? clinic.location}</span>
+              {clinic.location && (
+                <>
+                  <span className="text-gray-400 mx-0.5">·</span>
+                  <span className="text-gray-500 truncate">
+                    {t.locations[clinic.location] ?? clinic.location}
+                  </span>
+                </>
+              )}
               <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
@@ -92,29 +97,22 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
         ))}
       </div>
 
-      {/* ── Bottom Action Area ── */}
+      {/* Bottom Action Area */}
       <div className="mt-auto pt-3 border-t border-gray-100">
         {showSlots ? (
           <div className="flex items-center justify-between gap-3">
-            {/* Clickable distance link — opens Google Maps */}
             <a
-              href={doctor.mapUrl}
+              href={doctor.mapUrl || "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm font-medium bg-[#D4A853]/5 hover:bg-[#D4A853]/10 text-[#D4A853] border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-2 transition-colors"
-              title={isRTL ? "افتح في خرائط Google" : "Open in Google Maps"}
             >
               <Navigation className="h-3.5 w-3.5" />
-              <span>{doctor.distance}</span>
-              <span className="text-[10px] font-normal uppercase tracking-wider text-[#D4A853]/70">
-                {isRTL ? "افتح الخريطة" : "Map"}
-              </span>
+              <span>{doctor.distance || (isRTL ? "خريطة" : "Map")}</span>
               <svg className="h-3 w-3 ml-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </a>
-
-            {/* Buttons */}
             <div className="flex items-center gap-2">
               <Link href={`/doctor/${doctor.id}`}>
                 <Button
@@ -127,7 +125,6 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                   {isRTL ? "الحجز" : "Book"}
                 </Button>
               </Link>
-
               <Link href={`/profile/${doctor.id}`}>
                 <Button
                   variant="outline"
@@ -142,10 +139,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
           </div>
         ) : (
           <Link href={`/doctor/${doctor.id}`}>
-            <Button
-              className="w-full"
-              data-testid={`link-doctor-profile-${doctor.id}`}
-            >
+            <Button className="w-full" data-testid={`link-doctor-profile-${doctor.id}`}>
               {t.card.bookAppointment}
             </Button>
           </Link>

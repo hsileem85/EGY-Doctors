@@ -8,29 +8,34 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { getSpecialties, getCities, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword } from "@/lib/api";
 
 type UserType = "patient" | "doctor" | "medical";
 type MedicalSubtype = "hospital" | "clinic" | "polyclinic" | "lab" | "scan";
 
-const userTypeLabels = {
-  en: { patient: "Patient", doctor: "Doctor", medical: "Medical Center" },
-  ar: { patient: "مريض", doctor: "طبيب", medical: "مركز طبي" },
-};
-
-const medicalSubtypeLabels = {
-  en: { hospital: "Hospital", clinic: "Clinic", polyclinic: "Poly Clinic", lab: "Lab", scan: "Scan Center" },
-  ar: { hospital: "مستشفى", clinic: "عيادة", polyclinic: "عيادة متعددة", lab: "معمل", scan: "مركز أشعة" },
-};
-
 export default function AuthPage() {
   const { dir, lang } = useLanguage();
   const isRTL = dir === "rtl";
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const { signIn, signUp } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
-
   const [userType, setUserType] = useState<UserType>("doctor");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [redirectPath, setRedirectPath] = useState("/dashboard");
+
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState<"phone" | "reset" | "done">("phone");
+  const [forgotPhone, setForgotPhone] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const [loginData, setLoginData] = useState({ phone: "", password: "" });
 
@@ -47,72 +52,132 @@ export default function AuthPage() {
     confirmPassword: "",
   });
 
-  // Read tab and type from URL query
+  const { data: apiSpecialties = [] } = useQuery({
+    queryKey: ["specialties"],
+    queryFn: getSpecialties,
+  });
+
+  const { data: apiCities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "signup") {
-      setActiveTab("signup");
-    }
+    if (params.get("tab") === "signup") setActiveTab("signup");
     const typeParam = params.get("type");
     if (typeParam === "doctor" || typeParam === "medical" || typeParam === "patient") {
-      setUserType(typeParam);
+      setUserType(typeParam as UserType);
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSuccess(true);
-  };
-
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSuccess(true);
-  };
-
-  const getRedirect = () => {
-    if (activeTab === "signin") {
-      if (userType === "patient") return "/patient/dashboard";
-      if (userType === "doctor") return "/dashboard";
-      if (userType === "medical") return "/medical-center/dashboard";
-    } else {
-      if (userType === "patient") return "/patient/dashboard";
-      if (userType === "doctor") return "/profile-setup";
-      if (userType === "medical") return "/medical-center/profile-setup";
-    }
+  const getRedirectFromRole = (role: string, isNewSignup: boolean) => {
+    if (role === "patient") return "/patient/dashboard";
+    if (role === "doctor") return isNewSignup ? "/profile-setup" : "/dashboard";
+    if (role === "medical_center") return isNewSignup ? "/medical-center/profile-setup" : "/medical-center/dashboard";
     return "/";
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    try {
+      const result = await signIn(loginData.phone, loginData.password);
+      setRedirectPath(getRedirectFromRole(result.user.role, false));
+      setIsSuccess(true);
+    } catch {
+      setError(isRTL ? "رقم الهاتف أو كلمة المرور غير صحيحة" : "Invalid phone or password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (signupData.password !== signupData.confirmPassword) {
+      setError(isRTL ? "كلمات المرور غير متطابقة" : "Passwords do not match");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const result = await signUp({
+        name: signupData.fullName,
+        email: signupData.email,
+        phone: signupData.phone,
+        password: signupData.password,
+        role: userType === "medical" ? "medical_center" : userType,
+        nationalId: signupData.nationalId || undefined,
+      });
+      setRedirectPath(getRedirectFromRole(result.user.role, true));
+      setIsSuccess(true);
+    } catch {
+      setError(isRTL ? "حدث خطأ. يرجى المحاولة مجدداً." : "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotLoading(true);
+    try {
+      const res = await apiForgotPassword(forgotPhone);
+      if (res.resetToken) setResetToken(res.resetToken);
+      setForgotStep("reset");
+    } catch {
+      setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotLoading(true);
+    try {
+      await apiResetPassword(resetToken, newPassword);
+      setForgotStep("done");
+    } catch {
+      setForgotError(isRTL ? "الرمز غير صحيح أو انتهت صلاحيته" : "Invalid or expired token");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Background glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
-
         <Card className="w-full max-w-md text-center py-10 border-[#D4A853]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
           <CardContent className="flex flex-col items-center gap-4">
             <div className="w-20 h-20 bg-[#D4A853]/20 rounded-full flex items-center justify-center mb-2 border border-[#D4A853]/30">
               <CheckCircle2 className="w-10 h-10 text-[#D4A853]" />
             </div>
             <h2 className="text-2xl font-bold text-white">
-              {isRTL ? "تم تسجيل الدخول بنجاح!" : "Login Successful!"}
+              {isRTL ? "تم بنجاح!" : "Success!"}
             </h2>
             <p className="text-gray-400 mb-6">
               {isRTL
-                ? "مرحباً بك في EGY Doctors. ستم إعادة التوجيه إلى لوحة التحكم."
+                ? "مرحباً بك في EGY Doctors. سيتم إعادة التوجيه إلى لوحة التحكم."
                 : "Welcome to EGY Doctors. You will be redirected to your dashboard."}
             </p>
-            <Link href={getRedirect()}>
-              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold">
-                {isRTL ? "الذهاب إلى لوحة التحكم" : "Go to Dashboard"}
-              </Button>
-            </Link>
+            <Button
+              className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold"
+              onClick={() => setLocation(redirectPath)}
+            >
+              {isRTL ? "الذهاب إلى لوحة التحكم" : "Go to Dashboard"}
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const t = {
+  const tl = {
     signIn: isRTL ? "تسجيل الدخول" : "Sign In",
     signUp: isRTL ? "إنشاء حساب" : "Sign Up",
     whoAreYou: isRTL ? "من أنت؟" : "Who are you?",
@@ -142,15 +207,7 @@ export default function AuthPage() {
     secure: isRTL ? "بياناتك آمنة ومشفرة" : "Your data is secure and encrypted",
   };
 
-  const TypeButton = ({
-    type,
-    icon: Icon,
-    label,
-  }: {
-    type: UserType;
-    icon: typeof User;
-    label: string;
-  }) => (
+  const TypeButton = ({ type, icon: Icon, label }: { type: UserType; icon: typeof User; label: string }) => (
     <button
       type="button"
       onClick={() => setUserType(type)}
@@ -165,16 +222,103 @@ export default function AuthPage() {
     </button>
   );
 
+  const medicalSubtypeLabels = lang === "ar"
+    ? { hospital: "مستشفى", clinic: "عيادة", polyclinic: "عيادة متعددة", lab: "معمل", scan: "مركز أشعة" }
+    : { hospital: "Hospital", clinic: "Clinic", polyclinic: "Poly Clinic", lab: "Lab", scan: "Scan Center" };
+
+  if (showForgot) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
+        <Card className="w-full max-w-md border-[#334155] bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
+          <CardContent className="p-8">
+            <button
+              onClick={() => { setShowForgot(false); setForgotStep("phone"); setForgotError(null); }}
+              className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] mb-6 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {isRTL ? "العودة" : "Back"}
+            </button>
+
+            {forgotStep === "phone" && (
+              <form onSubmit={handleForgotRequest} className="space-y-4">
+                <h2 className="text-xl font-bold text-white mb-2">{isRTL ? "نسيت كلمة المرور" : "Forgot Password"}</h2>
+                <p className="text-sm text-gray-400 mb-4">{isRTL ? "أدخل رقم هاتفك وسنرسل رمز إعادة التعيين." : "Enter your phone number and we'll send you a reset code."}</p>
+                <div className="space-y-2">
+                  <Label className="text-gray-300">{isRTL ? "رقم الهاتف" : "Phone Number"}</Label>
+                  <Input
+                    type="tel"
+                    value={forgotPhone}
+                    onChange={e => setForgotPhone(e.target.value)}
+                    placeholder="01xxxxxxxxx"
+                    className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853]"
+                    required
+                  />
+                </div>
+                {forgotError && <p className="text-red-400 text-sm">{forgotError}</p>}
+                <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] font-semibold" disabled={forgotLoading}>
+                  {forgotLoading ? (isRTL ? "جاري الإرسال..." : "Sending...") : (isRTL ? "إرسال الرمز" : "Send Code")}
+                </Button>
+              </form>
+            )}
+
+            {forgotStep === "reset" && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <h2 className="text-xl font-bold text-white mb-2">{isRTL ? "إعادة تعيين كلمة المرور" : "Reset Password"}</h2>
+                <p className="text-sm text-gray-400 mb-4">{isRTL ? "أدخل رمز التحقق وكلمة المرور الجديدة." : "Enter the reset code and your new password."}</p>
+                <div className="space-y-2">
+                  <Label className="text-gray-300">{isRTL ? "رمز التحقق" : "Reset Code"}</Label>
+                  <Input
+                    value={resetToken}
+                    onChange={e => setResetToken(e.target.value)}
+                    className="bg-[#0F172A]/60 border-[#334155] text-white focus:border-[#D4A853]"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-gray-300">{isRTL ? "كلمة المرور الجديدة" : "New Password"}</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className="bg-[#0F172A]/60 border-[#334155] text-white focus:border-[#D4A853]"
+                    required
+                    minLength={8}
+                  />
+                </div>
+                {forgotError && <p className="text-red-400 text-sm">{forgotError}</p>}
+                <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] font-semibold" disabled={forgotLoading}>
+                  {forgotLoading ? (isRTL ? "جاري التغيير..." : "Resetting...") : (isRTL ? "تغيير كلمة المرور" : "Reset Password")}
+                </Button>
+              </form>
+            )}
+
+            {forgotStep === "done" && (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 bg-[#D4A853]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-[#D4A853]" />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">{isRTL ? "تم تغيير كلمة المرور!" : "Password Reset!"}</h2>
+                <p className="text-gray-400 mb-6">{isRTL ? "يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة." : "You can now sign in with your new password."}</p>
+                <Button className="w-full bg-[#D4A853] text-[#0F172A] font-semibold" onClick={() => { setShowForgot(false); setForgotStep("phone"); }}>
+                  {isRTL ? "تسجيل الدخول" : "Sign In"}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0F172A] flex items-stretch justify-center relative overflow-hidden">
-      {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-[#D4A853]/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-[#D4A853]/5 rounded-full blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#1E293B]/30 rounded-full blur-[80px]" />
       </div>
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col lg:flex-row w-full max-w-6xl mx-auto">
         {/* Left brand panel */}
         <div className="hidden lg:flex lg:w-5/12 flex-col justify-center p-12">
@@ -204,17 +348,16 @@ export default function AuthPage() {
               <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
                 <Shield className="h-4 w-4 text-[#D4A853]" />
               </div>
-              <span className="text-sm">{t.secure}</span>
+              <span className="text-sm">{tl.secure}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-300">
               <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center border border-[#D4A853]/20">
                 <Heart className="h-4 w-4 text-[#D4A853]" />
               </div>
-              <span className="text-sm">{t.trust}</span>
+              <span className="text-sm">{tl.trust}</span>
             </div>
           </div>
 
-          {/* Stats */}
           <div className="flex gap-8 mt-10 pt-8 border-t border-[#334155]">
             <div>
               <div className="text-2xl font-bold text-[#D4A853]">2,500+</div>
@@ -235,7 +378,6 @@ export default function AuthPage() {
         <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
           <Card className="w-full max-w-lg border-[#334155] bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl shadow-black/40">
             <CardContent className="p-6 lg:p-8">
-              {/* Mobile logo + back */}
               <div className="lg:hidden flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
@@ -248,7 +390,6 @@ export default function AuthPage() {
                 </Link>
               </div>
 
-              {/* Desktop back button */}
               <div className="hidden lg:flex items-center mb-4">
                 <Link href="/" className="flex items-center gap-1 text-sm text-gray-400 hover:text-[#D4A853] transition-colors">
                   <ArrowLeft className="h-4 w-4" />
@@ -256,13 +397,13 @@ export default function AuthPage() {
                 </Link>
               </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value={activeTab} onValueChange={v => { setActiveTab(v); setError(null); }} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#0F172A]/60 border border-[#334155] p-1">
                   <TabsTrigger value="signin" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
-                    {t.signIn}
+                    {tl.signIn}
                   </TabsTrigger>
                   <TabsTrigger value="signup" className="data-[state=active]:bg-[#D4A853] data-[state=active]:text-[#0F172A] data-[state=active]:font-semibold text-gray-400">
-                    {t.signUp}
+                    {tl.signUp}
                   </TabsTrigger>
                 </TabsList>
 
@@ -270,17 +411,16 @@ export default function AuthPage() {
                 <TabsContent value="signin">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="mb-4">
-                      <h2 className="text-xl font-bold text-white text-start">{t.signInTitle}</h2>
-                      <p className="text-sm text-gray-400 mt-1 text-start">{t.signInSubtitle}</p>
+                      <h2 className="text-xl font-bold text-white text-start">{tl.signInTitle}</h2>
+                      <p className="text-sm text-gray-400 mt-1 text-start">{tl.signInSubtitle}</p>
                     </div>
 
-                    {/* Who are you? */}
                     <div className="mb-2">
-                      <p className="text-sm font-medium text-gray-300 mb-3">{t.whoAreYou}</p>
+                      <p className="text-sm font-medium text-gray-300 mb-3">{tl.whoAreYou}</p>
                       <div className="grid grid-cols-3 gap-2">
-                        <TypeButton type="patient" icon={User} label={t.patient} />
-                        <TypeButton type="doctor" icon={Stethoscope} label={t.doctor} />
-                        <TypeButton type="medical" icon={Building2} label={t.medical} />
+                        <TypeButton type="patient" icon={User} label={tl.patient} />
+                        <TypeButton type="doctor" icon={Stethoscope} label={tl.doctor} />
+                        <TypeButton type="medical" icon={Building2} label={tl.medical} />
                       </div>
                     </div>
 
@@ -293,11 +433,12 @@ export default function AuthPage() {
                         onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
                         placeholder="01xxxxxxxxx"
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        required
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="loginPassword" className="text-gray-300">{t.password}</Label>
+                      <Label htmlFor="loginPassword" className="text-gray-300">{tl.password}</Label>
                       <div className="relative">
                         <Input
                           id="loginPassword"
@@ -305,6 +446,7 @@ export default function AuthPage() {
                           value={loginData.password}
                           onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                           className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          required
                         />
                         <button
                           type="button"
@@ -317,13 +459,27 @@ export default function AuthPage() {
                     </div>
 
                     <div className="flex justify-end">
-                      <Link href="/" className="text-sm text-[#D4A853] hover:text-[#D4A853]/80 hover:underline transition-colors">
-                        {t.forgotPassword}
-                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgot(true)}
+                        className="text-sm text-[#D4A853] hover:text-[#D4A853]/80 hover:underline transition-colors"
+                      >
+                        {tl.forgotPassword}
+                      </button>
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20">
-                      {t.loginBtn}
+                    {error && (
+                      <p className="text-red-400 text-sm bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">
+                        {error}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (isRTL ? "جاري الدخول..." : "Signing in...") : tl.loginBtn}
                     </Button>
                   </form>
                 </TabsContent>
@@ -332,59 +488,59 @@ export default function AuthPage() {
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="mb-4">
-                      <h2 className="text-xl font-bold text-white text-start">{t.signUpTitle}</h2>
-                      <p className="text-sm text-gray-400 mt-1 text-start">{t.signUpSubtitle}</p>
+                      <h2 className="text-xl font-bold text-white text-start">{tl.signUpTitle}</h2>
+                      <p className="text-sm text-gray-400 mt-1 text-start">{tl.signUpSubtitle}</p>
                     </div>
 
-                    {/* Who are you? */}
                     <div className="mb-2">
-                      <p className="text-sm font-medium text-gray-300 mb-3">{t.whoAreYou}</p>
+                      <p className="text-sm font-medium text-gray-300 mb-3">{tl.whoAreYou}</p>
                       <div className="grid grid-cols-3 gap-2">
-                        <TypeButton type="patient" icon={User} label={t.patient} />
-                        <TypeButton type="doctor" icon={Stethoscope} label={t.doctor} />
-                        <TypeButton type="medical" icon={Building2} label={t.medical} />
+                        <TypeButton type="patient" icon={User} label={tl.patient} />
+                        <TypeButton type="doctor" icon={Stethoscope} label={tl.doctor} />
+                        <TypeButton type="medical" icon={Building2} label={tl.medical} />
                       </div>
                     </div>
 
-                    {/* Common fields */}
                     <div className="space-y-2">
                       <Label htmlFor="signupName" className="text-gray-300">
-                        {userType === "medical" ? t.centerName : t.fullName}
+                        {userType === "medical" ? tl.centerName : tl.fullName}
                       </Label>
                       <Input
                         id="signupName"
                         value={signupData.fullName}
                         onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        required
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signupEmail" className="text-gray-300">{t.email}</Label>
+                      <Label htmlFor="signupEmail" className="text-gray-300">{tl.email}</Label>
                       <Input
                         id="signupEmail"
                         type="email"
                         value={signupData.email}
                         onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        required
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signupPhone" className="text-gray-300">{t.phone}</Label>
+                      <Label htmlFor="signupPhone" className="text-gray-300">{tl.phone}</Label>
                       <Input
                         id="signupPhone"
                         type="tel"
                         value={signupData.phone}
                         onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        required
                       />
                     </div>
 
-                    {/* Type-specific fields */}
                     {userType === "patient" && (
                       <div className="space-y-2">
-                        <Label htmlFor="signupNationalId" className="text-gray-300">{t.nationalId}</Label>
+                        <Label htmlFor="signupNationalId" className="text-gray-300">{tl.nationalId}</Label>
                         <Input
                           id="signupNationalId"
                           type="text"
@@ -398,48 +554,45 @@ export default function AuthPage() {
                           placeholder="14 digits"
                           className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                         />
-                        <p className="text-xs text-gray-500">{t.emrHint}</p>
+                        <p className="text-xs text-gray-500">{tl.emrHint}</p>
                       </div>
                     )}
 
                     {userType === "doctor" && (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="signupSpecialty" className="text-gray-300">{t.specialty}</Label>
-                          <Select
-                            value={signupData.specialty}
-                            onValueChange={(v) => setSignupData({ ...signupData, specialty: v })}
-                          >
-                            <SelectTrigger id="signupSpecialty" className="bg-[#0F172A]/60 border-[#334155] text-white">
+                          <Label className="text-gray-300">{tl.specialty}</Label>
+                          <Select value={signupData.specialty} onValueChange={(v) => setSignupData({ ...signupData, specialty: v })}>
+                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
                               <SelectValue placeholder={isRTL ? "اختر التخصص" : "Choose specialty"} />
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {["Cardiology", "Dermatology", "Orthopedics", "Pediatrics", "Neurology", "Gynecology", "Ophthalmology", "ENT", "Internal Medicine", "General Surgery"].map((s) => (
-                                <SelectItem key={s} value={s} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">{s}</SelectItem>
+                              {apiSpecialties.map((s) => (
+                                <SelectItem key={s.id} value={s.name} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                                  {s.name}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="signupLocation" className="text-gray-300">{t.location}</Label>
-                          <Select
-                            value={signupData.location}
-                            onValueChange={(v) => setSignupData({ ...signupData, location: v })}
-                          >
-                            <SelectTrigger id="signupLocation" className="bg-[#0F172A]/60 border-[#334155] text-white">
+                          <Label className="text-gray-300">{tl.location}</Label>
+                          <Select value={signupData.location} onValueChange={(v) => setSignupData({ ...signupData, location: v })}>
+                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
                               <SelectValue placeholder={isRTL ? "اختر الموقع" : "Choose location"} />
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {["Cairo", "Alexandria", "Giza", "Mansoura", "Tanta", "Zagazig", "Ismailia", "Suez", "Port Said", "Luxor", "Aswan", "Sharm El Sheikh"].map((l) => (
-                                <SelectItem key={l} value={l} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">{l}</SelectItem>
+                              {apiCities.map((c) => (
+                                <SelectItem key={c.id} value={c.name} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                                  {c.name}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="signupSyndicate" className="text-gray-300">{t.syndicateMembership}</Label>
+                          <Label className="text-gray-300">{tl.syndicateMembership}</Label>
                           <Input
-                            id="signupSyndicate"
                             value={signupData.syndicateMembership}
                             onChange={(e) => setSignupData({ ...signupData, syndicateMembership: e.target.value })}
                             placeholder={isRTL ? "أدخل رقم عضوية النقابة" : "Enter syndicate membership number"}
@@ -452,35 +605,34 @@ export default function AuthPage() {
                     {userType === "medical" && (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="signupMedicalType" className="text-gray-300">{t.centerType}</Label>
+                          <Label className="text-gray-300">{tl.centerType}</Label>
                           <Select
                             value={signupData.medicalSubtype}
                             onValueChange={(v) => setSignupData({ ...signupData, medicalSubtype: v as MedicalSubtype })}
                           >
-                            <SelectTrigger id="signupMedicalType" className="bg-[#0F172A]/60 border-[#334155] text-white">
-                              <SelectValue placeholder={isRTL ? "اختر النوع" : "Choose type"} />
+                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
+                              <SelectValue placeholder={isRTL ? "اختر نوع المركز" : "Choose center type"} />
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {(["hospital", "clinic", "polyclinic", "lab", "scan"] as MedicalSubtype[]).map((s) => (
-                                <SelectItem key={s} value={s} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
-                                  {medicalSubtypeLabels[lang][s]}
+                              {(Object.keys(medicalSubtypeLabels) as MedicalSubtype[]).map((k) => (
+                                <SelectItem key={k} value={k} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                                  {medicalSubtypeLabels[k]}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="signupMedicalLocation" className="text-gray-300">{t.location}</Label>
-                          <Select
-                            value={signupData.location}
-                            onValueChange={(v) => setSignupData({ ...signupData, location: v })}
-                          >
-                            <SelectTrigger id="signupMedicalLocation" className="bg-[#0F172A]/60 border-[#334155] text-white">
+                          <Label className="text-gray-300">{tl.location}</Label>
+                          <Select value={signupData.location} onValueChange={(v) => setSignupData({ ...signupData, location: v })}>
+                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
                               <SelectValue placeholder={isRTL ? "اختر الموقع" : "Choose location"} />
                             </SelectTrigger>
                             <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {["Cairo", "Alexandria", "Giza", "Mansoura", "Tanta", "Zagazig", "Ismailia", "Suez", "Port Said", "Luxor", "Aswan", "Sharm El Sheikh"].map((l) => (
-                                <SelectItem key={l} value={l} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">{l}</SelectItem>
+                              {apiCities.map((c) => (
+                                <SelectItem key={c.id} value={c.name} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
+                                  {c.name}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -489,7 +641,7 @@ export default function AuthPage() {
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="signupPassword" className="text-gray-300">{t.password}</Label>
+                      <Label htmlFor="signupPassword" className="text-gray-300">{tl.password}</Label>
                       <div className="relative">
                         <Input
                           id="signupPassword"
@@ -497,6 +649,8 @@ export default function AuthPage() {
                           value={signupData.password}
                           onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                           className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                          required
+                          minLength={8}
                         />
                         <button
                           type="button"
@@ -509,29 +663,39 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signupConfirmPassword" className="text-gray-300">{t.confirmPassword}</Label>
+                      <Label htmlFor="signupConfirm" className="text-gray-300">{tl.confirmPassword}</Label>
                       <Input
-                        id="signupConfirmPassword"
-                        type="password"
+                        id="signupConfirm"
+                        type={showPassword ? "text" : "password"}
                         value={signupData.confirmPassword}
                         onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        required
                       />
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20">
-                      {t.signupBtn}
+                    {error && (
+                      <p className="text-red-400 text-sm bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">
+                        {error}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (isRTL ? "جاري الإنشاء..." : "Creating...") : tl.signupBtn}
                     </Button>
+
+                    <p className="text-center text-xs text-gray-500 mt-2">
+                      {isRTL
+                        ? "بالتسجيل، أنت توافق على الشروط وسياسة الخصوصية."
+                        : "By signing up, you agree to our Terms and Privacy Policy."}
+                    </p>
                   </form>
                 </TabsContent>
               </Tabs>
-
-              {/* Footer text */}
-              <div className="mt-6 text-start text-xs text-gray-500">
-                {isRTL
-                  ? "بالتسجيل، أنت توافق على شروط الخدمة وسياسة الخصوصية"
-                  : "By signing up, you agree to our Terms of Service and Privacy Policy"}
-              </div>
             </CardContent>
           </Card>
         </div>

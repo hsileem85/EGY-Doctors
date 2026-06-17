@@ -6,8 +6,10 @@ export const userRoleEnum = ["admin", "patient", "doctor", "medical_center"] as 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  phone: varchar("phone", { length: 50 }),
+  phone: varchar("phone", { length: 50 }).notNull().unique(),
+  email: varchar("email", { length: 255 }).unique(),
+  nationalId: varchar("national_id", { length: 50 }),
+  syndicateNumber: varchar("syndicate_number", { length: 100 }),
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: userRoleEnum }).notNull().default("patient"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -15,5 +17,5 @@ export const usersTable = pgTable("users", {
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, updatedAt: true });
-export type InsertUser = typeof insertUserSchema.type;
+export type InsertUser = typeof insertUserSchema._type;
 export type User = typeof usersTable.$inferSelect;

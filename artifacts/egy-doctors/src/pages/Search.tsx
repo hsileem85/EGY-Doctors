@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { doctors, specialties, locations, governorates, insuranceNetworks } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
+import { getDoctors, getSpecialties, getCities } from "@/lib/api";
 
 export default function Search() {
   const { t } = useLanguage();
@@ -17,71 +18,64 @@ export default function Search() {
 
   const initialQuery = searchParams.get("q") || "";
   const initialSpecialty = searchParams.get("specialty") || "";
-  const initialGovernorate = searchParams.get("governorate") || "";
-  const initialLocation = searchParams.get("location") || "";
-  const initialInsurance = searchParams.get("insurance") || "";
+  const initialCity = searchParams.get("city") || "";
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
     initialSpecialty ? [initialSpecialty] : []
   );
-  const [selectedGovernorates, setSelectedGovernorates] = useState<string[]>(
-    initialGovernorate ? [initialGovernorate] : []
-  );
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(
-    initialLocation ? [initialLocation] : []
-  );
-  const [selectedInsurances, setSelectedInsurances] = useState<string[]>(
-    initialInsurance ? [initialInsurance] : []
+  const [selectedCities, setSelectedCities] = useState<string[]>(
+    initialCity ? [initialCity] : []
   );
 
-  const toggleSpecialty = (s: string) => {
-    setSelectedSpecialties(prev =>
-      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-    );
-  };
+  const { data: allDoctors = [], isLoading: loadingDoctors } = useQuery({
+    queryKey: ["doctors"],
+    queryFn: () => getDoctors(),
+  });
 
-  const toggleGovernorate = (g: string) => {
-    setSelectedGovernorates(prev =>
-      prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
-    );
-  };
+  const { data: specialties = [] } = useQuery({
+    queryKey: ["specialties"],
+    queryFn: getSpecialties,
+  });
 
-  const toggleLocation = (l: string) => {
-    setSelectedLocations(prev =>
-      prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]
-    );
-  };
+  const { data: cities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
 
-  const toggleInsurance = (i: string) => {
-    setSelectedInsurances(prev =>
-      prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
-    );
-  };
+  const toggleSpecialty = (s: string) =>
+    setSelectedSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+
+  const toggleCity = (c: string) =>
+    setSelectedCities(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
 
   const filteredDoctors = useMemo(() => {
-    return doctors.filter(doctor => {
+    return allDoctors.filter(doctor => {
       const matchSearch =
         searchQuery === "" ||
         doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doctor.bio.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchSpecialty =
-        selectedSpecialties.length === 0 || selectedSpecialties.includes(doctor.specialty);
-      const matchGovernorate =
-        selectedGovernorates.length === 0 || selectedGovernorates.includes(doctor.governorate);
-      const matchLocation =
-        selectedLocations.length === 0 || selectedLocations.includes(doctor.location);
-      const matchInsurance =
-        selectedInsurances.length === 0 || selectedInsurances.includes(doctor.insuranceNetwork);
-      return matchSearch && matchSpecialty && matchGovernorate && matchLocation && matchInsurance;
-    });
-  }, [searchQuery, selectedSpecialties, selectedGovernorates, selectedLocations, selectedInsurances]);
+        doctor.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const hasActiveFilters =
-    selectedSpecialties.length > 0 ||
-    selectedGovernorates.length > 0 ||
-    selectedLocations.length > 0 ||
-    selectedInsurances.length > 0;
+      const matchSpecialty =
+        selectedSpecialties.length === 0 ||
+        selectedSpecialties.some(s => doctor.specialty.toLowerCase().includes(s.toLowerCase()));
+
+      const matchCity =
+        selectedCities.length === 0 ||
+        selectedCities.some(c => doctor.cityName.toLowerCase().includes(c.toLowerCase()));
+
+      return matchSearch && matchSpecialty && matchCity;
+    });
+  }, [searchQuery, selectedSpecialties, selectedCities, allDoctors]);
+
+  const hasActiveFilters = selectedSpecialties.length > 0 || selectedCities.length > 0;
+
+  const clearFilters = () => {
+    setSelectedSpecialties([]);
+    setSelectedCities([]);
+    setSearchQuery("");
+  };
 
   return (
     <Layout>
@@ -109,100 +103,59 @@ export default function Search() {
                 <h2>{t.search.filters}</h2>
               </div>
 
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
-                  {t.search.specialty}
-                </h3>
-                <div className="space-y-3">
-                  {specialties.map(s => (
-                    <div key={s} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`spec-${s}`}
-                        checked={selectedSpecialties.includes(s)}
-                        onCheckedChange={() => toggleSpecialty(s)}
-                        data-testid={`checkbox-specialty-${s}`}
-                      />
-                      <Label htmlFor={`spec-${s}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                        {t.specialties[s] ?? s}
-                      </Label>
-                    </div>
-                  ))}
+              {/* Specialty filter */}
+              {specialties.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
+                    {t.search.specialty}
+                  </h3>
+                  <div className="space-y-3">
+                    {specialties.map(s => (
+                      <div key={s.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`spec-${s.id}`}
+                          checked={selectedSpecialties.includes(s.name)}
+                          onCheckedChange={() => toggleSpecialty(s.name)}
+                          data-testid={`checkbox-specialty-${s.name}`}
+                        />
+                        <Label htmlFor={`spec-${s.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                          {t.specialties[s.name] ?? s.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
-                  {t.home.governorate}
-                </h3>
-                <div className="space-y-3">
-                  {governorates.map(g => (
-                    <div key={g} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`gov-${g}`}
-                        checked={selectedGovernorates.includes(g)}
-                        onCheckedChange={() => toggleGovernorate(g)}
-                        data-testid={`checkbox-governorate-${g}`}
-                      />
-                      <Label htmlFor={`gov-${g}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                        {t.governorates[g] ?? g}
-                      </Label>
-                    </div>
-                  ))}
+              {/* City filter */}
+              {cities.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
+                    {t.search.location}
+                  </h3>
+                  <div className="space-y-3">
+                    {cities.map(c => (
+                      <div key={c.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`city-${c.id}`}
+                          checked={selectedCities.includes(c.name)}
+                          onCheckedChange={() => toggleCity(c.name)}
+                          data-testid={`checkbox-location-${c.name}`}
+                        />
+                        <Label htmlFor={`city-${c.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                          {t.governorates[c.name] ?? t.locations[c.name] ?? c.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
-                  {t.search.location}
-                </h3>
-                <div className="space-y-3">
-                  {locations.map(l => (
-                    <div key={l} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`loc-${l}`}
-                        checked={selectedLocations.includes(l)}
-                        onCheckedChange={() => toggleLocation(l)}
-                        data-testid={`checkbox-location-${l}`}
-                      />
-                      <Label htmlFor={`loc-${l}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                        {t.locations[l] ?? l}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
-                  {t.home.insurance}
-                </h3>
-                <div className="space-y-3">
-                  {insuranceNetworks.map(i => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`ins-${i}`}
-                        checked={selectedInsurances.includes(i)}
-                        onCheckedChange={() => toggleInsurance(i)}
-                        data-testid={`checkbox-insurance-${i}`}
-                      />
-                      <Label htmlFor={`ins-${i}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                        {t.insuranceNetworks[i] ?? i}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
 
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
-                  className="w-full mt-6 text-primary hover:text-primary/80 hover:bg-primary/5"
-                  onClick={() => {
-                    setSelectedSpecialties([]);
-                    setSelectedGovernorates([]);
-                    setSelectedLocations([]);
-                    setSelectedInsurances([]);
-                  }}
+                  className="w-full mt-2 text-primary hover:text-primary/80 hover:bg-primary/5"
+                  onClick={clearFilters}
                 >
                   {t.search.clearFilters}
                 </Button>
@@ -213,11 +166,19 @@ export default function Search() {
           <main className="flex-1">
             <div className="mb-6 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">
-                {t.search.doctorsFound(filteredDoctors.length)}
+                {loadingDoctors
+                  ? (t.search.doctorsFound(0))
+                  : t.search.doctorsFound(filteredDoctors.length)}
               </h2>
             </div>
 
-            {filteredDoctors.length > 0 ? (
+            {loadingDoctors ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-white rounded-xl border p-5 animate-pulse h-48" />
+                ))}
+              </div>
+            ) : filteredDoctors.length > 0 ? (
               <div className="space-y-6">
                 {filteredDoctors.map(doctor => (
                   <DoctorCard key={doctor.id} doctor={doctor} showSlots={true} />
@@ -227,17 +188,7 @@ export default function Search() {
               <div className="text-center py-20 bg-white rounded-xl border border-dashed">
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{t.search.noFound}</h3>
                 <p className="text-gray-500 max-w-md mx-auto">{t.search.noFoundDesc}</p>
-                <Button
-                  variant="outline"
-                  className="mt-6"
-                  onClick={() => {
-                    setSelectedSpecialties([]);
-                    setSelectedGovernorates([]);
-                    setSelectedLocations([]);
-                    setSelectedInsurances([]);
-                    setSearchQuery("");
-                  }}
-                >
+                <Button variant="outline" className="mt-6" onClick={clearFilters}>
                   {t.search.clearAllFilters}
                 </Button>
               </div>

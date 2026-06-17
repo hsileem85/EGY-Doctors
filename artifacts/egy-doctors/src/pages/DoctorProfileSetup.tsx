@@ -14,7 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { specialties, locations } from "@/lib/data";
+import { useQuery } from "@tanstack/react-query";
+import { getSpecialties, getCities } from "@/lib/api";
 import { Link } from "wouter";
 
 const DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
@@ -46,7 +47,7 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
   return {
     id: Math.random().toString(36).slice(2),
     name: "",
-    location: locations[0] ?? "",
+    location: "",
     address: "",
     lat: "30.0444",
     lng: "31.2357",
@@ -62,6 +63,15 @@ export default function DoctorProfileSetup() {
   const { toast } = useToast();
   const isEditMode = pathname.includes("edit-profile");
   const isRTL = dir === "rtl";
+
+  const { data: apiSpecialties = [] } = useQuery({
+    queryKey: ["specialties"],
+    queryFn: getSpecialties,
+  });
+  const { data: apiCities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
 
   const [profile, setProfile] = useState({
     fullName: "Dr. Ahmed Youssef",
@@ -188,7 +198,7 @@ export default function DoctorProfileSetup() {
                       <Select value={profile.specialty} onValueChange={v => setProfile(p => ({ ...p, specialty: v }))}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {specialties.map(s => <SelectItem key={s} value={s}>{t.specialties[s]}</SelectItem>)}
+                          {apiSpecialties.map(s => <SelectItem key={s.id} value={s.name}>{t.specialties[s.name] ?? s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -340,7 +350,7 @@ export default function DoctorProfileSetup() {
                               <Select value={clinic.location} onValueChange={v => updateClinic(clinic.id, { location: v })}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  {locations.map(l => <SelectItem key={l} value={l}>{t.locations[l]}</SelectItem>)}
+                                  {apiCities.map(c => <SelectItem key={c.id} value={c.name}>{t.locations[c.name] ?? t.governorates[c.name] ?? c.name}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>

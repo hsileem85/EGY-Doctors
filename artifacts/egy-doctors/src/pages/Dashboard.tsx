@@ -5,12 +5,40 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { appointments } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { getAppointments, type ApiAppointment } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+
+function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirmed: string } }) {
+  const map: Record<ApiAppointment["status"], string> = {
+    confirmed: "bg-[#D4A853]/5 text-[#D4A853] border-[#D4A853]/20",
+    pending: "bg-blue-50 text-blue-600 border-blue-200",
+    cancelled: "bg-red-50 text-red-600 border-red-200",
+    completed: "bg-green-50 text-green-600 border-green-200",
+  };
+  const labels: Record<ApiAppointment["status"], string> = {
+    confirmed: t.dashboard.confirmed,
+    pending: "Pending",
+    cancelled: "Cancelled",
+    completed: "Completed",
+  };
+  return <Badge variant="outline" className={map[status]}>{labels[status]}</Badge>;
+}
 
 export default function Dashboard() {
   const { t, dir } = useLanguage();
+  const { user } = useAuth();
+
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ["appointments", user?.doctorId],
+    queryFn: () => getAppointments({ doctorId: user?.doctorId ?? undefined }),
+    enabled: !!user?.doctorId,
+  });
+
+  const doctorName = user?.name ?? "Doctor";
+  const specialty = "";
 
   return (
     <Layout>
@@ -20,11 +48,11 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                D
+                {doctorName.charAt(0)}
               </div>
               <div>
-                <h3 className="font-bold text-sm">Dr. Ahmed Youssef</h3>
-                <p className="text-xs text-gray-500">{t.specialties["Cardiology"]}</p>
+                <h3 className="font-bold text-sm">{doctorName}</h3>
+                <p className="text-xs text-gray-500">{specialty}</p>
               </div>
             </div>
 
@@ -86,7 +114,7 @@ export default function Dashboard() {
                   <Users className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">1,248</div>
+                  <div className="text-3xl font-bold text-gray-900">—</div>
                   <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthViews}</p>
                 </CardContent>
               </Card>
@@ -99,7 +127,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-gray-900">
-                    12,400 <span className="text-lg font-normal text-gray-500">{t.dashboard.egp}</span>
+                    — <span className="text-lg font-normal text-gray-500">{t.dashboard.egp}</span>
                   </div>
                   <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthEarnings}</p>
                 </CardContent>
@@ -133,25 +161,28 @@ export default function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {appointments.map(apt => (
-                      <TableRow key={apt.id}>
-                        <TableCell className="font-medium text-gray-900">{apt.patientName}</TableCell>
-                        <TableCell className="text-gray-600">{apt.phone}</TableCell>
-                        <TableCell className="text-gray-600">{apt.date}</TableCell>
-                        <TableCell className="text-gray-600">{apt.time}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-[#D4A853]/5 text-[#D4A853] border-[#D4A853]/20">
-                            {t.dashboard.confirmed}
-                          </Badge>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                          {dir === "rtl" ? "جار التحميل..." : "Loading..."}
                         </TableCell>
                       </TableRow>
-                    ))}
-                    {appointments.length === 0 && (
+                    ) : appointments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                           {t.dashboard.noAppointments}
                         </TableCell>
                       </TableRow>
+                    ) : (
+                      appointments.map((apt) => (
+                        <TableRow key={apt.id}>
+                          <TableCell className="font-medium text-gray-900">{apt.patientName}</TableCell>
+                          <TableCell className="text-gray-600">{apt.patientPhone}</TableCell>
+                          <TableCell className="text-gray-600">{apt.appointmentDate}</TableCell>
+                          <TableCell className="text-gray-600">{apt.appointmentTime}</TableCell>
+                          <TableCell>{statusBadge(apt.status, t)}</TableCell>
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>
@@ -210,7 +241,6 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-
           </div>
         </main>
       </div>

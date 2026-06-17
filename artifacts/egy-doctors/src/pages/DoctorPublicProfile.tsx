@@ -1,19 +1,38 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Clock, Award, BookOpen, Calendar, CheckCircle2, User } from "lucide-react";
+import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { doctors } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
+import { getDoctor } from "@/lib/api";
 
 export default function DoctorPublicProfile() {
   const { id } = useParams();
-  const { t, lang, dir } = useLanguage();
+  const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
 
-  const doctor = doctors.find((d) => d.id === id);
+  const { data: doctor, isLoading } = useQuery({
+    queryKey: ["doctor", id],
+    queryFn: () => getDoctor(parseInt(id!, 10)),
+    enabled: !!id,
+  });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-[#F1F5F9] pb-20">
+          <div className="bg-[#0F172A] text-white py-8">
+            <div className="container mx-auto px-4 max-w-5xl">
+              <div className="animate-pulse h-40 bg-[#1E293B] rounded-xl" />
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!doctor) {
     return (
@@ -26,7 +45,7 @@ export default function DoctorPublicProfile() {
   }
 
   const specialty = t.specialties[doctor.specialty] ?? doctor.specialty;
-  const location = t.locations[doctor.location] ?? doctor.location;
+  const location = t.locations[doctor.cityName] ?? t.governorates[doctor.cityName] ?? doctor.cityName;
 
   return (
     <Layout>
@@ -133,8 +152,8 @@ export default function DoctorPublicProfile() {
                     </span>
                   </div>
                   <div className="flex flex-col gap-3">
-                    {doctor.clinics.map((clinic, i) => (
-                      <div key={i} className="rounded-xl border border-gray-200 overflow-hidden">
+                    {doctor.clinics.map((clinic) => (
+                      <div key={clinic.id} className="rounded-xl border border-gray-200 overflow-hidden">
                         <div className="flex items-start gap-3 p-4">
                           <div className="w-9 h-9 rounded-lg bg-[#D4A853]/10 flex items-center justify-center shrink-0 mt-0.5">
                             <MapPin className="h-4 w-4 text-[#D4A853]" />
@@ -186,30 +205,36 @@ export default function DoctorPublicProfile() {
                       ({doctor.reviews})
                     </span>
                   </div>
-                  <div className="space-y-4">
-                    {doctor.reviewList?.map((review) => (
-                      <div key={review.id} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center text-[#D4A853] font-semibold text-xs">
-                              {review.patientName.split(" ").map((n) => n[0]).join("")}
+                  {doctor.reviewList && doctor.reviewList.length > 0 ? (
+                    <div className="space-y-4">
+                      {doctor.reviewList.map((review) => (
+                        <div key={review.id} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-[#D4A853]/10 flex items-center justify-center text-[#D4A853] font-semibold text-xs">
+                                {review.patientName.split(" ").map((n) => n[0]).join("")}
+                              </div>
+                              <span className="font-medium text-gray-900 text-sm">{review.patientName}</span>
                             </div>
-                            <span className="font-medium text-gray-900 text-sm">{review.patientName}</span>
+                            <span className="text-xs text-gray-400">{review.date}</span>
                           </div>
-                          <span className="text-xs text-gray-400">{review.date}</span>
+                          <div className="flex items-center gap-1 mb-1.5 ml-10">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-3 w-3 ${i < review.rating ? "text-amber-400 fill-current" : "text-gray-300"}`}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-gray-600 text-sm leading-relaxed ml-10">{review.text}</p>
                         </div>
-                        <div className="flex items-center gap-1 mb-1.5 ml-10">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${i < review.rating ? "text-amber-400 fill-current" : "text-gray-300"}`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-gray-600 text-sm leading-relaxed ml-10">{review.text}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      {isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -221,15 +246,6 @@ export default function DoctorPublicProfile() {
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#D4A853]/10 flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-[#D4A853]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">{isRTL ? "أقرب موعد" : "Next Available"}</p>
-                      <p className="font-semibold text-gray-900">{doctor.nextAvailable}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#D4A853]/10 flex items-center justify-center">
                       <Award className="h-5 w-5 text-[#D4A853]" />
                     </div>
                     <div>
@@ -239,11 +255,20 @@ export default function DoctorPublicProfile() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#D4A853]/10 flex items-center justify-center">
+                      <Star className="h-5 w-5 text-[#D4A853]" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">{isRTL ? "التقييم" : "Rating"}</p>
+                      <p className="font-semibold text-gray-900">{doctor.rating} / 5</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#D4A853]/10 flex items-center justify-center">
                       <MapPin className="h-5 w-5 text-[#D4A853]" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">{isRTL ? "المسافة" : "Distance"}</p>
-                      <p className="font-semibold text-gray-900">{doctor.distance}</p>
+                      <p className="text-sm text-gray-500">{isRTL ? "المدينة" : "City"}</p>
+                      <p className="font-semibold text-gray-900">{location}</p>
                     </div>
                   </div>
                 </CardContent>

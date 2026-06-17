@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import {
@@ -11,19 +11,37 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
-import { doctors, specialties, stats } from "@/lib/data";
 import { useLanguage } from "@/context/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
+import { getDoctors, getSpecialties, type ApiDoctor } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
+
+const HOME_STATS = [
+  { value: "2,500+", label: "Verified Doctors", labelAr: "طبيب موثق" },
+  { value: "27", label: "Governorates", labelAr: "محافظة" },
+  { value: "150K+", label: "Monthly Bookings", labelAr: "حجز شهرياً" },
+  { value: "4.9★", label: "Avg. Rating", labelAr: "متوسط التقييم" },
+];
 
 export default function Home() {
   const [_, setLocation] = useLocation();
   const [doctorName, setDoctorName] = useState("");
   const [specialty, setSpecialty] = useState<string>("");
-  const [sortBy, setSortBy] = useState<SortOption>("nearest");
+  const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [isDetecting, setIsDetecting] = useState(false);
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
+
+  const { data: allDoctors = [], isLoading } = useQuery<ApiDoctor[]>({
+    queryKey: ["doctors"],
+    queryFn: () => getDoctors(),
+  });
+
+  const { data: specialties = [] } = useQuery({
+    queryKey: ["specialties"],
+    queryFn: getSpecialties,
+  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,16 +51,13 @@ export default function Home() {
     setLocation(`/search?${params.toString()}`);
   };
 
-  const sortedDoctors = [...doctors].sort((a, b) => {
-    if (sortBy === "nearest") {
-      const distA = parseFloat(a.distance);
-      const distB = parseFloat(b.distance);
-      return distA - distB;
-    }
-    if (sortBy === "rating") return b.rating - a.rating;
-    if (sortBy === "fee") return a.fee - b.fee;
-    return 0;
-  });
+  const sortedDoctors = useMemo(() => {
+    return [...allDoctors].sort((a, b) => {
+      if (sortBy === "rating") return b.rating - a.rating;
+      if (sortBy === "fee") return a.fee - b.fee;
+      return 0;
+    });
+  }, [allDoctors, sortBy]);
 
   return (
     <Layout>
@@ -67,12 +82,8 @@ export default function Home() {
                   className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors"
                 >
                   {isDetecting
-                    ? isRTL
-                      ? "جاري التحديد..."
-                      : "Detecting..."
-                    : isRTL
-                      ? "تغيير"
-                      : "Change"}
+                    ? isRTL ? "جاري التحديد..." : "Detecting..."
+                    : isRTL ? "تغيير" : "Change"}
                 </button>
               </div>
             </div>
@@ -140,8 +151,8 @@ export default function Home() {
                     {isRTL ? "أي تخصص" : "Any Specialty"}
                   </option>
                   {specialties.map((s) => (
-                    <option key={s} value={s}>
-                      {t.specialties[s] ?? s}
+                    <option key={s.id} value={s.name}>
+                      {t.specialties[s.name] ?? s.name}
                     </option>
                   ))}
                 </select>
@@ -160,7 +171,7 @@ export default function Home() {
         {/* Stats Strip */}
         <div className="bg-[#1E293B] border-b border-[#334155] py-2.5">
           <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
-            {stats.map((s) => (
+            {HOME_STATS.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
                 <span className="text-[#D4A853] font-bold">{s.value}</span>
                 <span className="font-medium text-gray-400 uppercase text-[11px] sm:text-xs tracking-wider">
@@ -186,9 +197,6 @@ export default function Home() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
               >
-                <option value="nearest">
-                  {isRTL ? "الأقرب أولاً" : "Nearest First"}
-                </option>
                 <option value="rating">
                   {isRTL ? "الأعلى تقييماً" : "Highest Rated"}
                 </option>
@@ -199,110 +207,117 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            {sortedDoctors.map((doc) => (
-              <div
-                key={doc.id}
-                className="bg-white rounded-xl p-2 sm:p-2.5 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-start"
-              >
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                  <img
-                    src={doc.image}
-                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shadow-sm border border-gray-100"
-                    alt={doc.name}
-                  />
-                  <div className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm border border-gray-100">
-                    <div className="bg-[#D4A853]/10 text-[#0F172A] font-bold text-xs px-2 py-0.5 rounded-md flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
-                      {doc.rating}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 w-full">
-                  <div className="flex items-start gap-2 mb-1">
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-lg font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
-                          {doc.name}
-                        </h3>
-                      </Link>
-                      <p className="text-[#0F172A]/70 text-xs font-medium flex items-center gap-1 mt-0.5">
-                        <HeartPulse className="w-3.5 h-3.5 text-[#D4A853]" />
-                        {t.specialties[doc.specialty] ?? doc.specialty}
-                      </p>
-                    </div>
-                    <div className="bg-[#F8FAFC] px-2 py-0.5 rounded-lg border border-gray-200 flex items-center gap-1 shrink-0">
-                      <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
-                      <span className="font-bold text-[#0F172A] text-[11px]">{doc.distance}</span>
+          {isLoading ? (
+            <div className="flex flex-col gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl p-4 border border-gray-200 animate-pulse h-32" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {sortedDoctors.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="bg-white rounded-xl p-2 sm:p-2.5 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-start"
+                >
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
+                    <img
+                      src={doc.image}
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shadow-sm border border-gray-100"
+                      alt={doc.name}
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm border border-gray-100">
+                      <div className="bg-[#D4A853]/10 text-[#0F172A] font-bold text-xs px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
+                        {doc.rating}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Fee + Next Available */}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
-                    <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
-                    <span className="text-gray-300">·</span>
-                    <span className="flex items-center gap-1 text-[#D4A853] font-semibold">
-                      <CalendarDays className="w-3 h-3" />
-                      {doc.nextAvailable}
-                    </span>
+                  {/* Details */}
+                  <div className="flex-1 w-full">
+                    <div className="flex items-start gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/doctor/${doc.id}`}>
+                          <h3 className="text-lg font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
+                            {doc.name}
+                          </h3>
+                        </Link>
+                        <p className="text-[#0F172A]/70 text-xs font-medium flex items-center gap-1 mt-0.5">
+                          <HeartPulse className="w-3.5 h-3.5 text-[#D4A853]" />
+                          {t.specialties[doc.specialty] ?? doc.specialty}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Fee */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
+                      <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
+                      {doc.cityName && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="flex items-center gap-1 text-gray-500">
+                            <CalendarDays className="w-3 h-3" />
+                            {t.governorates[doc.cityName] ?? t.locations[doc.cityName] ?? doc.cityName}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Clinics */}
+                    <div className="flex flex-col gap-1 mb-1">
+                      {doc.clinics.map((clinic) => (
+                        <a
+                          key={clinic.id}
+                          href={clinic.mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0 group"
+                        >
+                          <MapPin className="w-3 h-3 text-[#D4A853] shrink-0" />
+                          <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
+                          <span className="text-gray-400 mx-0.5">·</span>
+                          <span className="text-gray-500 truncate">{t.locations[clinic.location] ?? clinic.location}</span>
+                          <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Clinics */}
-                  <div className="flex flex-col gap-1 mb-1">
-                    {doc.clinics.map((clinic, i) => (
-                      <a
-                        key={i}
-                        href={clinic.mapUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0 group"
-                      >
-                        <MapPin className="w-3 h-3 text-[#D4A853] shrink-0" />
-                        <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
-                        <span className="text-gray-400 mx-0.5">·</span>
-                        <span className="text-gray-500 truncate">{t.locations[clinic.location] ?? clinic.location}</span>
-                        <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    ))}
-                  </div>
-
-                </div>
-
-                {/* Actions */}
-                <div className="w-full sm:w-[170px] flex flex-col gap-1.5 shrink-0 sm:border-l border-gray-100 sm:pl-3 sm:py-0 mt-1 sm:mt-0">
-                  <Link href={`/doctor/${doc.id}`}>
-                    <Button className="w-full bg-[#0F172A] text-white rounded-lg py-2 font-semibold text-xs hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-auto">
-                      {isRTL ? "احجز" : "Book"}
-                    </Button>
-                  </Link>
-                  <div className="flex gap-1.5">
-                    <a
-                      href={doc.mapUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/5 hover:bg-[#D4A853]/10 rounded-lg border border-[#D4A853]/20 hover:border-[#D4A853]/40 py-1.5 transition-colors"
-                    >
-                      <Navigation className="w-3 h-3" />
-                      {isRTL ? "الخريطة" : "Map"}
-                    </a>
-                    <Link href={`/profile/${doc.id}`} className="flex-1">
-                      <Button
-                        variant="outline"
-                        className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
-                      >
-                        {isRTL ? "الملف" : "Profile"}
+                  {/* Actions */}
+                  <div className="w-full sm:w-[170px] flex flex-col gap-1.5 shrink-0 sm:border-l border-gray-100 sm:pl-3 sm:py-0 mt-1 sm:mt-0">
+                    <Link href={`/doctor/${doc.id}`}>
+                      <Button className="w-full bg-[#0F172A] text-white rounded-lg py-2 font-semibold text-xs hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-auto">
+                        {isRTL ? "احجز" : "Book"}
                       </Button>
                     </Link>
+                    <div className="flex gap-1.5">
+                      <a
+                        href={doc.mapUrl || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/5 hover:bg-[#D4A853]/10 rounded-lg border border-[#D4A853]/20 hover:border-[#D4A853]/40 py-1.5 transition-colors"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        {isRTL ? "الخريطة" : "Map"}
+                      </a>
+                      <Link href={`/profile/${doc.id}`} className="flex-1">
+                        <Button
+                          variant="outline"
+                          className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                        >
+                          {isRTL ? "الملف" : "Profile"}
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-8 text-center">
             <Button

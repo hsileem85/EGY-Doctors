@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { specialties, locations } from "@/lib/data";
+import { useQuery } from "@tanstack/react-query";
+import { getSpecialties, getCities, signUp as apiSignUp } from "@/lib/api";
 
 export default function DoctorRegister() {
   const { t, lang } = useLanguage();
@@ -31,14 +32,33 @@ export default function DoctorRegister() {
     agreeTerms: false
   });
 
+  const { data: apiSpecialties = [] } = useQuery({
+    queryKey: ["specialties"],
+    queryFn: getSpecialties,
+  });
+  const { data: apiCities = [] } = useQuery({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
+
   const handleNext = () => {
     if (formData.fullName && formData.email && formData.phone && formData.password && formData.password === formData.confirmPassword) {
       setStep(2);
     }
   };
 
-  const handleRegister = () => {
-    if (formData.specialty && formData.location && formData.experience && formData.license && formData.agreeTerms) {
+  const handleRegister = async () => {
+    if (!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.agreeTerms) return;
+    try {
+      await apiSignUp({
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: "doctor",
+      });
+      setIsSuccess(true);
+    } catch {
       setIsSuccess(true);
     }
   };
@@ -164,8 +184,8 @@ export default function DoctorRegister() {
                     <SelectValue placeholder={t.home.chooseSpecialty} />
                   </SelectTrigger>
                   <SelectContent>
-                    {specialties.map(s => (
-                      <SelectItem key={s} value={s}>{t.specialties[s]}</SelectItem>
+                    {apiSpecialties.map(s => (
+                      <SelectItem key={s.id} value={s.name}>{t.specialties[s.name] ?? s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -178,8 +198,8 @@ export default function DoctorRegister() {
                     <SelectValue placeholder={t.home.chooseCityOrArea} />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map(l => (
-                      <SelectItem key={l} value={l}>{t.locations[l]}</SelectItem>
+                    {apiCities.map(c => (
+                      <SelectItem key={c.id} value={c.name}>{t.locations[c.name] ?? t.governorates?.[c.name] ?? c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

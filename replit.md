@@ -22,15 +22,26 @@ A bilingual (EN/AR) medical directory platform for Egypt where patients can sear
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/db/src/schema/` — Drizzle table definitions (source of truth for DB)
+- `artifacts/api-server/src/routes/` — Express route handlers (auth, doctors, listings, appointments, admin)
+- `artifacts/egy-doctors/src/lib/api.ts` — typed frontend API client (all API calls go through here)
+- `artifacts/egy-doctors/src/context/AuthContext.tsx` — JWT auth state, signIn/signUp/signOut
+- `scripts/src/seed.ts` — DB seed script (`pnpm --filter @workspace/scripts run seed`)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **JWT in localStorage** (`egy_token`), sent as `Authorization: Bearer` header. Phone is the primary login identifier.
+- **Contract-first API**: OpenAPI spec + Orval codegen in `lib/api-spec`. Run `pnpm --filter @workspace/api-spec run codegen` after spec changes.
+- **SignUpData** uses `specialtyId: number` (not `specialty: string`). Doctors set specialty via Profile Setup after signing up.
+- **API server** must be **rebuilt** (workflow restart) after adding new route files — esbuild bundles everything at startup.
+- **`getDoctors()` in useQuery**: always wrap in arrow fn `() => getDoctors()` and use explicit generic `useQuery<ApiDoctor[]>` to avoid TS2769.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Patients: Search doctors by name/specialty/city, view profiles with clinic map links and reviews, book appointments with date/time picker.
+- Doctors: Sign up, complete profile setup (specialty, bio, fee, clinics, schedule), manage appointments from dashboard.
+- Auth: Sign in / sign up (patient / doctor / medical center), forgot password / reset via token.
+- Admin: Manage doctor applications and platform data.
 
 ## User preferences
 
@@ -38,7 +49,10 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `zod` must be in `artifacts/api-server/package.json` dependencies (not just root) — esbuild won't find it otherwise.
+- Always restart the API server workflow after adding new route files to trigger a rebuild.
+- `pnpm --filter @workspace/db run push` applies schema changes to the dev DB (never run in production).
+- Seed users all use password `password123`. Seed is idempotent (safe to re-run).
 
 ## Pointers
 

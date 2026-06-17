@@ -3,3 +3,7 @@ export * from "./specialties";
 export * from "./cities";
 export * from "./areas";
 export * from "./doctors";
+export * from "./clinics";
+export * from "./reviews";
+export * from "./appointments";
+export * from "./password_reset_tokens";
