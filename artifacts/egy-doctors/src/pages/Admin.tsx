@@ -461,15 +461,17 @@ function CitiesSection({ lang }: { lang: string }) {
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", nameAr: "", displayOrder: 0 });
+  const [form, setForm] = useState({ name: "", nameAr: "", displayOrder: 1 });
+
+  const nextOrder = items.length > 0 ? Math.max(...items.map((i) => i.displayOrder)) + 1 : 1;
 
   const reset = () => {
-    setForm({ name: "", nameAr: "", displayOrder: 0 });
+    setForm({ name: "", nameAr: "", displayOrder: nextOrder });
     setEditId(null);
   };
 
   const handleSubmit = () => {
-    const payload = { ...form, displayOrder: Number(form.displayOrder) };
+    const payload = { name: form.name, nameAr: form.nameAr, displayOrder: Number(form.displayOrder) };
     if (editId) {
       update.mutate(
         { id: editId, data: payload },
@@ -499,7 +501,7 @@ function CitiesSection({ lang }: { lang: string }) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-gray-900">{lang === "ar" ? "المحافظات" : "Cities"}</h3>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o && !editId) reset(); }}>
           <DialogTrigger asChild>
             <Button className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={() => { reset(); setOpen(true); }}>
               <Plus className="w-4 h-4 mr-1" />
@@ -515,8 +517,13 @@ function CitiesSection({ lang }: { lang: string }) {
             <div className="space-y-3 pt-2">
               <Input placeholder={lang === "ar" ? "الاسم (إنجليزي)" : "Name (English)"} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               <Input placeholder={lang === "ar" ? "الاسم (عربي)" : "Name (Arabic)"} value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} />
-              <Input type="number" placeholder={lang === "ar" ? "ترتيب العرض" : "Display Order"} value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} />
-              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={handleSubmit} disabled={create.isPending || update.isPending}>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 font-medium">
+                  {lang === "ar" ? "ترتيب العرض" : "Display Order"}
+                </label>
+                <Input type="number" min={1} value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} />
+              </div>
+              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={handleSubmit} disabled={create.isPending || update.isPending || !form.name || !form.nameAr}>
                 {editId ? (lang === "ar" ? "حفظ" : "Save") : (lang === "ar" ? "إضافة" : "Add")}
               </Button>
             </div>
@@ -531,9 +538,9 @@ function CitiesSection({ lang }: { lang: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
                   <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
                   <TableHead>{lang === "ar" ? "الاسم (ع)" : "Name (AR)"}</TableHead>
-                  <TableHead>{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
                   <TableHead>{lang === "ar" ? "الحالة" : "Status"}</TableHead>
                   <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
                 </TableRow>
@@ -541,9 +548,9 @@ function CitiesSection({ lang }: { lang: string }) {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell className="font-mono text-sm text-gray-500 w-8">{item.displayOrder}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.nameAr}</TableCell>
-                    <TableCell>{item.displayOrder}</TableCell>
                     <TableCell>
                       <Badge variant={item.isActive === "true" ? "default" : "secondary"}>
                         {item.isActive === "true" ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "معطل" : "Inactive")}

@@ -228,7 +228,13 @@ router.post("/admin/cities", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db.insert(citiesTable).values(parsed.data).returning();
+  let { displayOrder } = parsed.data;
+  if (displayOrder == null) {
+    const [result] = await db.select({ maxOrder: max(citiesTable.displayOrder) }).from(citiesTable);
+    displayOrder = (result?.maxOrder ?? 0) + 1;
+  }
+
+  const [row] = await db.insert(citiesTable).values({ ...parsed.data, displayOrder }).returning();
   res.status(201).json(UpdateCityResponse.parse(stringifyRow(row)));
 });
 
