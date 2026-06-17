@@ -64,7 +64,7 @@ export default function DoctorProfileSetup() {
   const { t, dir } = useLanguage();
   const [pathname, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const isEditMode = pathname.includes("edit-profile");
   const isRTL = dir === "rtl";
 
@@ -242,6 +242,7 @@ export default function DoctorProfileSetup() {
         }
       }));
 
+      await refreshUser();
       toast({
         title: isEditMode ? (isRTL ? "تم حفظ الملف الشخصي!" : "Profile Updated!") : t.profileSetup.publishedSuccess,
         description: isRTL ? "تم حفظ تغييرات ملفك الشخصي بنجاح." : "Your profile changes have been saved successfully.",

@@ -105,8 +105,14 @@ export function Navbar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 focus:outline-none group">
-                  <div className="w-8 h-8 rounded-full bg-[#D4A853] text-[#0F172A] flex items-center justify-center text-sm font-bold ring-2 ring-[#D4A853]/30 group-hover:ring-[#D4A853]/60 transition-all select-none">
-                    {initials}
+                  <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#D4A853]/30 group-hover:ring-[#D4A853]/60 transition-all select-none flex-shrink-0">
+                    {user.image ? (
+                      <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#D4A853] text-[#0F172A] flex items-center justify-center text-sm font-bold">
+                        {initials}
+                      </div>
+                    )}
                   </div>
                   <span className="hidden sm:block text-sm text-gray-300 group-hover:text-white transition-colors max-w-[120px] truncate">
                     {user.name}
@@ -114,9 +120,20 @@ export function Navbar() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52 bg-[#1E293B] border-[#334155] text-white">
-                <div className="px-3 py-2 border-b border-[#334155]">
-                  <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                  <p className="text-xs text-gray-400 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role}</p>
+                <div className="px-3 py-3 border-b border-[#334155] flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                    {user.image ? (
+                      <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[#D4A853] text-[#0F172A] flex items-center justify-center text-sm font-bold">
+                        {initials}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                    <p className="text-xs text-gray-400 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role}</p>
+                  </div>
                 </div>
                 {user.role === "doctor" && (
                   <DropdownMenuItem

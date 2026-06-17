@@ -173,13 +173,15 @@ router.get("/auth/me", async (req, res): Promise<void> => {
 
   let doctorId: number | null = null;
   let accountStatus: string | null = null;
+  let image: string | null = null;
   if (user.role === "doctor") {
-    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus })
+    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus, image: doctorsTable.image })
       .from(doctorsTable)
       .where(eq(doctorsTable.userId, user.id)).limit(1);
     if (doc) {
       doctorId = doc.id;
       accountStatus = doc.accountStatus;
+      image = doc.image ?? null;
     }
   }
 
@@ -192,6 +194,7 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     role: user.role,
     doctorId,
     accountStatus,
+    image,
   });
 });
 

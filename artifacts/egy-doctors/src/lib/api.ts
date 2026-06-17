@@ -9,6 +9,7 @@ export interface AuthUser {
   role: "patient" | "doctor" | "medical_center" | "admin";
   doctorId?: number | null;
   accountStatus?: string | null;
+  image?: string | null;
 }
 
 export interface ApiClinic {
