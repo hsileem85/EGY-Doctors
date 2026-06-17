@@ -207,6 +207,19 @@ export function addClinic(data: {
   return request("/doctor/clinics", { method: "POST", body: JSON.stringify(data) });
 }
 
+export function updateClinic(id: number, data: {
+  name?: string;
+  address?: string;
+  mapUrl?: string;
+  phone?: string;
+  fee?: number;
+  areaId?: number;
+  lat?: number;
+  lng?: number;
+}): Promise<ApiClinic> {
+  return request(`/doctor/clinics/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
 export function deleteClinic(id: number): Promise<void> {
   return request(`/doctor/clinics/${id}`, { method: "DELETE" });
 }

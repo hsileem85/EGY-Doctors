@@ -364,6 +364,44 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
   res.status(201).json(clinic);
 });
 
+/* ─── PUT /doctor/clinics/:id  (update clinic — requires JWT) ─── */
+router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) { res.status(401).json({ error: "Unauthorized" }); return; }
+  let payload: { sub: number };
+  try { payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number }; }
+  catch { res.status(401).json({ error: "Invalid token" }); return; }
+
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const clinicId = parseInt(rawId, 10);
+  if (isNaN(clinicId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [doc] = await db.select({ id: doctorsTable.id }).from(doctorsTable)
+    .where(eq(doctorsTable.userId, payload.sub)).limit(1);
+  if (!doc) { res.status(404).json({ error: "Doctor not found" }); return; }
+
+  const Schema = z.object({
+    name: z.string().min(1).optional(),
+    address: z.string().optional().nullable(),
+    mapUrl: z.string().optional().nullable(),
+    phone: z.string().optional().nullable(),
+    fee: z.coerce.number().optional().nullable(),
+    areaId: z.coerce.number().optional().nullable(),
+    lat: z.coerce.number().optional().nullable(),
+    lng: z.coerce.number().optional().nullable(),
+  });
+  const parsed = Schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message }); return; }
+
+  const [updated] = await db.update(clinicsTable)
+    .set(parsed.data)
+    .where(and(eq(clinicsTable.id, clinicId), eq(clinicsTable.doctorId, doc.id)))
+    .returning();
+
+  if (!updated) { res.status(404).json({ error: "Clinic not found" }); return; }
+  res.json(updated);
+});
+
 /* ─── DELETE /doctor/clinics/:id  (remove clinic — requires JWT) ─── */
 router.delete("/doctor/clinics/:id", async (req, res): Promise<void> => {
   const authHeader = req.headers.authorization;

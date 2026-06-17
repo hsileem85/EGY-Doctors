@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { getSpecialties, getCities, getMyDoctorProfile } from "@/lib/api";
+import { getSpecialties, getCities, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 
@@ -94,6 +94,8 @@ export default function DoctorProfileSetup() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [clinics, setClinics] = useState<Clinic[]>([makeClinic()]);
   const [expandedId, setExpandedId] = useState<string>(() => clinics[0].id);
+  const [deletedDbIds, setDeletedDbIds] = useState<number[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (myProfile && !profileLoaded && (apiSpecialties.length > 0 || !myProfile.specialtyId)) {
@@ -145,6 +147,10 @@ export default function DoctorProfileSetup() {
   };
 
   const removeClinic = (id: string) => {
+    const numId = parseInt(id, 10);
+    if (!isNaN(numId)) {
+      setDeletedDbIds(prev => [...prev, numId]);
+    }
     setClinics(prev => {
       const next = prev.filter(c => c.id !== id);
       if (expandedId === id && next.length > 0) setExpandedId(next[0].id);
@@ -163,17 +169,55 @@ export default function DoctorProfileSetup() {
     }));
   };
 
-  const handleSave = () => {
-    toast({
-      title: isEditMode
-        ? (isRTL ? "تم حفظ الملف الشخصي!" : "Profile Updated!")
-        : t.profileSetup.publishedSuccess,
-      description: isEditMode
-        ? (isRTL ? "تم حفظ تغييرات ملفك الشخصي بنجاح." : "Your profile changes have been saved successfully.")
-        : t.profileSetup.publishedSuccess,
-      className: "bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20",
-    });
-    setTimeout(() => setLocation("/dashboard"), 1500);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const selectedSpecialty = apiSpecialties.find(s => s.name === profile.specialty);
+      const firstClinicCity = apiCities.find(c => c.name === clinics[0]?.location);
+
+      await updateDoctorProfile({
+        name: profile.fullName || undefined,
+        bio: profile.bio || undefined,
+        specialtyId: selectedSpecialty?.id,
+        cityId: firstClinicCity?.id,
+        experience: profile.experience ? parseInt(profile.experience, 10) : undefined,
+      });
+
+      await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
+
+      await Promise.all(clinics.map(clinic => {
+        const numId = parseInt(clinic.id, 10);
+        const cityForClinic = apiCities.find(c => c.name === clinic.location);
+        const data = {
+          name: clinic.name || `Clinic`,
+          address: clinic.address || undefined,
+          fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
+          areaId: cityForClinic?.id,
+          lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
+          lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
+        };
+        if (isNaN(numId)) {
+          return apiAddClinic(data);
+        } else {
+          return apiUpdateClinic(numId, data);
+        }
+      }));
+
+      toast({
+        title: isEditMode ? (isRTL ? "تم حفظ الملف الشخصي!" : "Profile Updated!") : t.profileSetup.publishedSuccess,
+        description: isRTL ? "تم حفظ تغييرات ملفك الشخصي بنجاح." : "Your profile changes have been saved successfully.",
+        className: "bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20",
+      });
+      setTimeout(() => setLocation("/dashboard"), 1500);
+    } catch {
+      toast({
+        title: isRTL ? "حدث خطأ" : "Error",
+        description: isRTL ? "تعذر حفظ الملف الشخصي. يرجى المحاولة مجدداً." : "Failed to save profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -202,8 +246,8 @@ export default function DoctorProfileSetup() {
                   </Button>
                 </Link>
               )}
-              <Button onClick={handleSave} size="lg" className="w-full md:w-auto" data-testid="button-save-profile">
-                {isEditMode ? (isRTL ? "حفظ التغييرات" : "Save Changes") : t.profileSetup.savePublish}
+              <Button onClick={handleSave} size="lg" className="w-full md:w-auto" data-testid="button-save-profile" disabled={isSaving}>
+                {isSaving ? (isRTL ? "جاري الحفظ..." : "Saving...") : isEditMode ? (isRTL ? "حفظ التغييرات" : "Save Changes") : t.profileSetup.savePublish}
               </Button>
             </div>
           </div>
