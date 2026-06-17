@@ -190,6 +190,14 @@ export const UpdateDoctorOnboardingResponse = zod.object({
 
 
 /**
+ * @summary Delete a doctor and their user account
+ */
+export const DeleteDoctorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all specialties
  */
 export const ListSpecialtiesResponseItem = zod.object({

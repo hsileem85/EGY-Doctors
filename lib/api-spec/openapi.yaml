@@ -115,6 +115,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Doctor"
+  /admin/doctors/{id}:
+    delete:
+      operationId: deleteDoctor
+      tags: [admin]
+      summary: Delete a doctor and their user account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
   /admin/specialties:
     get:
       operationId: listSpecialties

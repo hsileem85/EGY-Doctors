@@ -1,6 +1,12 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User } from "lucide-react";
+import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle } from "lucide-react";
+
+function whatsappUrl(phone: string) {
+  const digits = phone.replace(/[^\d]/g, "");
+  const intl = digits.startsWith("0") ? "20" + digits.slice(1) : digits;
+  return `https://wa.me/${intl}`;
+}
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,6 +176,15 @@ export default function DoctorPublicProfile() {
                               >
                                 <Phone className="h-3.5 w-3.5 shrink-0" />
                                 {clinic.phone}
+                              </a>
+                              <a
+                                href={whatsappUrl(clinic.phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-[#25D366] hover:text-[#1ebe59] font-medium transition-colors"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                                WhatsApp
                               </a>
                               <span className="text-gray-300">·</span>
                               <span className="text-sm font-bold text-gray-800">

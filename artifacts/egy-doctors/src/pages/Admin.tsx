@@ -6,6 +6,7 @@ import {
   useApproveDoctor,
   useRejectDoctor,
   useUpdateDoctorOnboarding,
+  useDeleteDoctor,
   useListSpecialties,
   useCreateSpecialty,
   useUpdateSpecialty,
@@ -207,6 +208,7 @@ function DoctorsSection({ lang }: { lang: string }) {
   const approve = useApproveDoctor();
   const reject = useRejectDoctor();
   const updateOnboarding = useUpdateDoctorOnboarding();
+  const deleteDoc = useDeleteDoctor();
   const invalidate = useInvalidateAdmin();
   const [selectedDoctor, setSelectedDoctor] = useState<AdminDoctor | null>(null as AdminDoctor | null);
 
@@ -222,6 +224,11 @@ function DoctorsSection({ lang }: { lang: string }) {
   };
   const handleOnboarding = (id: number, status: "pending" | "approved" | "rejected") => {
     updateOnboarding.mutate({ id, data: { status } }, { onSuccess: invalidate });
+  };
+  const handleDelete = (id: number, name: string) => {
+    if (confirm(lang === "ar" ? `هل أنت متأكد من حذف الطبيب "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.` : `Delete doctor "${name}"? This cannot be undone.`)) {
+      deleteDoc.mutate({ id }, { onSuccess: invalidate });
+    }
   };
 
   const statusBadge = (status: string) => {
@@ -346,6 +353,16 @@ function DoctorsSection({ lang }: { lang: string }) {
                             title={lang === "ar" ? "تحديث الإعداد" : "Toggle onboarding"}
                           >
                             <Clock className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(doctor.id, doctor.name)}
+                            disabled={deleteDoc.isPending}
+                            title={lang === "ar" ? "حذف" : "Delete"}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </TableCell>

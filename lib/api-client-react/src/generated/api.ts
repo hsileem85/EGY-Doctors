@@ -499,6 +499,55 @@ export const useUpdateDoctorOnboarding = <TError = ErrorType<unknown>,
       return useMutation(getUpdateDoctorOnboardingMutationOptions(options));
     }
 
+export const getDeleteDoctorUrl = (id: number,) => {
+  return `/api/admin/doctors/${id}`
+}
+
+/**
+ * @summary Delete a doctor and their user account
+ */
+export const deleteDoctor = async (id: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(getDeleteDoctorUrl(id), {
+    ...options,
+    method: 'DELETE',
+  });
+}
+
+export const getDeleteDoctorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDoctor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDoctor>>, TError,{id: number}, TContext> => {
+const mutationKey = ['deleteDoctor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDoctor>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+          return deleteDoctor(id, requestOptions)
+        }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type DeleteDoctorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDoctor>>>
+export type DeleteDoctorMutationError = ErrorType<unknown>
+
+/**
+ * @summary Delete a doctor and their user account
+ */
+export const useDeleteDoctor = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDoctor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDoctor>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDoctorMutationOptions(options));
+    }
+
 export const getListSpecialtiesUrl = () => {
 
 

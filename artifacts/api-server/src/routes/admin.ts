@@ -92,6 +92,26 @@ router.get("/admin/doctors", async (req, res): Promise<void> => {
   res.json(stringifyDates(filtered));
 });
 
+router.delete("/admin/doctors/:id", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [doctor] = await db.select({ userId: doctorsTable.userId }).from(doctorsTable).where(eq(doctorsTable.id, id));
+  if (!doctor) {
+    res.status(404).json({ error: "Doctor not found" });
+    return;
+  }
+
+  await db.delete(doctorsTable).where(eq(doctorsTable.id, id));
+  await db.delete(usersTable).where(eq(usersTable.id, doctor.userId));
+
+  res.status(204).send();
+});
+
 router.get("/admin/doctors/pending", async (_req, res): Promise<void> => {
   const rows = await listDoctorsWithDetails();
   res.json(stringifyDates(rows.filter((r) => r.accountStatus === "pending")));
