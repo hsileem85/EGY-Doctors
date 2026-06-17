@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { db, appointmentsTable } from "@workspace/db";
+import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -62,11 +62,38 @@ router.get("/appointments", async (req, res): Promise<void> => {
   if (patientUserId) conditions.push(eq(appointmentsTable.patientUserId, patientUserId));
   if (patientPhone) conditions.push(eq(appointmentsTable.patientPhone, patientPhone));
 
-  const rows = conditions.length > 0
-    ? await db.select().from(appointmentsTable).where(and(...conditions))
-    : await db.select().from(appointmentsTable);
+  const query = db
+    .select({
+      id: appointmentsTable.id,
+      doctorId: appointmentsTable.doctorId,
+      clinicId: appointmentsTable.clinicId,
+      patientUserId: appointmentsTable.patientUserId,
+      patientName: appointmentsTable.patientName,
+      patientPhone: appointmentsTable.patientPhone,
+      appointmentDate: appointmentsTable.appointmentDate,
+      appointmentTime: appointmentsTable.appointmentTime,
+      status: appointmentsTable.status,
+      notes: appointmentsTable.notes,
+      createdAt: appointmentsTable.createdAt,
+      updatedAt: appointmentsTable.updatedAt,
+      doctorName: usersTable.name,
+      specialty: specialtiesTable.name,
+      specialtyAr: specialtiesTable.nameAr,
+    })
+    .from(appointmentsTable)
+    .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
+    .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id))
+    .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id));
 
-  res.json(rows.map(serializeRow));
+  const rows = conditions.length > 0
+    ? await query.where(and(...conditions))
+    : await query;
+
+  res.json(rows.map(r => ({
+    ...r,
+    createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+    updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : r.updatedAt,
+  })));
 });
 
 /* ─── PATCH /appointments/:id/status ─── */

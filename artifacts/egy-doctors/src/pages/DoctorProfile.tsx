@@ -133,6 +133,7 @@ export default function DoctorProfile() {
       await bookAppointment({
         doctorId: doctor.id,
         clinicId: selectedClinic.id,
+        patientUserId: user?.id,
         appointmentDate: selectedDate,
         appointmentTime: selectedTime,
         patientName: user?.name ?? "Guest",

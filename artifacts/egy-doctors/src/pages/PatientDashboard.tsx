@@ -4,15 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-
-const upcomingAppointments = [
-  { id: 1, doctor: "Dr. Ahmed Youssef", specialty: "Cardiology", date: "2026-05-28", time: "10:00 AM", status: "confirmed" },
-];
-
-const recentRecords = [
-  { id: 1, title: "Cardiology Consultation", doctor: "Dr. Ahmed Youssef", date: "2026-05-20", icon: Stethoscope },
-  { id: 4, title: "Blood Pressure Medication", doctor: "Dr. Ahmed Youssef", date: "2026-05-20", icon: Pill },
-];
+import { useQuery } from "@tanstack/react-query";
+import { getAppointments } from "@/lib/api";
 
 export default function PatientDashboard() {
   const { dir } = useLanguage();
@@ -20,6 +13,25 @@ export default function PatientDashboard() {
   const isRTL = dir === "rtl";
 
   const firstName = user?.name?.split(" ")[0] ?? (isRTL ? "مريض" : "Patient");
+
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ["patient-appointments", user?.id],
+    queryFn: () => getAppointments({ patientUserId: user!.id }),
+    enabled: !!user?.id,
+  });
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const upcoming = appointments
+    .filter(a => a.appointmentDate >= today && a.status !== "cancelled")
+    .sort((a, b) => a.appointmentDate.localeCompare(b.appointmentDate));
+
+  const recentActivity = appointments
+    .filter(a => a.appointmentDate < today)
+    .sort((a, b) => b.appointmentDate.localeCompare(a.appointmentDate))
+    .slice(0, 4);
+
+  const visitCount = appointments.filter(a => a.status !== "cancelled").length;
 
   return (
     <Layout>
@@ -77,7 +89,9 @@ export default function PatientDashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{isRTL ? "أدوية" : "Medications"}</p>
-                    <p className="text-xl font-bold">3</p>
+                    <p className="text-sm text-gray-400 italic">
+                      {isRTL ? "الخدمة قادمة قريباً" : "Service coming soon"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -88,7 +102,7 @@ export default function PatientDashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{isRTL ? "زيارات" : "Visits"}</p>
-                    <p className="text-xl font-bold">8</p>
+                    <p className="text-xl font-bold">{isLoading ? "—" : visitCount}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -104,20 +118,34 @@ export default function PatientDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {upcomingAppointments.length === 0 ? (
+                  {isLoading ? (
+                    <div className="space-y-2 py-2">
+                      {[1, 2].map(i => (
+                        <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
+                  ) : upcoming.length === 0 ? (
                     <p className="text-sm text-gray-500 py-4 text-center">
                       {isRTL ? "لا توجد مواعيد قادمة." : "No upcoming appointments."}
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {upcomingAppointments.map((apt) => (
+                      {upcoming.map((apt) => (
                         <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
                           <div>
-                            <p className="font-medium text-sm">{apt.doctor}</p>
-                            <p className="text-xs text-gray-500">{apt.specialty} &middot; {apt.date} &middot; {apt.time}</p>
+                            <p className="font-medium text-sm">{apt.doctorName ?? `Doctor #${apt.doctorId}`}</p>
+                            <p className="text-xs text-gray-500">
+                              {(isRTL ? apt.specialtyAr : apt.specialty) ?? ""}
+                              {apt.specialty || apt.specialtyAr ? " · " : ""}
+                              {apt.appointmentDate} · {apt.appointmentTime}
+                            </p>
                           </div>
-                          <Badge variant="outline" className="text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5">
-                            {apt.status === "confirmed" ? (isRTL ? "مؤكد" : "Confirmed") : apt.status}
+                          <Badge variant="outline" className="text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5 capitalize">
+                            {apt.status === "confirmed"
+                              ? (isRTL ? "مؤكد" : "Confirmed")
+                              : apt.status === "pending"
+                              ? (isRTL ? "في الانتظار" : "Pending")
+                              : apt.status}
                           </Badge>
                         </div>
                       ))}
@@ -135,22 +163,35 @@ export default function PatientDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {recentRecords.map((record) => {
-                      const Icon = record.icon;
-                      return (
-                        <div key={record.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  {isLoading ? (
+                    <div className="space-y-2 py-2">
+                      {[1, 2].map(i => (
+                        <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
+                  ) : recentActivity.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-4 text-center">
+                      {isRTL ? "لا يوجد نشاط سابق." : "No past activity yet."}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentActivity.map((apt) => (
+                        <div key={apt.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                            <Icon className="h-4 w-4 text-gray-600" />
+                            <Stethoscope className="h-4 w-4 text-gray-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{record.title}</p>
-                            <p className="text-xs text-gray-500">{record.doctor} &middot; {record.date}</p>
+                            <p className="font-medium text-sm">
+                              {(isRTL ? apt.specialtyAr : apt.specialty) ?? (isRTL ? "استشارة" : "Consultation")}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {apt.doctorName ?? `Doctor #${apt.doctorId}`} · {apt.appointmentDate}
+                            </p>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

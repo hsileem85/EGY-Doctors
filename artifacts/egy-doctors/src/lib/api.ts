@@ -90,6 +90,9 @@ export interface ApiAppointment {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  doctorName?: string | null;
+  specialty?: string | null;
+  specialtyAr?: string | null;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
