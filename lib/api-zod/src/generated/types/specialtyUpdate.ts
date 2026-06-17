@@ -9,6 +9,7 @@
 export interface SpecialtyUpdate {
   name?: string;
   nameAr?: string;
+  shortName?: string;
   description?: string;
   displayOrder?: number;
   isActive?: string;

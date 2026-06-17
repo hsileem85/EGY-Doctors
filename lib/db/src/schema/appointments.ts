@@ -19,5 +19,5 @@ export const appointmentsTable = pgTable("appointments", {
 });
 
 export const insertAppointmentSchema = createInsertSchema(appointmentsTable).omit({ id: true, createdAt: true, updatedAt: true });
-export type InsertAppointment = typeof insertAppointmentSchema._type;
+export type InsertAppointment = typeof insertAppointmentSchema.type;
 export type Appointment = typeof appointmentsTable.$inferSelect;

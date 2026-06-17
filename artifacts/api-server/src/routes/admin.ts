@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { db, doctorsTable, specialtiesTable, citiesTable, areasTable } from "@workspace/db";
 
 function stringifyDates<T>(rows: T[]): T[] {
@@ -155,7 +155,13 @@ router.post("/admin/specialties", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db.insert(specialtiesTable).values(parsed.data).returning();
+  let { displayOrder } = parsed.data;
+  if (displayOrder == null) {
+    const [result] = await db.select({ maxOrder: max(specialtiesTable.displayOrder) }).from(specialtiesTable);
+    displayOrder = (result?.maxOrder ?? 0) + 1;
+  }
+
+  const [row] = await db.insert(specialtiesTable).values({ ...parsed.data, displayOrder }).returning();
   res.status(201).json(UpdateSpecialtyResponse.parse(stringifyRow(row)));
 });
 

@@ -5,6 +5,7 @@ export const specialtiesTable = pgTable("specialties", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
   nameAr: varchar("name_ar", { length: 100 }).notNull(),
+  shortName: varchar("short_name", { length: 50 }),
   description: varchar("description", { length: 500 }),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: varchar("is_active", { length: 10 }).notNull().default("true"),

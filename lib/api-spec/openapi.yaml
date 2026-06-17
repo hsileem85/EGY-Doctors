@@ -369,6 +369,7 @@ components:
         id: { type: integer }
         name: { type: string }
         nameAr: { type: string }
+        shortName: { type: [string, "null"] }
         description: { type: [string, "null"] }
         displayOrder: { type: integer }
         isActive: { type: string }
@@ -387,6 +388,7 @@ components:
       properties:
         name: { type: string }
         nameAr: { type: string }
+        shortName: { type: string }
         description: { type: string }
         displayOrder: { type: integer }
       required:
@@ -397,6 +399,7 @@ components:
       properties:
         name: { type: string }
         nameAr: { type: string }
+        shortName: { type: string }
         description: { type: string }
         displayOrder: { type: integer }
         isActive: { type: string }

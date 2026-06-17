@@ -171,6 +171,7 @@ export const ListSpecialtiesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "nameAr": zod.string(),
+  "shortName": zod.string().nullish(),
   "description": zod.string().nullish(),
   "displayOrder": zod.number(),
   "isActive": zod.string(),
@@ -186,6 +187,7 @@ export const ListSpecialtiesResponse = zod.array(ListSpecialtiesResponseItem)
 export const CreateSpecialtyBody = zod.object({
   "name": zod.string(),
   "nameAr": zod.string(),
+  "shortName": zod.string().optional(),
   "description": zod.string().optional(),
   "displayOrder": zod.number().optional()
 })
@@ -201,6 +203,7 @@ export const UpdateSpecialtyParams = zod.object({
 export const UpdateSpecialtyBody = zod.object({
   "name": zod.string().optional(),
   "nameAr": zod.string().optional(),
+  "shortName": zod.string().optional(),
   "description": zod.string().optional(),
   "displayOrder": zod.number().optional(),
   "isActive": zod.string().optional()
@@ -210,6 +213,7 @@ export const UpdateSpecialtyResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "nameAr": zod.string(),
+  "shortName": zod.string().nullish(),
   "description": zod.string().nullish(),
   "displayOrder": zod.number(),
   "isActive": zod.string(),

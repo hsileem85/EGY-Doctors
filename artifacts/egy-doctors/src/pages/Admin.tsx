@@ -287,15 +287,23 @@ function SpecialtiesSection({ lang }: { lang: string }) {
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", nameAr: "", description: "", displayOrder: 0 });
+  const [form, setForm] = useState({ name: "", nameAr: "", shortName: "", description: "", displayOrder: 1 });
+
+  const nextOrder = items.length > 0 ? Math.max(...items.map((i) => i.displayOrder)) + 1 : 1;
 
   const reset = () => {
-    setForm({ name: "", nameAr: "", description: "", displayOrder: 0 });
+    setForm({ name: "", nameAr: "", shortName: "", description: "", displayOrder: nextOrder });
     setEditId(null);
   };
 
   const handleSubmit = () => {
-    const payload = { ...form, displayOrder: Number(form.displayOrder) };
+    const payload = {
+      name: form.name,
+      nameAr: form.nameAr,
+      shortName: form.shortName || undefined,
+      description: form.description || undefined,
+      displayOrder: Number(form.displayOrder),
+    };
     if (editId) {
       update.mutate(
         { id: editId, data: payload },
@@ -313,6 +321,7 @@ function SpecialtiesSection({ lang }: { lang: string }) {
     setForm({
       name: item.name,
       nameAr: item.nameAr,
+      shortName: item.shortName ?? "",
       description: item.description ?? "",
       displayOrder: item.displayOrder,
     });
@@ -332,7 +341,7 @@ function SpecialtiesSection({ lang }: { lang: string }) {
         <h3 className="font-semibold text-gray-900">
           {lang === "ar" ? "التخصصات" : "Specialties"}
         </h3>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o && !editId) reset(); }}>
           <DialogTrigger asChild>
             <Button
               className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]"
@@ -360,20 +369,30 @@ function SpecialtiesSection({ lang }: { lang: string }) {
                 onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
               />
               <Input
-                placeholder={lang === "ar" ? "الوصف" : "Description"}
+                placeholder={lang === "ar" ? "الاسم المختصر (اختياري)" : "Short Name (optional)"}
+                value={form.shortName}
+                onChange={(e) => setForm({ ...form, shortName: e.target.value })}
+              />
+              <Input
+                placeholder={lang === "ar" ? "الوصف (اختياري)" : "Description (optional)"}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
-              <Input
-                type="number"
-                placeholder={lang === "ar" ? "ترتيب العرض" : "Display Order"}
-                value={form.displayOrder}
-                onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })}
-              />
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 font-medium">
+                  {lang === "ar" ? "ترتيب العرض" : "Display Order"}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.displayOrder}
+                  onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })}
+                />
+              </div>
               <Button
                 className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]"
                 onClick={handleSubmit}
-                disabled={create.isPending || update.isPending}
+                disabled={create.isPending || update.isPending || !form.name || !form.nameAr}
               >
                 {editId ? (lang === "ar" ? "حفظ" : "Save") : (lang === "ar" ? "إضافة" : "Add")}
               </Button>
@@ -390,9 +409,10 @@ function SpecialtiesSection({ lang }: { lang: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
                   <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
+                  <TableHead>{lang === "ar" ? "الاسم المختصر" : "Short Name"}</TableHead>
                   <TableHead>{lang === "ar" ? "الاسم (ع)" : "Name (AR)"}</TableHead>
-                  <TableHead>{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
                   <TableHead>{lang === "ar" ? "الحالة" : "Status"}</TableHead>
                   <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
                 </TableRow>
@@ -400,9 +420,10 @@ function SpecialtiesSection({ lang }: { lang: string }) {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell className="font-mono text-sm text-gray-500 w-8">{item.displayOrder}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-gray-500 text-sm">{item.shortName ?? "—"}</TableCell>
                     <TableCell>{item.nameAr}</TableCell>
-                    <TableCell>{item.displayOrder}</TableCell>
                     <TableCell>
                       <Badge variant={item.isActive === "true" ? "default" : "secondary"}>
                         {item.isActive === "true" ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "معطل" : "Inactive")}

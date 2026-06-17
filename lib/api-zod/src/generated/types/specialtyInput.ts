@@ -9,6 +9,7 @@
 export interface SpecialtyInput {
   name: string;
   nameAr: string;
+  shortName?: string;
   description?: string;
   displayOrder?: number;
 }

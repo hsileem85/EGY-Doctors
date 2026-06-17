@@ -17,5 +17,5 @@ export const clinicsTable = pgTable("clinics", {
 });
 
 export const insertClinicSchema = createInsertSchema(clinicsTable).omit({ id: true, createdAt: true, updatedAt: true });
-export type InsertClinic = typeof insertClinicSchema._type;
+export type InsertClinic = typeof insertClinicSchema.type;
 export type Clinic = typeof clinicsTable.$inferSelect;

@@ -57,6 +57,8 @@ export interface Specialty {
   name: string;
   nameAr: string;
   /** @nullable */
+  shortName?: string | null;
+  /** @nullable */
   description?: string | null;
   displayOrder: number;
   isActive: string;
@@ -67,6 +69,7 @@ export interface Specialty {
 export interface SpecialtyInput {
   name: string;
   nameAr: string;
+  shortName?: string;
   description?: string;
   displayOrder?: number;
 }
@@ -74,6 +77,7 @@ export interface SpecialtyInput {
 export interface SpecialtyUpdate {
   name?: string;
   nameAr?: string;
+  shortName?: string;
   description?: string;
   displayOrder?: number;
   isActive?: string;

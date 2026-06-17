@@ -11,6 +11,8 @@ export interface Specialty {
   name: string;
   nameAr: string;
   /** @nullable */
+  shortName?: string | null;
+  /** @nullable */
   description?: string | null;
   displayOrder: number;
   isActive: string;

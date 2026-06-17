@@ -12,5 +12,5 @@ export const reviewsTable = pgTable("reviews", {
 });
 
 export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: true, createdAt: true });
-export type InsertReview = typeof insertReviewSchema._type;
+export type InsertReview = typeof insertReviewSchema.type;
 export type Review = typeof reviewsTable.$inferSelect;

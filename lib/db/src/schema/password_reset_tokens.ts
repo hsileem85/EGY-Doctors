@@ -11,5 +11,5 @@ export const passwordResetTokensTable = pgTable("password_reset_tokens", {
 });
 
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokensTable).omit({ id: true, createdAt: true });
-export type InsertPasswordResetToken = typeof insertPasswordResetTokenSchema._type;
+export type InsertPasswordResetToken = typeof insertPasswordResetTokenSchema.type;
 export type PasswordResetToken = typeof passwordResetTokensTable.$inferSelect;
