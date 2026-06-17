@@ -157,6 +157,7 @@ type AdminDoctor = Doctor & {
   cityName?: string | null;
   areaName?: string | null;
   email?: string | null;
+  phone?: string | null;
   syndicateNumber?: string | null;
 };
 
@@ -189,8 +190,9 @@ function DoctorDetailModal({ doctor, lang, onClose }: {
         {row(isAr ? "المدينة" : "City", (doctor as unknown as Record<string, string>).cityName)}
         {row(isAr ? "المنطقة" : "Area", (doctor as unknown as Record<string, string>).areaName)}
         {row(isAr ? "البريد الإلكتروني" : "Email", (doctor as unknown as Record<string, string>).email)}
+        {row(isAr ? "رقم الموبايل" : "Mobile", (doctor as unknown as Record<string, string>).phone)}
         {row(isAr ? "رقم الترخيص" : "License Number", doctor.license)}
-        {row(isAr ? "رقم النقابة" : "Syndicate Number", (doctor as unknown as Record<string, string>).syndicateNumber)}
+        {row(isAr ? "رقم نقابة الأطباء" : "Medical Syndicate No.", (doctor as unknown as Record<string, string>).syndicateNumber)}
         {row(isAr ? "سنوات الخبرة" : "Experience (years)", doctor.experience)}
         {row(isAr ? "رسوم الكشف" : "Consultation Fee (EGP)", doctor.fee)}
         {row(isAr ? "عنوان العيادة" : "Clinic Address", doctor.clinicAddress)}

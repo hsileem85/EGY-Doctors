@@ -65,6 +65,7 @@ async function listDoctorsWithDetails() {
       license: doctorsTable.license,
       syndicateNumber: usersTable.syndicateNumber,
       email: usersTable.email,
+      phone: usersTable.phone,
       rating: doctorsTable.rating,
       reviews: doctorsTable.reviews,
       accountStatus: doctorsTable.accountStatus,
