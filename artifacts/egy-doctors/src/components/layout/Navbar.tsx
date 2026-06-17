@@ -1,4 +1,4 @@
-import { Newspaper, Search, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard } from "lucide-react";
+import { Newspaper, Search, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -135,6 +135,15 @@ export function Navbar() {
                     <p className="text-xs text-gray-400 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role}</p>
                   </div>
                 </div>
+                {user.role === "patient" && (
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853] mt-1"
+                    onClick={() => setLocation("/patient/dashboard")}
+                  >
+                    <CalendarDays className="h-4 w-4 text-[#D4A853]" />
+                    {lang === "ar" ? "مواعيدي" : "My Appointments"}
+                  </DropdownMenuItem>
+                )}
                 {user.role === "doctor" && (
                   <DropdownMenuItem
                     className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853] mt-1"
