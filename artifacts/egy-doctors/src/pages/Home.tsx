@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import {
@@ -30,8 +30,38 @@ export default function Home() {
   const [specialty, setSpecialty] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [isDetecting, setIsDetecting] = useState(false);
+  const [locationName, setLocationName] = useState("");
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
+
+  const detectLocation = useCallback(() => {
+    if (!navigator.geolocation) return;
+    setIsDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            { headers: { "Accept-Language": isRTL ? "ar" : "en" } },
+          );
+          const data = await res.json();
+          const addr = data.address ?? {};
+          const sub = addr.suburb ?? addr.neighbourhood ?? addr.quarter ?? addr.village ?? "";
+          const city = addr.city ?? addr.town ?? addr.state_district ?? addr.county ?? "";
+          setLocationName([sub, city].filter(Boolean).join(", ") || data.display_name?.split(",")[0] || "");
+        } catch {
+          // silently fail — keep previous value
+        } finally {
+          setIsDetecting(false);
+        }
+      },
+      () => setIsDetecting(false),
+      { timeout: 10000 },
+    );
+  }, [isRTL]);
+
+  useEffect(() => { detectLocation(); }, []);
 
   const { data: allDoctors = [], isLoading } = useQuery<ApiDoctor[]>({
     queryKey: ["doctors"],
@@ -74,16 +104,19 @@ export default function Home() {
                     {isRTL ? "الموقع الحالي" : "Current Location"}
                   </span>
                   <span className="text-[10px] font-bold tracking-wide">
-                    {isRTL ? "المعادي، محافظة القاهرة" : "Maadi, Cairo Governorate"}
+                    {isDetecting
+                      ? (isRTL ? "جاري التحديد..." : "Detecting...")
+                      : locationName || (isRTL ? "غير محدد" : "Unknown")}
                   </span>
                 </div>
                 <button
-                  onClick={() => setIsDetecting(true)}
-                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors"
+                  onClick={detectLocation}
+                  disabled={isDetecting}
+                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors disabled:opacity-50"
                 >
                   {isDetecting
-                    ? isRTL ? "جاري التحديد..." : "Detecting..."
-                    : isRTL ? "تغيير" : "Change"}
+                    ? isRTL ? "..." : "..."
+                    : isRTL ? "تحديث" : "Refresh"}
                 </button>
               </div>
             </div>
