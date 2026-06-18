@@ -216,6 +216,59 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Browse by Specialty */}
+        {specialties.length > 0 && (() => {
+          const SPECIALTY_EMOJI: Record<string, string> = {
+            neurology: "🧠", cardiology: "❤️", dentistry: "🦷",
+            ophthalmology: "👁️", orthopedics: "🦴", dermatology: "🌿",
+            pediatrics: "👶", oncology: "🧬", general: "🩺",
+            pulmonology: "🫁", endocrinology: "🧪", psychiatry: "💊",
+            gynecology: "🌸", urology: "🔬", gastroenterology: "🍃",
+            nephrology: "💧", rheumatology: "🩹", "internal medicine": "⚕️",
+          };
+          const countBySpecialty: Record<string, number> = {};
+          allDoctors.forEach(d => {
+            if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
+          });
+          return (
+            <section className="max-w-4xl mx-auto px-4 pt-6 pb-2">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-[#0F172A]">
+                  {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
+                </h2>
+                <button
+                  onClick={() => setLocation("/search")}
+                  className="text-sm font-semibold text-[#D4A853] hover:underline"
+                >
+                  {isRTL ? "عرض الكل ←" : "View all →"}
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                {specialties.map((sp) => {
+                  const key = sp.name.toLowerCase();
+                  const emoji = SPECIALTY_EMOJI[key] ?? "🏥";
+                  const count = countBySpecialty[sp.name.toLowerCase()] ?? 0;
+                  return (
+                    <button
+                      key={sp.id}
+                      onClick={() => setLocation(`/search?specialty=${sp.id}`)}
+                      className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col items-center gap-2 hover:border-[#D4A853] hover:shadow-md transition-all group"
+                    >
+                      <span className="text-3xl">{emoji}</span>
+                      <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
+                        {isRTL ? sp.nameAr : sp.name}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {count} {isRTL ? "طبيب" : "doctors"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
+
         {/* Main List */}
         <main className="max-w-4xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-4">
