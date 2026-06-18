@@ -339,7 +339,7 @@ export default function AuthPage() {
 
       <div className="relative z-10 flex flex-col lg:flex-row w-full max-w-6xl mx-auto">
         {/* Left brand panel */}
-        <div className="hidden lg:flex lg:w-5/12 flex-col justify-center p-12">
+        <div className="hidden lg:flex lg:w-5/12 flex-col justify-start pt-16 p-12">
           <Link href="/" className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20 flex items-center justify-center">
               <Stethoscope className="h-6 w-6 text-[#D4A853]" />
