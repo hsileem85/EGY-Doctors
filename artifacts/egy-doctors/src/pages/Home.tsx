@@ -247,7 +247,7 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ backgroundColor: '#e8eef5', borderTop: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1' }}>
               <section className="max-w-5xl mx-auto px-4 pt-6 pb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-sm font-semibold text-[#0F172A]">
