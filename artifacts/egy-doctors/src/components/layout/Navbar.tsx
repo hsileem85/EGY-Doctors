@@ -80,15 +80,6 @@ export function Navbar() {
                 {lang === "ar" ? "تواصل معنا" : "Contact Us"}
               </Button>
             </Link>
-            <Link href="/admin">
-              <Button
-                variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
-              >
-                <ShieldCheck className="h-4 w-4 mr-1" />
-                {lang === "ar" ? "الإدارة" : "Admin"}
-              </Button>
-            </Link>
           </div>
 
           <div className="w-px h-6 bg-[#334155] hidden md:block" />

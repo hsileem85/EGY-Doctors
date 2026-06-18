@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useLanguage } from "@/context/LanguageContext";
+import { ShieldCheck } from "lucide-react";
 
 export function Footer() {
   const { lang, t } = useLanguage();
@@ -28,6 +29,10 @@ export function Footer() {
           </a>
           <Link href="/contact" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-contact">
             {t.footer.contact}
+          </Link>
+          <Link href="/admin" className="hover:text-[#D4A853] transition-colors flex items-center gap-1" data-testid="link-footer-admin">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            {lang === "ar" ? "الإدارة" : "Admin"}
           </Link>
         </div>
       </div>
