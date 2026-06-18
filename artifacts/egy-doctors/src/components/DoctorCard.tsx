@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, Stethoscope, Star, Navigation, Calendar } from "lucide-react";
+import { MapPin, Stethoscope, Star, Calendar } from "lucide-react";
 import { type ApiDoctor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
           alt={doctor.name}
           className="w-14 h-14 rounded-full object-cover border-2 border-gray-50 shrink-0"
         />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pl-1">
           <div className="flex items-start justify-between gap-2">
             <Link href={`/profile/${doctor.id}`}>
               <h3 className="font-bold text-gray-900 text-base leading-tight hover:text-primary transition-colors cursor-pointer">
@@ -69,73 +69,50 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
       </p>
 
       {/* Clinics */}
-      <div className="mb-4 space-y-1.5">
-        {doctor.clinics.map((clinic, i) => (
-          <a
-            key={i}
-            href={clinic.mapUrl || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 group"
-          >
-            <span className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 text-gray-700 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0">
-              <MapPin className="h-3 w-3 text-[#D4A853] shrink-0" />
-              <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
-              {clinic.location && (
-                <>
-                  <span className="text-gray-400 mx-0.5">·</span>
-                  <span className="text-gray-500 truncate">
-                    {t.locations[clinic.location] ?? clinic.location}
-                  </span>
-                </>
-              )}
-              <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </span>
-          </a>
-        ))}
-      </div>
+      {doctor.clinics.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+            {isRTL ? "العيادات المتاحة" : "Available Clinics"}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {doctor.clinics.map((clinic, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 text-xs bg-[#D4A853]/8 border border-[#D4A853]/20 text-gray-700 rounded-md px-2.5 py-1"
+              >
+                <MapPin className="h-3 w-3 text-[#D4A853] shrink-0" />
+                <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bottom Action Area */}
       <div className="mt-auto pt-3 border-t border-gray-100">
         {showSlots ? (
-          <div className="flex items-center justify-between gap-3">
-            <a
-              href={doctor.mapUrl || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm font-medium bg-[#D4A853]/5 hover:bg-[#D4A853]/10 text-[#D4A853] border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-2 transition-colors"
-            >
-              <Navigation className="h-3.5 w-3.5" />
-              <span>{doctor.distance || (isRTL ? "خريطة" : "Map")}</span>
-              <svg className="h-3 w-3 ml-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-            <div className="flex items-center gap-2">
-              <Link href={`/doctor/${doctor.id}`}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 px-3 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
-                  data-testid={`link-doctor-book-${doctor.id}`}
-                >
-                  <Calendar className="h-4 w-4 mr-1.5" />
-                  {isRTL ? "الحجز" : "Book"}
-                </Button>
-              </Link>
-              <Link href={`/profile/${doctor.id}`}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 h-9 px-4 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
-                  data-testid={`link-doctor-profile-${doctor.id}`}
-                >
-                  {t.card.viewProfile}
-                </Button>
-              </Link>
-            </div>
+          <div className="flex items-center justify-end gap-2">
+            <Link href={`/doctor/${doctor.id}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
+                data-testid={`link-doctor-book-${doctor.id}`}
+              >
+                <Calendar className="h-4 w-4 mr-1.5" />
+                {isRTL ? "الحجز" : "Book"}
+              </Button>
+            </Link>
+            <Link href={`/profile/${doctor.id}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 h-9 px-4 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
+                data-testid={`link-doctor-profile-${doctor.id}`}
+              >
+                {t.card.viewProfile}
+              </Button>
+            </Link>
           </div>
         ) : (
           <Link href={`/doctor/${doctor.id}`}>
