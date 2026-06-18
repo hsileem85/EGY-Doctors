@@ -233,7 +233,7 @@ export default function Home() {
           return (
             <section className="max-w-4xl mx-auto px-4 pt-6 pb-2">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-[#0F172A]">
+                <h2 className="text-sm font-semibold text-[#0F172A]">
                   {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
                 </h2>
                 <button
@@ -272,7 +272,7 @@ export default function Home() {
         {/* Main List */}
         <main className="max-w-4xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
+            <h1 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
             </h1>
             <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
