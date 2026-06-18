@@ -304,59 +304,65 @@ export default function Home() {
               {sortedDoctors.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col gap-2 w-full"
+                  className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 w-full"
                 >
-                  {/* Avatar + rating */}
-                  <div className="flex items-center gap-2.5">
+                  {/* Avatar + name row */}
+                  <div className="flex items-start gap-3">
+                    {/* Avatar with rating badge */}
                     <div className="relative shrink-0">
                       <img
                         src={doc.image}
-                        className="w-12 h-12 rounded-xl object-cover shadow-sm border border-gray-100"
+                        className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
                         alt={doc.name}
                       />
-                      <div className="absolute -bottom-1.5 -right-1.5 bg-white rounded-md px-1 py-0.5 shadow-sm border border-gray-100 flex items-center gap-0.5">
-                        <Star className="w-2.5 h-2.5 fill-[#D4A853] text-[#D4A853]" />
-                        <span className="text-[10px] font-bold text-[#0F172A]">{doc.rating}</span>
+                      <div className="absolute -bottom-2 -right-2 bg-white rounded-full px-1.5 py-0.5 shadow-md border border-white flex items-center gap-0.5">
+                        <Star className="w-2.5 h-2.5 fill-[#F59E0B] text-[#F59E0B]" />
+                        <span className="text-[10px] font-bold text-slate-800 leading-none">{doc.rating}</span>
                       </div>
                     </div>
-                    <div className="min-w-0 flex-1">
+
+                    {/* Name + specialty */}
+                    <div className="min-w-0 flex-1 pt-0.5">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-sm font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
+                        <h3 className="text-[15px] font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate">
                           {doc.name}
                         </h3>
                       </Link>
-                      <p className="text-[#0F172A]/60 text-[11px] font-medium flex items-center gap-1 mt-0.5">
-                        <HeartPulse className="w-3 h-3 text-[#D4A853] shrink-0" />
+                      <span className="inline-flex items-center gap-1 mt-1 bg-blue-50 text-blue-700 rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                        <HeartPulse className="w-3 h-3 shrink-0" />
                         <span className="truncate">{t.specialties[doc.specialty] ?? doc.specialty}</span>
-                      </p>
+                      </span>
                     </div>
                   </div>
 
-                  {/* Fee + location */}
-                  <div className="flex flex-wrap items-center gap-1 text-[11px]">
-                    <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
+                  {/* Fee + location row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-900">{doc.fee} <span className="font-medium text-slate-500 text-xs">{t.dashboard.egp}</span></span>
                     {doc.clinics.slice(0, 1).map((clinic) => (
                       <span
                         key={clinic.id}
-                        className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5 font-medium"
+                        className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 text-[10px] font-medium"
                       >
-                        <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                        <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
                         {t.locations[clinic.location] ?? clinic.location}
                       </span>
                     ))}
                   </div>
 
+                  {/* Divider */}
+                  <div className="border-t border-slate-100 -mx-3.5" />
+
                   {/* Actions */}
-                  <div className="flex gap-1.5 mt-auto">
+                  <div className="flex gap-2">
                     <Link href={`/doctor/${doc.id}`} style={{ flex: 1 }}>
-                      <Button className="w-full bg-[#0F172A] text-white rounded-lg font-semibold text-[11px] hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-7 px-2">
+                      <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-xs hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-8 px-3">
                         {isRTL ? "احجز" : "Book"}
                       </Button>
                     </Link>
                     <Link href={`/profile/${doc.id}`} style={{ flex: 1 }}>
                       <Button
                         variant="outline"
-                        className="w-full bg-white text-[#0F172A] rounded-lg font-semibold text-[11px] border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-7 px-2"
+                        className="w-full text-slate-700 rounded-xl font-semibold text-xs border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all h-8 px-3"
                       >
                         {isRTL ? "الملف" : "Profile"}
                       </Button>
