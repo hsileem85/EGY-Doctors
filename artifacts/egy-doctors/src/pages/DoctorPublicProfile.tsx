@@ -194,7 +194,7 @@ export default function DoctorPublicProfile() {
                           </div>
                           {(clinic.mapUrl || (clinic.lat != null && clinic.lng != null)) && (
                             <a
-                              href={clinic.mapUrl || `https://www.openstreetmap.org/?mlat=${clinic.lat}&mlon=${clinic.lng}#map=16/${clinic.lat}/${clinic.lng}`}
+                              href={clinic.mapUrl || `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-1.5 transition-colors"

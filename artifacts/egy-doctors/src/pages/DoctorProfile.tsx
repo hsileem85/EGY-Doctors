@@ -198,9 +198,9 @@ export default function DoctorProfile() {
             <p className="text-sm text-gray-500 mt-0.5">
               {doctor.name} · {selectedClinic ? `${selectedClinic.fee} ${t.dashboard.egp}` : `${doctor.fee} ${t.dashboard.egp}`}
             </p>
-            {selectedClinic && (
+            {selectedClinic && (selectedClinic.mapUrl || (selectedClinic.lat != null && selectedClinic.lng != null)) && (
               <a
-                href={selectedClinic.mapUrl}
+                href={selectedClinic.mapUrl || `https://www.google.com/maps/dir/?api=1&destination=${selectedClinic.lat},${selectedClinic.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-[#D4A853] hover:text-[#c49a4a] hover:underline mt-1"
@@ -284,7 +284,7 @@ export default function DoctorProfile() {
                             )}
                             {(clinic.mapUrl || (clinic.lat != null && clinic.lng != null)) && (
                               <a
-                                href={clinic.mapUrl || `https://www.openstreetmap.org/?mlat=${clinic.lat}&mlon=${clinic.lng}#map=16/${clinic.lat}/${clinic.lng}`}
+                                href={clinic.mapUrl || `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}

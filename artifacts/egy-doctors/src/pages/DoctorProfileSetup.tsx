@@ -256,7 +256,8 @@ export default function DoctorProfileSetup() {
 
       await refreshUser();
       await queryClient.invalidateQueries({ queryKey: ["myDoctorProfile"] });
-      await queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      queryClient.removeQueries({ queryKey: ["doctors"] });
+      queryClient.removeQueries({ queryKey: ["doctor"] });
       toast({
         title: isEditMode ? (isRTL ? "تم حفظ الملف الشخصي!" : "Profile Updated!") : t.profileSetup.publishedSuccess,
         description: isRTL ? "تم حفظ تغييرات ملفك الشخصي بنجاح." : "Your profile changes have been saved successfully.",
