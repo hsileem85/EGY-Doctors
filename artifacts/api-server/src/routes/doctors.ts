@@ -67,10 +67,24 @@ router.get("/doctors", async (req, res): Promise<void> => {
     );
   }
 
-  // Batch-fetch clinics
+  // Batch-fetch clinics with area join
   const doctorIds = rows.map((r) => r.id);
   const allClinics = doctorIds.length > 0
-    ? await db.select().from(clinicsTable).where(inArray(clinicsTable.doctorId, doctorIds))
+    ? await db
+        .select({
+          id: clinicsTable.id,
+          doctorId: clinicsTable.doctorId,
+          name: clinicsTable.name,
+          address: clinicsTable.address,
+          mapUrl: clinicsTable.mapUrl,
+          phone: clinicsTable.phone,
+          fee: clinicsTable.fee,
+          areaId: clinicsTable.areaId,
+          areaName: areasTable.name,
+        })
+        .from(clinicsTable)
+        .leftJoin(areasTable, eq(clinicsTable.areaId, areasTable.id))
+        .where(inArray(clinicsTable.doctorId, doctorIds))
     : [];
 
   const clinicsByDoctor = new Map<number, typeof allClinics>();
@@ -87,8 +101,8 @@ router.get("/doctors", async (req, res): Promise<void> => {
       mapUrl: c.mapUrl ?? "",
       phone: c.phone ?? "",
       fee: c.fee ?? r.fee ?? 0,
-      location: "",
-      areaName: "",
+      location: c.areaName ?? "",
+      areaName: c.areaName ?? "",
     }));
 
     return {
