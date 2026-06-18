@@ -1,3 +1,4 @@
 - [EGY Doctors stack decisions](egy-doctors-stack.md) — JWT in localStorage, SignUpData uses specialtyId (number) not specialty string, forgotPassword returns resetToken not token.
 - [API server build gotchas](api-server-build.md) — zod must be in api-server dependencies; getDoctors() must be wrapped in arrow fn for useQuery queryFn.
 - [Seed script](seed-script.md) — 12 doctors, 16 specialties, 8 cities, 15 areas seeded; run with pnpm --filter @workspace/scripts run seed.
+- [Bilingual schema migration](bilingual-schema.md) — doctors/clinics use name/bio as Arabic; lookup tables use name_ar; drizzle-kit needs TTY for renames so use raw SQL instead.

@@ -66,7 +66,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     const [doc] = await db.insert(doctorsTable).values({
       userId: user.id,
       nameEn: d.name,
-      nameAr: d.nameAr ?? null,
+      name: d.nameAr ?? null,
       specialtyId: d.specialtyId ?? null,
       cityId: d.cityId ?? null,
       license: d.license ?? null,

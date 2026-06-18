@@ -40,9 +40,9 @@ router.get("/doctors", async (req, res): Promise<void> => {
   let rows = await db.select({
     id: doctorsTable.id,
     nameEn: doctorsTable.nameEn,
-    nameAr: doctorsTable.nameAr,
+    nameAr: doctorsTable.name,
     bioEn: doctorsTable.bioEn,
-    bioAr: doctorsTable.bioAr,
+    bioAr: doctorsTable.bio,
     image: doctorsTable.image,
     fee: doctorsTable.fee,
     experience: doctorsTable.experience,
@@ -78,7 +78,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
           id: clinicsTable.id,
           doctorId: clinicsTable.doctorId,
           nameEn: clinicsTable.nameEn,
-          nameAr: clinicsTable.nameAr,
+          nameAr: clinicsTable.name,
           address: clinicsTable.address,
           mapUrl: clinicsTable.mapUrl,
           phone: clinicsTable.phone,
@@ -155,9 +155,9 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     id: doctorsTable.id,
     userId: doctorsTable.userId,
     nameEn: doctorsTable.nameEn,
-    nameAr: doctorsTable.nameAr,
+    nameAr: doctorsTable.name,
     bioEn: doctorsTable.bioEn,
-    bioAr: doctorsTable.bioAr,
+    bioAr: doctorsTable.bio,
     image: doctorsTable.image,
     fee: doctorsTable.fee,
     experience: doctorsTable.experience,
@@ -192,7 +192,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       id: clinicsTable.id,
       doctorId: clinicsTable.doctorId,
       nameEn: clinicsTable.nameEn,
-      nameAr: clinicsTable.nameAr,
+      nameAr: clinicsTable.name,
       address: clinicsTable.address,
       mapUrl: clinicsTable.mapUrl,
       phone: clinicsTable.phone,
@@ -273,9 +273,9 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
   const [doc] = await db.select({
     id: doctorsTable.id,
     nameEn: doctorsTable.nameEn,
-    nameAr: doctorsTable.nameAr,
+    nameAr: doctorsTable.name,
     bioEn: doctorsTable.bioEn,
-    bioAr: doctorsTable.bioAr,
+    bioAr: doctorsTable.bio,
     image: doctorsTable.image,
     fee: doctorsTable.fee,
     experience: doctorsTable.experience,
@@ -355,11 +355,12 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
   }
 
   // Map frontend field names to DB column names
-  const { name, bio, bioAr, ...rest } = parsed.data;
+  const { name, nameAr, bio, bioAr, ...rest } = parsed.data;
   const updateData: Record<string, unknown> = { ...rest };
   if (name !== undefined) updateData.nameEn = name;
+  if (nameAr !== undefined) updateData.name = nameAr;
   if (bio !== undefined) updateData.bioEn = bio;
-  if (bioAr !== undefined) updateData.bioAr = bioAr;
+  if (bioAr !== undefined) updateData.bio = bioAr;
 
   const [updated] = await db.update(doctorsTable)
     .set(updateData)
@@ -414,11 +415,11 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, nameAr, ...rest } = parsed.data;
+  const { name: nameEnVal, nameAr: nameArVal, ...rest } = parsed.data;
   const [clinic] = await db.insert(clinicsTable).values({
     doctorId: doc.id,
-    nameEn: name,
-    nameAr: nameAr ?? null,
+    nameEn: nameEnVal,
+    name: nameArVal ?? null,
     ...rest,
   }).returning();
 
@@ -455,9 +456,10 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
   const parsed = Schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message }); return; }
 
-  const { name, ...rest } = parsed.data;
+  const { name: nameEnVal, nameAr: nameArVal, ...rest } = parsed.data;
   const updateData: Record<string, unknown> = { ...rest };
-  if (name !== undefined) updateData.nameEn = name;
+  if (nameEnVal !== undefined) updateData.nameEn = nameEnVal;
+  if (nameArVal !== undefined) updateData.name = nameArVal;
 
   const [updated] = await db.update(clinicsTable)
     .set(updateData)
