@@ -92,7 +92,7 @@ export default function Home() {
     <Layout>
       <div className="min-h-screen bg-[#F1F5F9] font-sans pb-20">
         {/* Header: Location & Search */}
-        <header className="bg-[#0F172A] pt-3 pb-6 px-4 shadow-md sticky top-0 z-40">
+        <header className="bg-[#0F172A] pt-3 pb-6 px-4 shadow-md">
           <div className="max-w-5xl mx-auto flex flex-col gap-2">
             {/* Top row: badge left, location right */}
             <div className="flex items-center justify-between">
