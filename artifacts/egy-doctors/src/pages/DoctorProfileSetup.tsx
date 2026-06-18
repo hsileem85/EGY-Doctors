@@ -99,6 +99,7 @@ export default function DoctorProfileSetup() {
     specialty: "",
     qualificationDegree: "",
     bio: "",
+    bioAr: "",
   });
 
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -153,6 +154,7 @@ export default function DoctorProfileSetup() {
       specialty: matchedSpecialty?.name ?? "",
       qualificationDegree: "",
       bio: myProfile.bio ?? "",
+      bioAr: myProfile.bioAr ?? "",
     });
 
     if (myProfile.image) {
@@ -224,6 +226,7 @@ export default function DoctorProfileSetup() {
       await updateDoctorProfile({
         name: profile.fullName || undefined,
         bio: profile.bio || undefined,
+        bioAr: profile.bioAr || undefined,
         image: imagePreview || undefined,
         specialtyId: selectedSpecialty?.id,
         cityId: firstClinicCity?.id,
@@ -371,30 +374,53 @@ export default function DoctorProfileSetup() {
                 </CardContent>
               </Card>
 
-              {/* Bio */}
+            </div>
+
+            {/* Right column — Bio + Clinics */}
+            <div className="md:col-span-2 space-y-4">
+
+              {/* Bio row */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">{t.profileSetup.bio}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <Textarea
-                      value={profile.bio}
-                      onChange={e => { if (e.target.value.length <= 500) setProfile(p => ({ ...p, bio: e.target.value })); }}
-                      placeholder={t.profileSetup.aboutMe}
-                      className="min-h-[120px] resize-y"
-                      data-testid="textarea-profile-bio"
-                    />
-                    <div className="text-end text-xs text-gray-400 font-medium">
-                      {t.profileSetup.charCount(profile.bio.length)}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-500 font-medium">
+                        {isRTL ? "النبذة (إنجليزي)" : "Biography (English)"}
+                      </Label>
+                      <Textarea
+                        value={profile.bio}
+                        onChange={e => { if (e.target.value.length <= 500) setProfile(p => ({ ...p, bio: e.target.value })); }}
+                        placeholder={t.profileSetup.aboutMe}
+                        className="min-h-[120px] resize-y"
+                        dir="ltr"
+                        data-testid="textarea-profile-bio"
+                      />
+                      <div className="text-end text-xs text-gray-400 font-medium">
+                        {t.profileSetup.charCount(profile.bio.length)}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-500 font-medium">
+                        {isRTL ? "النبذة (عربي)" : "Biography (Arabic)"}
+                      </Label>
+                      <Textarea
+                        value={profile.bioAr}
+                        onChange={e => { if (e.target.value.length <= 500) setProfile(p => ({ ...p, bioAr: e.target.value })); }}
+                        placeholder={isRTL ? "نبذة عنك..." : "About me (Arabic)..."}
+                        className="min-h-[120px] resize-y"
+                        dir="rtl"
+                        data-testid="textarea-profile-bio-ar"
+                      />
+                      <div className="text-end text-xs text-gray-400 font-medium">
+                        {t.profileSetup.charCount(profile.bioAr.length)}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Right column — Clinics */}
-            <div className="md:col-span-2 space-y-4">
 
               {/* Clinics label */}
               <div className="flex items-center justify-between">
