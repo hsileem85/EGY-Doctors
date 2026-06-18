@@ -1,4 +1,4 @@
-import { Newspaper, Search, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays } from "lucide-react";
+import { Newspaper, Search, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -23,21 +23,36 @@ export function Navbar() {
   return (
     <nav className="bg-[#0F172A] border-b border-[#1E293B] z-50 w-full">
       <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
-          {lang === "ar" ? (
-            <span className="text-xl font-bold text-white tracking-tight font-brand">
-              إجي <span className="text-[#D4A853]">دكتورز</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
-              <span className="text-white">EG</span>
-              <span className="text-[#D4A853]">Y Doctors</span>
-            </span>
-          )}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
+            {lang === "ar" ? (
+              <span className="text-xl font-bold text-white tracking-tight font-brand">
+                إجي <span className="text-[#D4A853]">دكتورز</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
+                <span className="text-white">EG</span>
+                <span className="text-[#D4A853]">Y Doctors</span>
+              </span>
+            )}
+          </Link>
+          <div className="hidden sm:flex items-center gap-1 bg-[#1E293B] rounded-full px-2.5 py-1">
+            <PhoneCall className="w-3 h-3 text-[#D4A853]" />
+            <span className="text-xs font-bold text-white tracking-wide">15992</span>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-1">
+            <Link href="/">
+              <Button
+                variant="ghost"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+              >
+                <Home className="h-4 w-4 mr-1" />
+                {lang === "ar" ? "الرئيسية" : "Home"}
+              </Button>
+            </Link>
             <Link href="/search">
               <Button
                 variant="ghost"
@@ -63,6 +78,15 @@ export function Navbar() {
               >
                 <Info className="h-4 w-4 mr-1" />
                 {lang === "ar" ? "من نحن" : "About"}
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button
+                variant="ghost"
+                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+              >
+                <PhoneCall className="h-4 w-4 mr-1" />
+                {lang === "ar" ? "تواصل معنا" : "Contact Us"}
               </Button>
             </Link>
             <Link href="/admin">
