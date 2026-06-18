@@ -130,7 +130,7 @@ export default function Home() {
 
             {/* Hero Text */}
             <div className="text-center py-2">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-3">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight mb-3">
                 {isRTL ? (
                   <>
                     ابحث واحجز مع{" "}
