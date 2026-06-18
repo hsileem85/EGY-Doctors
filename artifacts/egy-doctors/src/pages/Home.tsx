@@ -304,65 +304,59 @@ export default function Home() {
               {sortedDoctors.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-white rounded-xl p-2 sm:p-2.5 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-start"
+                  className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all flex flex-col gap-2 w-full"
                 >
-                  {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <img
-                      src={doc.image}
-                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shadow-sm border border-gray-100"
-                      alt={doc.name}
-                    />
-                    <div className="absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm border border-gray-100">
-                      <div className="bg-[#D4A853]/10 text-[#0F172A] font-bold text-xs px-2 py-0.5 rounded-md flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
-                        {doc.rating}
+                  {/* Avatar + rating */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative shrink-0">
+                      <img
+                        src={doc.image}
+                        className="w-12 h-12 rounded-xl object-cover shadow-sm border border-gray-100"
+                        alt={doc.name}
+                      />
+                      <div className="absolute -bottom-1.5 -right-1.5 bg-white rounded-md px-1 py-0.5 shadow-sm border border-gray-100 flex items-center gap-0.5">
+                        <Star className="w-2.5 h-2.5 fill-[#D4A853] text-[#D4A853]" />
+                        <span className="text-[10px] font-bold text-[#0F172A]">{doc.rating}</span>
                       </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/doctor/${doc.id}`}>
+                        <h3 className="text-sm font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
+                          {doc.name}
+                        </h3>
+                      </Link>
+                      <p className="text-[#0F172A]/60 text-[11px] font-medium flex items-center gap-1 mt-0.5">
+                        <HeartPulse className="w-3 h-3 text-[#D4A853] shrink-0" />
+                        <span className="truncate">{t.specialties[doc.specialty] ?? doc.specialty}</span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Details */}
-                  <div className="flex-1 w-full pl-5">
-                    <div className="flex items-start gap-2 mb-1">
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/doctor/${doc.id}`}>
-                          <h3 className="text-lg font-bold text-[#0F172A] leading-tight hover:text-[#D4A853] cursor-pointer transition-colors truncate">
-                            {doc.name}
-                          </h3>
-                        </Link>
-                        <p className="text-[#0F172A]/70 text-xs font-medium flex items-center gap-1 mt-0.5">
-                          <HeartPulse className="w-3.5 h-3.5 text-[#D4A853]" />
-                          {t.specialties[doc.specialty] ?? doc.specialty}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Fee + clinic area badges */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600 mb-1">
-                      <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
-                      {doc.clinics.map((clinic) => (
-                        <span
-                          key={clinic.id}
-                          className="inline-flex items-center gap-1 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
-                        >
-                          <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
-                          {t.locations[clinic.location] ?? clinic.location}
-                        </span>
-                      ))}
-                    </div>
+                  {/* Fee + location */}
+                  <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                    <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
+                    {doc.clinics.slice(0, 1).map((clinic) => (
+                      <span
+                        key={clinic.id}
+                        className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5 font-medium"
+                      >
+                        <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                        {t.locations[clinic.location] ?? clinic.location}
+                      </span>
+                    ))}
                   </div>
 
                   {/* Actions */}
-                  <div className="w-full sm:w-[170px] flex flex-col gap-1.5 shrink-0 sm:border-l border-gray-100 sm:pl-3 sm:py-0 mt-1 sm:mt-0">
-                    <Link href={`/doctor/${doc.id}`}>
-                      <Button className="w-full bg-[#0F172A] text-white rounded-lg py-2 font-semibold text-xs hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-auto">
+                  <div className="flex gap-1.5 mt-auto">
+                    <Link href={`/doctor/${doc.id}`} style={{ flex: 1 }}>
+                      <Button className="w-full bg-[#0F172A] text-white rounded-lg font-semibold text-[11px] hover:bg-[#1E293B] shadow-sm transition-all active:scale-[0.98] h-7 px-2">
                         {isRTL ? "احجز" : "Book"}
                       </Button>
                     </Link>
-                    <Link href={`/profile/${doc.id}`}>
+                    <Link href={`/profile/${doc.id}`} style={{ flex: 1 }}>
                       <Button
                         variant="outline"
-                        className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
+                        className="w-full bg-white text-[#0F172A] rounded-lg font-semibold text-[11px] border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-7 px-2"
                       >
                         {isRTL ? "الملف" : "Profile"}
                       </Button>
