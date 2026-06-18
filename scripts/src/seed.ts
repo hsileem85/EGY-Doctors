@@ -511,11 +511,11 @@ for (const d of doctorSeed) {
     .insert(doctorsTable)
     .values({
       userId: user.id,
-      name: d.name,
+      nameEn: d.name,
       specialtyId: specialtyMap[d.specialty],
       cityId: cityMap[d.city],
       areaId: areaMap[d.area],
-      bio: d.bio,
+      bioEn: d.bio,
       image: img(d.name),
       fee: d.fee,
       experience: d.experience,
@@ -530,7 +530,7 @@ for (const d of doctorSeed) {
   for (const c of d.clinics) {
     await db.insert(clinicsTable).values({
       doctorId: doctor.id,
-      name: c.name,
+      nameEn: c.name,
       address: c.address,
       phone: c.phone,
       fee: c.fee,

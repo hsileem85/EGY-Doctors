@@ -15,6 +15,7 @@ export interface AuthUser {
 export interface ApiClinic {
   id: number;
   name: string;
+  nameAr?: string;
   address: string;
   mapUrl: string;
   phone: string;
@@ -37,6 +38,7 @@ export interface ApiReview {
 export interface ApiDoctor {
   id: number;
   name: string;
+  nameAr?: string;
   specialty: string;
   specialtyAr: string;
   location: string;
@@ -44,6 +46,7 @@ export interface ApiDoctor {
   cityNameAr: string;
   areaName?: string;
   bio: string;
+  bioAr?: string;
   image: string;
   fee: number;
   experience: number | null;
@@ -190,7 +193,9 @@ export function getMyDoctorProfile(): Promise<ApiDoctor & { clinics: ApiClinic[]
 
 export function updateDoctorProfile(data: {
   name?: string;
+  nameAr?: string;
   bio?: string;
+  bioAr?: string;
   image?: string;
   specialtyId?: number;
   cityId?: number;
@@ -204,6 +209,7 @@ export function updateDoctorProfile(data: {
 
 export function addClinic(data: {
   name: string;
+  nameAr?: string;
   address?: string;
   mapUrl?: string;
   phone?: string;
@@ -217,6 +223,7 @@ export function addClinic(data: {
 
 export function updateClinic(id: number, data: {
   name?: string;
+  nameAr?: string;
   address?: string;
   mapUrl?: string;
   phone?: string;

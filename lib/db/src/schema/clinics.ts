@@ -4,7 +4,8 @@ import { createInsertSchema } from "drizzle-zod";
 export const clinicsTable = pgTable("clinics", {
   id: serial("id").primaryKey(),
   doctorId: integer("doctor_id").notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
+  nameEn: varchar("name_en", { length: 255 }).notNull(),
+  nameAr: varchar("name_ar", { length: 255 }),
   areaId: integer("area_id"),
   address: text("address"),
   mapUrl: text("map_url"),

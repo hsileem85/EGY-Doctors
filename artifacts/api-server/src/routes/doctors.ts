@@ -39,8 +39,10 @@ router.get("/doctors", async (req, res): Promise<void> => {
 
   let rows = await db.select({
     id: doctorsTable.id,
-    name: doctorsTable.name,
-    bio: doctorsTable.bio,
+    nameEn: doctorsTable.nameEn,
+    nameAr: doctorsTable.nameAr,
+    bioEn: doctorsTable.bioEn,
+    bioAr: doctorsTable.bioAr,
     image: doctorsTable.image,
     fee: doctorsTable.fee,
     experience: doctorsTable.experience,
@@ -61,8 +63,9 @@ router.get("/doctors", async (req, res): Promise<void> => {
     const lower = q.toLowerCase();
     rows = rows.filter(
       (r) =>
-        r.name.toLowerCase().includes(lower) ||
-        (r.bio ?? "").toLowerCase().includes(lower) ||
+        r.nameEn.toLowerCase().includes(lower) ||
+        (r.nameAr ?? "").toLowerCase().includes(lower) ||
+        (r.bioEn ?? "").toLowerCase().includes(lower) ||
         (r.specialtyName ?? "").toLowerCase().includes(lower),
     );
   }
@@ -74,7 +77,8 @@ router.get("/doctors", async (req, res): Promise<void> => {
         .select({
           id: clinicsTable.id,
           doctorId: clinicsTable.doctorId,
-          name: clinicsTable.name,
+          nameEn: clinicsTable.nameEn,
+          nameAr: clinicsTable.nameAr,
           address: clinicsTable.address,
           mapUrl: clinicsTable.mapUrl,
           phone: clinicsTable.phone,
@@ -98,7 +102,8 @@ router.get("/doctors", async (req, res): Promise<void> => {
   const response = rows.map((r) => {
     const doctorClinics = (clinicsByDoctor.get(r.id) ?? []).map((c) => ({
       id: c.id,
-      name: c.name ?? "",
+      name: c.nameEn ?? "",
+      nameAr: c.nameAr ?? "",
       address: c.address ?? "",
       mapUrl: c.mapUrl ?? "",
       phone: c.phone ?? "",
@@ -111,14 +116,16 @@ router.get("/doctors", async (req, res): Promise<void> => {
 
     return {
       id: r.id,
-      name: r.name,
+      name: r.nameEn,
+      nameAr: r.nameAr ?? "",
       specialty: r.specialtyName ?? "",
       specialtyAr: r.specialtyNameAr ?? "",
       location: r.cityName ?? "",
       cityName: r.cityName ?? "",
       cityNameAr: r.cityNameAr ?? "",
-      bio: r.bio ?? "",
-      image: r.image ?? makeImage(r.name),
+      bio: r.bioEn ?? "",
+      bioAr: r.bioAr ?? "",
+      image: r.image ?? makeImage(r.nameEn),
       fee: r.fee ?? 0,
       experience: r.experience ?? null,
       rating: r.rating ?? 0,
@@ -147,8 +154,10 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
   const [row] = await db.select({
     id: doctorsTable.id,
     userId: doctorsTable.userId,
-    name: doctorsTable.name,
-    bio: doctorsTable.bio,
+    nameEn: doctorsTable.nameEn,
+    nameAr: doctorsTable.nameAr,
+    bioEn: doctorsTable.bioEn,
+    bioAr: doctorsTable.bioAr,
     image: doctorsTable.image,
     fee: doctorsTable.fee,
     experience: doctorsTable.experience,
@@ -182,7 +191,8 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     .select({
       id: clinicsTable.id,
       doctorId: clinicsTable.doctorId,
-      name: clinicsTable.name,
+      nameEn: clinicsTable.nameEn,
+      nameAr: clinicsTable.nameAr,
       address: clinicsTable.address,
       mapUrl: clinicsTable.mapUrl,
       phone: clinicsTable.phone,
@@ -202,15 +212,17 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
 
   res.json({
     id: row.id,
-    name: row.name,
+    name: row.nameEn,
+    nameAr: row.nameAr ?? "",
     specialty: row.specialtyName ?? "",
     specialtyAr: row.specialtyNameAr ?? "",
     location: row.cityName ?? "",
     cityName: row.cityName ?? "",
     cityNameAr: row.cityNameAr ?? "",
     areaName: row.areaName ?? "",
-    bio: row.bio ?? "",
-    image: row.image ?? makeImage(row.name),
+    bio: row.bioEn ?? "",
+    bioAr: row.bioAr ?? "",
+    image: row.image ?? makeImage(row.nameEn),
     fee: row.fee ?? 0,
     experience: row.experience ?? null,
     license: row.license ?? null,
@@ -222,7 +234,8 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     distance: "",
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
-      name: c.name ?? "",
+      name: c.nameEn ?? "",
+      nameAr: c.nameAr ?? "",
       address: c.address ?? "",
       mapUrl: c.mapUrl ?? "",
       phone: c.phone ?? "",
@@ -259,8 +272,10 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
 
   const [doc] = await db.select({
     id: doctorsTable.id,
-    name: doctorsTable.name,
-    bio: doctorsTable.bio,
+    nameEn: doctorsTable.nameEn,
+    nameAr: doctorsTable.nameAr,
+    bioEn: doctorsTable.bioEn,
+    bioAr: doctorsTable.bioAr,
     image: doctorsTable.image,
     fee: doctorsTable.fee,
     experience: doctorsTable.experience,
@@ -288,7 +303,12 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
 
   res.json({
     ...doc,
-    clinics,
+    name: doc.nameEn,
+    bio: doc.bioEn ?? "",
+    clinics: clinics.map((c) => ({
+      ...c,
+      name: c.nameEn,
+    })),
   });
 });
 
@@ -309,7 +329,9 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
 
   const Schema = z.object({
     name: z.string().min(1).optional(),
+    nameAr: z.string().optional().nullable(),
     bio: z.string().optional().nullable(),
+    bioAr: z.string().optional().nullable(),
     image: z.string().optional().nullable(),
     specialtyId: z.coerce.number().optional().nullable(),
     cityId: z.coerce.number().optional().nullable(),
@@ -332,17 +354,24 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
     return;
   }
 
+  // Map frontend field names to DB column names
+  const { name, bio, bioAr, ...rest } = parsed.data;
+  const updateData: Record<string, unknown> = { ...rest };
+  if (name !== undefined) updateData.nameEn = name;
+  if (bio !== undefined) updateData.bioEn = bio;
+  if (bioAr !== undefined) updateData.bioAr = bioAr;
+
   const [updated] = await db.update(doctorsTable)
-    .set(parsed.data)
+    .set(updateData)
     .where(eq(doctorsTable.userId, payload.sub))
     .returning();
 
   // Update user name if provided
-  if (parsed.data.name) {
-    await db.update(usersTable).set({ name: parsed.data.name }).where(eq(usersTable.id, payload.sub));
+  if (name) {
+    await db.update(usersTable).set({ name }).where(eq(usersTable.id, payload.sub));
   }
 
-  res.json(updated);
+  res.json({ ...updated, name: updated.nameEn, bio: updated.bioEn ?? "" });
 });
 
 /* ─── POST /doctor/clinics  (add clinic — requires JWT) ─── */
@@ -369,6 +398,7 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
 
   const Schema = z.object({
     name: z.string().min(1),
+    nameAr: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     mapUrl: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
@@ -384,12 +414,15 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     return;
   }
 
+  const { name, nameAr, ...rest } = parsed.data;
   const [clinic] = await db.insert(clinicsTable).values({
     doctorId: doc.id,
-    ...parsed.data,
+    nameEn: name,
+    nameAr: nameAr ?? null,
+    ...rest,
   }).returning();
 
-  res.status(201).json(clinic);
+  res.status(201).json({ ...clinic, name: clinic.nameEn });
 });
 
 /* ─── PUT /doctor/clinics/:id  (update clinic — requires JWT) ─── */
@@ -410,6 +443,7 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
 
   const Schema = z.object({
     name: z.string().min(1).optional(),
+    nameAr: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     mapUrl: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
@@ -421,13 +455,17 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
   const parsed = Schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message }); return; }
 
+  const { name, ...rest } = parsed.data;
+  const updateData: Record<string, unknown> = { ...rest };
+  if (name !== undefined) updateData.nameEn = name;
+
   const [updated] = await db.update(clinicsTable)
-    .set(parsed.data)
+    .set(updateData)
     .where(and(eq(clinicsTable.id, clinicId), eq(clinicsTable.doctorId, doc.id)))
     .returning();
 
   if (!updated) { res.status(404).json({ error: "Clinic not found" }); return; }
-  res.json(updated);
+  res.json({ ...updated, name: updated.nameEn });
 });
 
 /* ─── DELETE /doctor/clinics/:id  (remove clinic — requires JWT) ─── */
