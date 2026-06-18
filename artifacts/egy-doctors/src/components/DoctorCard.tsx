@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, Stethoscope, Star, Calendar } from "lucide-react";
+import { MapPin, Stethoscope, Star, Calendar, Building2 } from "lucide-react";
 import { type ApiDoctor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,18 +43,21 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             <Stethoscope className="h-3.5 w-3.5" />
             {specialty}
           </p>
-          {/* Clinic location badges */}
-          {doctor.clinics.length > 0 && (
+          {/* Location + clinic count */}
+          {(doctor.location || doctor.clinics.length > 0) && (
             <div className="flex flex-wrap gap-1 mt-1.5">
-              {doctor.clinics.map((clinic, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
-                >
+              {doctor.location && (
+                <span className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium">
                   <MapPin className="h-2.5 w-2.5 text-gray-400 shrink-0" />
-                  {t.locations[clinic.location] ?? clinic.location}
+                  {doctor.location}
                 </span>
-              ))}
+              )}
+              {doctor.clinics.length > 1 && (
+                <span className="inline-flex items-center gap-0.5 text-[11px] bg-primary/8 text-primary rounded-md px-2 py-0.5 font-medium">
+                  <Building2 className="h-2.5 w-2.5 shrink-0" />
+                  {doctor.clinics.length} {isRTL ? "عيادات" : "clinics"}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -86,22 +89,22 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
       <div className="mt-auto pt-3 border-t border-gray-100">
         {showSlots ? (
           <div className="flex items-center justify-end gap-2">
-            <Link href={`/doctor/${doctor.id}`}>
+            <Link href={`/doctor/${doctor.id}`} className="flex-1">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
+                className="w-full h-9 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
                 data-testid={`link-doctor-book-${doctor.id}`}
               >
                 <Calendar className="h-4 w-4 mr-1.5" />
                 {isRTL ? "الحجز" : "Book"}
               </Button>
             </Link>
-            <Link href={`/profile/${doctor.id}`}>
+            <Link href={`/profile/${doctor.id}`} className="flex-1">
               <Button
                 variant="outline"
                 size="sm"
-                className="shrink-0 h-9 px-4 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
+                className="w-full h-9 border-gray-200 hover:border-[#D4A853] hover:text-[#D4A853]"
                 data-testid={`link-doctor-profile-${doctor.id}`}
               >
                 {t.card.viewProfile}

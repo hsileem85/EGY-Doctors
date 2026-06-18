@@ -23,7 +23,15 @@ import Magazine from "@/pages/Magazine";
 import ContactUs from "@/pages/ContactUs";
 import Admin from "@/pages/Admin";
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 function Router() {
   return (

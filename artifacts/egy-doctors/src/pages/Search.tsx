@@ -79,9 +79,9 @@ export default function Search() {
 
   return (
     <Layout>
-      <div className="bg-white border-b sticky top-14 z-40">
+      <div className="bg-white border-b shadow-sm sticky top-14 z-40">
         <div className="container mx-auto px-4 py-4">
-          <div className="relative max-w-2xl mx-auto">
+          <div className="relative max-w-2xl">
             <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
               placeholder={t.search.placeholder}
