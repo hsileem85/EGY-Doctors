@@ -95,8 +95,15 @@ export default function Home() {
         {/* Header: Location & Search */}
         <header className="bg-[#0F172A] pt-5 pb-7 px-4 shadow-md sticky top-0 z-40">
           <div className="max-w-5xl mx-auto flex flex-col gap-4">
-            {/* Location indicator */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+            {/* Top row: badge left, location right */}
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+                <span className="text-xs font-medium text-gray-300 tracking-wide">
+                  {isRTL ? "المنصة الطبية الأولى في مصر" : "Egypt's #1 Medical Booking Platform"}
+                </span>
+              </div>
+              {/* Location indicator */}
               <div className="inline-flex items-center gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm">
                 <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
                 <div className="flex flex-col">
@@ -123,12 +130,6 @@ export default function Home() {
 
             {/* Hero Text */}
             <div className="text-center py-2">
-              <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5 mb-4">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-                <span className="text-xs font-medium text-gray-300 tracking-wide">
-                  {isRTL ? "المنصة الطبية الأولى في مصر" : "Egypt's #1 Medical Booking Platform"}
-                </span>
-              </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-3">
                 {isRTL ? (
                   <>
