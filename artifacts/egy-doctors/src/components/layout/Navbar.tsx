@@ -1,4 +1,4 @@
-import { Newspaper, Search, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall } from "lucide-react";
+import { Newspaper, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -51,15 +51,6 @@ export function Navbar() {
               >
                 <Home className="h-4 w-4 mr-1" />
                 {lang === "ar" ? "الرئيسية" : "Home"}
-              </Button>
-            </Link>
-            <Link href="/search">
-              <Button
-                variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
-              >
-                <Search className="h-4 w-4 mr-1" />
-                {lang === "ar" ? "البحث" : "Search"}
               </Button>
             </Link>
             <Link href="/magazine">
