@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "wouter";
 import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink, Building2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
@@ -54,11 +54,33 @@ function fmtDateInfo(dateStr: string, lang: string) {
   return { label: weekday, sub: `${dayNum} ${month}`, fullDate: `${weekdayFull}, ${dayNum} ${month} ${year}` };
 }
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function DoctorProfile() {
   const { id } = useParams();
   const { t, lang, dir } = useLanguage();
   const { user } = useAuth();
   const isRTL = dir === "rtl";
+
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { timeout: 5000 },
+    );
+  }, []);
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ["doctor", id],
@@ -225,30 +247,62 @@ export default function DoctorProfile() {
                     : `${doctor.name} has ${doctor.clinics.length} clinics — pick the one most convenient for you`}
                 </p>
                 <div className="flex flex-col gap-3">
-                  {doctor.clinics.map((clinic) => (
-                    <button
-                      key={clinic.id}
-                      onClick={() => handleClinicSelect(clinic)}
-                      className="w-full text-left flex items-start gap-4 p-4 rounded-xl border border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 transition-all group"
-                    >
-                      <div className="mt-0.5 w-9 h-9 rounded-lg bg-[#D4A853]/10 group-hover:bg-[#D4A853]/20 flex items-center justify-center shrink-0 transition-colors">
-                        <Building2 className="h-4 w-4 text-[#D4A853]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 group-hover:text-[#D4A853] transition-colors">
-                          {clinic.name}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {t.locations[clinic.location] ?? clinic.location} · {clinic.address}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <span className="text-sm font-bold text-gray-900">{clinic.fee}</span>
-                        <span className="text-xs text-gray-500 ml-1">{t.dashboard.egp}</span>
-                      </div>
-                    </button>
-                  ))}
+                  {doctor.clinics.map((clinic) => {
+                    const distKm =
+                      userCoords && clinic.lat != null && clinic.lng != null
+                        ? haversineKm(userCoords.lat, userCoords.lng, clinic.lat, clinic.lng)
+                        : null;
+                    const distLabel =
+                      distKm != null
+                        ? distKm < 1
+                          ? `${Math.round(distKm * 1000)} m`
+                          : `${distKm.toFixed(1)} km`
+                        : null;
+                    return (
+                      <button
+                        key={clinic.id}
+                        onClick={() => handleClinicSelect(clinic)}
+                        className="w-full text-left flex items-start gap-4 p-4 rounded-xl border border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 transition-all group"
+                      >
+                        <div className="mt-0.5 w-9 h-9 rounded-lg bg-[#D4A853]/10 group-hover:bg-[#D4A853]/20 flex items-center justify-center shrink-0 transition-colors">
+                          <Building2 className="h-4 w-4 text-[#D4A853]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 group-hover:text-[#D4A853] transition-colors">
+                            {clinic.name}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {t.locations[clinic.location] ?? clinic.location} · {clinic.address}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {distLabel && (
+                              <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 font-medium">
+                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                                {distLabel} {isRTL ? "منك" : "away"}
+                              </span>
+                            )}
+                            {clinic.mapUrl && (
+                              <a
+                                href={clinic.mapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[11px] bg-[#D4A853]/10 text-[#D4A853] rounded-full px-2 py-0.5 font-medium hover:bg-[#D4A853]/20 transition-colors"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                {isRTL ? "خريطة" : "Map"}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <span className="text-sm font-bold text-gray-900">{clinic.fee}</span>
+                          <span className="text-xs text-gray-500 ml-1">{t.dashboard.egp}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

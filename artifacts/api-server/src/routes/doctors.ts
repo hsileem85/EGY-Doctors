@@ -81,6 +81,8 @@ router.get("/doctors", async (req, res): Promise<void> => {
           fee: clinicsTable.fee,
           areaId: clinicsTable.areaId,
           areaName: areasTable.name,
+          lat: clinicsTable.lat,
+          lng: clinicsTable.lng,
         })
         .from(clinicsTable)
         .leftJoin(areasTable, eq(clinicsTable.areaId, areasTable.id))
@@ -103,6 +105,8 @@ router.get("/doctors", async (req, res): Promise<void> => {
       fee: c.fee ?? r.fee ?? 0,
       location: c.areaName ?? "",
       areaName: c.areaName ?? "",
+      lat: c.lat ?? null,
+      lng: c.lng ?? null,
     }));
 
     return {
@@ -174,16 +178,23 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const clinics = await db.select().from(clinicsTable).where(eq(clinicsTable.doctorId, id));
-
-  const enrichedClinics = await Promise.all(
-    clinics.map(async (c) => {
-      if (!c.areaId) return { ...c, areaName: null };
-      const [area] = await db.select({ name: areasTable.name })
-        .from(areasTable).where(eq(areasTable.id, c.areaId)).limit(1);
-      return { ...c, areaName: area?.name ?? null };
-    }),
-  );
+  const enrichedClinics = await db
+    .select({
+      id: clinicsTable.id,
+      doctorId: clinicsTable.doctorId,
+      name: clinicsTable.name,
+      address: clinicsTable.address,
+      mapUrl: clinicsTable.mapUrl,
+      phone: clinicsTable.phone,
+      fee: clinicsTable.fee,
+      areaId: clinicsTable.areaId,
+      lat: clinicsTable.lat,
+      lng: clinicsTable.lng,
+      areaName: areasTable.name,
+    })
+    .from(clinicsTable)
+    .leftJoin(areasTable, eq(clinicsTable.areaId, areasTable.id))
+    .where(eq(clinicsTable.doctorId, id));
 
   const reviews = await db.select().from(reviewsTable)
     .where(eq(reviewsTable.doctorId, id))
@@ -218,6 +229,8 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       fee: c.fee ?? row.fee ?? 0,
       location: c.areaName ?? "",
       areaName: c.areaName ?? "",
+      lat: c.lat ?? null,
+      lng: c.lng ?? null,
     })),
     reviewList: reviews.map((r) => ({
       id: r.id,

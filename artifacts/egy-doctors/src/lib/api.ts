@@ -22,6 +22,8 @@ export interface ApiClinic {
   location: string;
   areaId?: number | null;
   areaName: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface ApiReview {
