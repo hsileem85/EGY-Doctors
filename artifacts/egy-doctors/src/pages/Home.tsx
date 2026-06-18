@@ -304,69 +304,74 @@ export default function Home() {
               {sortedDoctors.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3 w-full"
+                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 w-full overflow-hidden"
+                  style={{ display: "flex", flexDirection: "row" }}
                 >
-                  {/* Avatar + name row */}
-                  <div className="flex items-start gap-3">
+                  {/* LEFT: avatar + info */}
+                  <div className="flex items-start gap-2.5 p-3.5 flex-1 min-w-0">
                     {/* Avatar with rating badge */}
                     <div className="relative shrink-0">
                       <img
                         src={doc.image}
-                        className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
+                        className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-md"
                         alt={doc.name}
                       />
-                      <div className="absolute -bottom-2 -right-2 bg-white rounded-full px-1.5 py-0.5 shadow-md border border-white flex items-center gap-0.5">
-                        <Star className="w-2.5 h-2.5 fill-[#F59E0B] text-[#F59E0B]" />
-                        <span className="text-[10px] font-bold text-slate-800 leading-none">{doc.rating}</span>
+                      <div className="absolute -bottom-1.5 -right-1.5 bg-white rounded-full px-1 py-0.5 shadow-md border border-slate-100 flex items-center gap-0.5">
+                        <Star className="w-2 h-2 fill-[#F59E0B] text-[#F59E0B]" />
+                        <span className="text-[9px] font-bold text-slate-800 leading-none">{doc.rating}</span>
                       </div>
                     </div>
 
-                    {/* Name + specialty */}
-                    <div className="min-w-0 flex-1 pt-0.5">
+                    {/* Name + specialty + location */}
+                    <div className="min-w-0 flex-1 flex flex-col gap-1">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-[15px] font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate">
+                        <h3 className="text-[13px] font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate">
                           {doc.name}
                         </h3>
                       </Link>
-                      <span className="inline-flex items-center gap-1 mt-1 bg-blue-50 text-blue-700 rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                        <HeartPulse className="w-3 h-3 shrink-0" />
+                      <span className="inline-flex items-center gap-1 self-start bg-blue-50 text-blue-700 rounded-full px-2 py-0.5 text-[9px] font-semibold">
+                        <HeartPulse className="w-2.5 h-2.5 shrink-0" />
                         <span className="truncate">{t.specialties[doc.specialty] ?? doc.specialty}</span>
                       </span>
+                      {doc.clinics.slice(0, 1).map((clinic) => (
+                        <span
+                          key={clinic.id}
+                          className="inline-flex items-center gap-1 self-start bg-slate-100 text-slate-500 rounded-full px-2 py-0.5 text-[9px] font-medium"
+                        >
+                          <MapPin className="w-2 h-2 shrink-0" />
+                          {t.locations[clinic.location] ?? clinic.location}
+                        </span>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Fee + location row */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-bold text-slate-900">{doc.fee} <span className="font-medium text-slate-500 text-xs">{t.dashboard.egp}</span></span>
-                    {doc.clinics.slice(0, 1).map((clinic) => (
-                      <span
-                        key={clinic.id}
-                        className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                      >
-                        <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                        {t.locations[clinic.location] ?? clinic.location}
-                      </span>
-                    ))}
-                  </div>
+                  {/* RIGHT: price + buttons */}
+                  <div
+                    className="flex flex-col items-end justify-between p-3.5 border-l border-slate-100 shrink-0"
+                    style={{ minWidth: "90px" }}
+                  >
+                    {/* Price */}
+                    <div className="text-right">
+                      <span className="text-base font-bold text-slate-900 leading-none">{doc.fee}</span>
+                      <span className="block text-[9px] font-medium text-slate-400 mt-0.5">{t.dashboard.egp}</span>
+                    </div>
 
-                  {/* Divider */}
-                  <div className="border-t border-slate-100 -mx-3.5" />
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Link href={`/doctor/${doc.id}`} style={{ flex: 1 }}>
-                      <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-xs hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-8 px-3">
-                        {isRTL ? "احجز" : "Book"}
-                      </Button>
-                    </Link>
-                    <Link href={`/profile/${doc.id}`} style={{ flex: 1 }}>
-                      <Button
-                        variant="outline"
-                        className="w-full text-slate-700 rounded-xl font-semibold text-xs border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all h-8 px-3"
-                      >
-                        {isRTL ? "الملف" : "Profile"}
-                      </Button>
-                    </Link>
+                    {/* Buttons */}
+                    <div className="flex flex-col gap-1.5 w-full mt-2">
+                      <Link href={`/doctor/${doc.id}`}>
+                        <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-[10px] hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-7 px-2">
+                          {isRTL ? "احجز" : "Book"}
+                        </Button>
+                      </Link>
+                      <Link href={`/profile/${doc.id}`}>
+                        <Button
+                          variant="outline"
+                          className="w-full text-slate-700 rounded-xl font-semibold text-[10px] border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all h-7 px-2"
+                        >
+                          {isRTL ? "الملف" : "Profile"}
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))}
