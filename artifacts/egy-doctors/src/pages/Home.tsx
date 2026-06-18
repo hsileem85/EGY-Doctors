@@ -251,7 +251,7 @@ export default function Home() {
                     <button
                       key={sp.id}
                       onClick={() => setLocation(`/search?specialty=${sp.id}`)}
-                      className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col items-center gap-2 hover:border-[#D4A853] hover:shadow-md transition-all group"
+                      className="bg-white border border-gray-100 rounded-xl p-2.5 flex flex-col items-center gap-1 hover:border-[#D4A853] hover:shadow-md transition-all group"
                     >
                       <span className="text-base">{emoji}</span>
                       <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
