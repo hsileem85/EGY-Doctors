@@ -7,6 +7,7 @@ import {
   HeartPulse,
   Star,
   Navigation,
+  LocateFixed,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
@@ -154,10 +155,11 @@ export default function Home() {
             {/* Single Pill Search */}
             <form
               onSubmit={handleSearch}
-              className="bg-white rounded-2xl sm:rounded-full p-2 flex flex-col sm:flex-row items-stretch sm:items-center shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+              className="bg-white rounded-2xl sm:rounded-full p-1.5 flex flex-col sm:flex-row items-stretch sm:items-center shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
             >
-              <div className="flex items-center flex-1 h-10 sm:h-11 pl-4">
-                <Search className="w-5 h-5 text-gray-400 shrink-0" />
+              {/* Doctor / clinic search input */}
+              <div className="flex items-center flex-1 h-9 pl-4">
+                <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
                   placeholder={
@@ -165,24 +167,24 @@ export default function Home() {
                       ? "ابحث عن الأطباء، التخصصات، أو العيادات..."
                       : "Search doctors, specialties, or clinics..."
                   }
-                  className="flex-1 bg-transparent border-none outline-none px-3 text-[#0F172A] font-medium placeholder:font-normal placeholder:text-gray-400 w-full"
+                  className="flex-1 bg-transparent border-none outline-none px-3 text-[#0F172A] text-sm font-medium placeholder:font-normal placeholder:text-gray-400 w-full"
                   value={doctorName}
                   onChange={(e) => setDoctorName(e.target.value)}
                 />
               </div>
 
-              <div className="hidden sm:block h-8 w-[1px] bg-gray-200 mx-1"></div>
+              {/* Divider 1 */}
+              <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
 
-              <div className="flex items-center flex-1 sm:flex-none sm:w-48 h-10 sm:h-11 px-4 border-t sm:border-t-0 border-gray-100">
-                <HeartPulse className="w-4 h-4 text-gray-400 shrink-0" />
+              {/* Specialty dropdown */}
+              <div className="flex items-center sm:w-40 h-9 px-3 border-t sm:border-t-0 border-gray-100">
+                <HeartPulse className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <select
                   className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
                 >
-                  <option value="">
-                    {isRTL ? "أي تخصص" : "Any Specialty"}
-                  </option>
+                  <option value="">{isRTL ? "أي تخصص" : "Any Specialty"}</option>
                   {specialties.map((s) => (
                     <option key={s.id} value={s.name}>
                       {t.specialties[s.name] ?? s.name}
@@ -191,11 +193,26 @@ export default function Home() {
                 </select>
               </div>
 
+              {/* Divider 2 */}
+              <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
+
+              {/* Near Me button */}
+              <button
+                type="button"
+                onClick={detectLocation}
+                disabled={isDetecting}
+                className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap"
+              >
+                <LocateFixed className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                {isRTL ? "بالقرب مني" : "Near Me"}
+              </button>
+
+              {/* Find Doctors */}
               <Button
                 type="submit"
-                className="bg-[#D4A853] text-[#0F172A] font-bold rounded-xl sm:rounded-full px-8 h-10 sm:h-11 mt-2 sm:mt-0 sm:ml-2 hover:bg-[#C49A48] transition-colors shadow-sm flex items-center justify-center gap-2 text-sm border-none"
+                className="bg-[#D4A853] text-[#0F172A] font-bold rounded-xl sm:rounded-full px-6 h-9 mt-1.5 sm:mt-0 sm:ml-1.5 hover:bg-[#C49A48] transition-colors shadow-sm flex items-center justify-center gap-2 text-sm border-none shrink-0"
               >
-                {isRTL ? "ابحث عن الأطباء" : "Find Doctors"}
+                {isRTL ? "ابحث" : "Find Doctors"}
               </Button>
             </form>
           </div>
