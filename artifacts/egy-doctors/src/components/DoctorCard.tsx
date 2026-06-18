@@ -52,7 +52,7 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                   className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
                 >
                   <MapPin className="h-2.5 w-2.5 text-gray-400 shrink-0" />
-                  {clinic.name}
+                  {t.locations[clinic.location] ?? clinic.location}
                 </span>
               ))}
             </div>
