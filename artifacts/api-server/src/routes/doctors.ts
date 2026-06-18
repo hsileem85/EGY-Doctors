@@ -139,7 +139,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
     };
   });
 
-  res.json(response);
+  res.set("Cache-Control", "no-store").json(response);
 });
 
 /* ─── GET /doctors/:id ─── */

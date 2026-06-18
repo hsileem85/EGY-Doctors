@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, Stethoscope, Star, Calendar, Building2 } from "lucide-react";
+import { MapPin, Stethoscope, Star, Calendar } from "lucide-react";
 import { type ApiDoctor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,21 +43,18 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             <Stethoscope className="h-3.5 w-3.5" />
             {specialty}
           </p>
-          {/* Location + clinic count */}
-          {(doctor.location || doctor.clinics.length > 0) && (
+          {/* Clinic location pills — one per clinic */}
+          {doctor.clinics.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
-              {doctor.location && (
-                <span className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium">
+              {doctor.clinics.map((clinic, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
+                >
                   <MapPin className="h-2.5 w-2.5 text-gray-400 shrink-0" />
-                  {doctor.location}
+                  {clinic.location || doctor.location}
                 </span>
-              )}
-              {doctor.clinics.length > 1 && (
-                <span className="inline-flex items-center gap-0.5 text-[11px] bg-primary/8 text-primary rounded-md px-2 py-0.5 font-medium">
-                  <Building2 className="h-2.5 w-2.5 shrink-0" />
-                  {doctor.clinics.length} {isRTL ? "عيادات" : "clinics"}
-                </span>
-              )}
+              ))}
             </div>
           )}
         </div>
