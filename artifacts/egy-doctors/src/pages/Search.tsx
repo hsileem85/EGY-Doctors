@@ -173,13 +173,13 @@ export default function Search() {
             </div>
 
             {loadingDoctors ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="bg-white rounded-xl border p-5 animate-pulse h-48" />
                 ))}
               </div>
             ) : filteredDoctors.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredDoctors.map(doctor => (
                   <DoctorCard key={doctor.id} doctor={doctor} showSlots={true} />
                 ))}
