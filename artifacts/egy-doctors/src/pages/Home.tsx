@@ -91,7 +91,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#F1F5F9] font-sans pb-20">
+      <div className="min-h-screen bg-white font-sans pb-20">
         {/* Header: Location & Search */}
         <header className="bg-[#0F172A] pt-2 pb-4 px-4 shadow-md">
           <div className="max-w-5xl mx-auto flex flex-col gap-1.5">
@@ -247,7 +247,7 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div className="bg-slate-50 border-t border-b border-gray-200">
+            <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
               <section className="max-w-5xl mx-auto px-4 pt-6 pb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-sm font-semibold text-[#0F172A]">
@@ -269,7 +269,8 @@ export default function Home() {
                       <button
                         key={sp.id}
                         onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
-                        className="bg-white border border-gray-100 rounded-xl p-2.5 flex flex-col items-center gap-1 shadow-sm hover:border-[#D4A853] hover:shadow-md transition-all group"
+                        className="rounded-xl p-2.5 flex flex-col items-center gap-1 transition-all group hover:border-[#D4A853]"
+                        style={{ backgroundColor: '#ffffff', border: '1px solid #f1f5f9', boxShadow: '0 1px 6px 0 rgba(0,0,0,0.08)' }}
                       >
                         <span className="text-base">{emoji}</span>
                         <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
