@@ -23,6 +23,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSpecialties, getCities, getAreas, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
+import { queryClient } from "@/App";
 
 const DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 type Day = typeof DAYS[number];
@@ -251,6 +252,8 @@ export default function DoctorProfileSetup() {
       }));
 
       await refreshUser();
+      await queryClient.invalidateQueries({ queryKey: ["myDoctorProfile"] });
+      await queryClient.invalidateQueries({ queryKey: ["doctors"] });
       toast({
         title: isEditMode ? (isRTL ? "تم حفظ الملف الشخصي!" : "Profile Updated!") : t.profileSetup.publishedSuccess,
         description: isRTL ? "تم حفظ تغييرات ملفك الشخصي بنجاح." : "Your profile changes have been saved successfully.",
