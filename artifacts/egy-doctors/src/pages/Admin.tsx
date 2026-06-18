@@ -196,6 +196,95 @@ function useInvalidateAdmin() {
   };
 }
 
+/* ─── Admin Login Gate ─── */
+
+const ADMIN_SESSION_KEY = "egy_admin_auth";
+
+function AdminLoginGate() {
+  const { lang } = useLanguage();
+  const isRTL = lang === "ar";
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem(ADMIN_SESSION_KEY) === "1");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username === "admin" && password === "koko@123") {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
+      setAuthed(true);
+      setError("");
+    } else {
+      setError(lang === "ar" ? "اسم المستخدم أو كلمة المرور غير صحيحة" : "Invalid username or password");
+    }
+  };
+
+  if (authed) return <AdminDashboard onSignOut={() => { sessionStorage.removeItem(ADMIN_SESSION_KEY); setAuthed(false); }} />;
+
+  return (
+    <div className={`min-h-screen bg-[#0F172A] flex items-center justify-center px-4 ${isRTL ? "font-arabic" : ""}`}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#D4A853]/15 mb-4">
+            <ShieldCheck className="w-7 h-7 text-[#D4A853]" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">
+            {lang === "ar" ? "لوحة التحكم" : "Admin Access"}
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            {lang === "ar" ? "أدخل بيانات الدخول للمتابعة" : "Enter your credentials to continue"}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">
+              {lang === "ar" ? "اسم المستخدم" : "Username"}
+            </label>
+            <Input
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setError(""); }}
+              className="bg-[#1E293B] border-[#334155] text-white placeholder:text-gray-600 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+              placeholder={lang === "ar" ? "اسم المستخدم" : "Username"}
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">
+              {lang === "ar" ? "كلمة المرور" : "Password"}
+            </label>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              className="bg-[#1E293B] border-[#334155] text-white placeholder:text-gray-600 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+              placeholder="••••••••"
+              dir="ltr"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-400 flex items-center gap-1.5">
+              <X className="w-3.5 h-3.5 shrink-0" />
+              {error}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] font-semibold"
+          >
+            {lang === "ar" ? "دخول" : "Sign In"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 const tabs = [
   { id: "doctors", label: "Doctors", labelAr: "الأطباء", icon: Users },
   { id: "specialties", label: "Specialties", labelAr: "التخصصات", icon: Stethoscope },
@@ -206,6 +295,10 @@ const tabs = [
 type TabId = (typeof tabs)[number]["id"];
 
 export default function Admin() {
+  return <AdminLoginGate />;
+}
+
+function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const { lang, t, dir } = useLanguage();
   const search = useSearch();
   const [, navigate] = useLocation();
@@ -234,7 +327,16 @@ export default function Admin() {
                 </span>
               </div>
             </div>
-            <NotificationBell lang={lang} />
+            <div className="flex items-center gap-2">
+              <NotificationBell lang={lang} />
+              <button
+                onClick={onSignOut}
+                title={lang === "ar" ? "تسجيل الخروج" : "Sign out"}
+                className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
