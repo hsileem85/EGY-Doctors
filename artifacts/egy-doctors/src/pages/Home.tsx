@@ -253,7 +253,7 @@ export default function Home() {
                       onClick={() => setLocation(`/search?specialty=${sp.id}`)}
                       className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col items-center gap-2 hover:border-[#D4A853] hover:shadow-md transition-all group"
                     >
-                      <span className="text-xl">{emoji}</span>
+                      <span className="text-base">{emoji}</span>
                       <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
                         {isRTL ? sp.nameAr : sp.name}
                       </span>
