@@ -18,14 +18,14 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col">
-      {/* Header: Avatar + Name + Fee */}
+      {/* Header: Avatar + Details */}
       <div className="flex items-start gap-3 mb-3">
         <img
           src={doctor.image}
           alt={doctor.name}
           className="w-14 h-14 rounded-full object-cover border-2 border-gray-50 shrink-0"
         />
-        <div className="flex-1 min-w-0 pl-1">
+        <div className="flex-1 min-w-0 pl-3">
           <div className="flex items-start justify-between gap-2">
             <Link href={`/profile/${doctor.id}`}>
               <h3 className="font-bold text-gray-900 text-base leading-tight hover:text-primary transition-colors cursor-pointer">
@@ -43,6 +43,20 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             <Stethoscope className="h-3.5 w-3.5" />
             {specialty}
           </p>
+          {/* Clinic location badges */}
+          {doctor.clinics.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {doctor.clinics.map((clinic, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
+                >
+                  <MapPin className="h-2.5 w-2.5 text-gray-400 shrink-0" />
+                  {clinic.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -67,26 +81,6 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
       <p className="text-gray-600 text-sm mb-3 line-clamp-2 leading-relaxed">
         {doctor.bio}
       </p>
-
-      {/* Clinics */}
-      {doctor.clinics.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-            {isRTL ? "العيادات المتاحة" : "Available Clinics"}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {doctor.clinics.map((clinic, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 text-xs bg-[#D4A853]/8 border border-[#D4A853]/20 text-gray-700 rounded-md px-2.5 py-1"
-              >
-                <MapPin className="h-3 w-3 text-[#D4A853] shrink-0" />
-                <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Bottom Action Area */}
       <div className="mt-auto pt-3 border-t border-gray-100">
