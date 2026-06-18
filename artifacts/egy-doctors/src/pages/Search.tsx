@@ -95,8 +95,8 @@ export default function Search() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="w-full lg:w-64 flex-shrink-0">
+        <div className="flex flex-col md:flex-row gap-6">
+          <aside className="w-full md:w-52 flex-shrink-0">
             <div className="bg-white rounded-xl border p-6 sticky top-40 shadow-sm">
               <div className="flex items-center gap-2 mb-6 text-gray-900 font-bold">
                 <Filter className="h-5 w-5" />
@@ -173,13 +173,13 @@ export default function Search() {
             </div>
 
             {loadingDoctors ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="bg-white rounded-xl border p-5 animate-pulse h-48" />
                 ))}
               </div>
             ) : filteredDoctors.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
                 {filteredDoctors.map(doctor => (
                   <DoctorCard key={doctor.id} doctor={doctor} showSlots={true} />
                 ))}
