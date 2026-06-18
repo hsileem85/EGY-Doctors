@@ -145,11 +145,6 @@ export default function Home() {
                   </>
                 )}
               </h1>
-              <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
-                {isRTL
-                  ? "تواصل مع أكثر من 2,500 طبيب موثق. اقرأ التقييمات، قارن الأسعار، واحجز في ثوانٍ."
-                  : "Connect with 2,500+ verified medical professionals. Read reviews, compare fees, and book in seconds."}
-              </p>
             </div>
 
             {/* Single Pill Search */}
