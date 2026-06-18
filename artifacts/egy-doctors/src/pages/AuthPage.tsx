@@ -85,8 +85,13 @@ export default function AuthPage() {
     setIsLoading(true);
     try {
       const result = await signIn(loginData.phone, loginData.password);
-      setRedirectPath(getRedirectFromRole(result.user.role, false));
-      setIsSuccess(true);
+      const path = getRedirectFromRole(result.user.role, false);
+      if (result.user.role === "patient") {
+        setLocation(path);
+      } else {
+        setRedirectPath(path);
+        setIsSuccess(true);
+      }
     } catch {
       setError(isRTL ? "رقم الهاتف أو كلمة المرور غير صحيحة" : "Invalid phone or password");
     } finally {
@@ -118,8 +123,13 @@ export default function AuthPage() {
         specialtyId: userType === "doctor" ? selectedSpecialty?.id : undefined,
         cityId: selectedCity?.id,
       });
-      setRedirectPath(getRedirectFromRole(result.user.role, true));
-      setIsSuccess(true);
+      const path = getRedirectFromRole(result.user.role, true);
+      if (result.user.role === "patient") {
+        setLocation(path);
+      } else {
+        setRedirectPath(path);
+        setIsSuccess(true);
+      }
     } catch {
       setError(isRTL ? "حدث خطأ. يرجى المحاولة مجدداً." : "An error occurred. Please try again.");
     } finally {
