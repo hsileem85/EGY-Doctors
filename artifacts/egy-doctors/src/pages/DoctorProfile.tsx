@@ -282,9 +282,9 @@ export default function DoctorProfile() {
                                 {distLabel} {isRTL ? "منك" : "away"}
                               </span>
                             )}
-                            {clinic.mapUrl && (
+                            {(clinic.mapUrl || (clinic.lat != null && clinic.lng != null)) && (
                               <a
-                                href={clinic.mapUrl}
+                                href={clinic.mapUrl || `https://www.openstreetmap.org/?mlat=${clinic.lat}&mlon=${clinic.lng}#map=16/${clinic.lat}/${clinic.lng}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
