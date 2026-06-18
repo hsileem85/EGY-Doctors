@@ -213,6 +213,8 @@ export default function DoctorProfileSetup() {
       const firstClinicArea = firstClinicAreaId ? apiAreas.find(a => a.id === firstClinicAreaId) : undefined;
       const firstClinicCity = firstClinicArea ? apiCities.find(c => c.id === firstClinicArea.cityId) : undefined;
 
+      const firstClinicFee = clinics[0]?.fee ? parseFloat(clinics[0].fee) : undefined;
+
       await updateDoctorProfile({
         name: profile.fullName || undefined,
         bio: profile.bio || undefined,
@@ -220,6 +222,7 @@ export default function DoctorProfileSetup() {
         specialtyId: selectedSpecialty?.id,
         cityId: firstClinicCity?.id,
         areaId: firstClinicAreaId,
+        fee: firstClinicFee,
       });
 
       await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
