@@ -331,9 +331,6 @@ export default function Home() {
                       <HeartPulse className="w-2.5 h-2.5 shrink-0" />
                       <span className="truncate">{t.specialties[doc.specialty] ?? doc.specialty}</span>
                     </span>
-                    <span className="text-xs font-bold text-slate-900">
-                      {doc.fee} <span className="text-[10px] font-medium text-slate-400">{t.dashboard.egp}</span>
-                    </span>
                     {doc.clinics.slice(0, 1).map((clinic) => (
                       <span
                         key={clinic.id}
@@ -346,7 +343,11 @@ export default function Home() {
                   </div>
 
                   {/* Buttons: side-by-side, right-aligned */}
-                  <div className="shrink-0 flex flex-row gap-1.5">
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
+                    <span className="text-sm font-bold text-slate-900 leading-none">
+                      {doc.fee} <span className="text-[10px] font-medium text-slate-400">{t.dashboard.egp}</span>
+                    </span>
+                    <div className="flex flex-row gap-1.5">
                     <Link href={`/doctor/${doc.id}`}>
                       <Button className="bg-[#0F172A] text-white rounded-xl font-semibold text-[10px] hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-7 px-3 whitespace-nowrap">
                         {isRTL ? "احجز" : "Book"}
@@ -360,6 +361,7 @@ export default function Home() {
                         {isRTL ? "الملف" : "Profile"}
                       </Button>
                     </Link>
+                    </div>
                   </div>
                 </div>
               ))}
