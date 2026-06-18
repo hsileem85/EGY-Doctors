@@ -250,7 +250,7 @@ export default function Home() {
                   return (
                     <button
                       key={sp.id}
-                      onClick={() => setLocation(`/search?specialty=${sp.id}`)}
+                      onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
                       className="bg-white border border-gray-100 rounded-xl p-2.5 flex flex-col items-center gap-1 hover:border-[#D4A853] hover:shadow-md transition-all group"
                     >
                       <span className="text-base">{emoji}</span>
