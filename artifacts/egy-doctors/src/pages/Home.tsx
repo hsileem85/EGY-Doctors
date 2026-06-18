@@ -322,7 +322,7 @@ export default function Home() {
                   </div>
 
                   {/* Details */}
-                  <div className="flex-1 w-full pl-2">
+                  <div className="flex-1 w-full pl-5">
                     <div className="flex items-start gap-2 mb-1">
                       <div className="flex-1 min-w-0">
                         <Link href={`/doctor/${doc.id}`}>
