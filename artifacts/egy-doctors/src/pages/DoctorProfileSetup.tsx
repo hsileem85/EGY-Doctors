@@ -4,6 +4,11 @@ import {
   Upload, Camera, Clock, ArrowLeft, MapPin,
   LocateFixed, Plus, Trash2, ChevronDown, ChevronUp, Building2,
 } from "lucide-react";
+import L from "leaflet";
+import markerIconPng from "leaflet/dist/images/marker-icon.png";
+import markerIcon2xPng from "leaflet/dist/images/marker-icon-2x.png";
+import markerShadowPng from "leaflet/dist/images/marker-shadow.png";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -163,8 +168,8 @@ export default function DoctorProfileSetup() {
           cityName: city?.name ?? "",
           areaId: c.areaId ? String(c.areaId) : "",
           address: c.address ?? "",
-          lat: "",
-          lng: "",
+          lat: c.lat != null ? String(c.lat) : "",
+          lng: c.lng != null ? String(c.lng) : "",
           fee: c.fee != null ? String(c.fee) : "",
           schedule: defaultSchedule(),
         };
@@ -634,6 +639,30 @@ export default function DoctorProfileSetup() {
   );
 }
 
+/* ─── Fix Leaflet default icon paths broken by Vite's asset pipeline ─── */
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIconPng,
+  iconRetinaUrl: markerIcon2xPng,
+  shadowUrl: markerShadowPng,
+});
+
+const DEFAULT_LAT = 30.0444;
+const DEFAULT_LNG = 31.2357;
+
+function MapClickHandler({ onPinDrop }: { onPinDrop: (lat: number, lng: number) => void }) {
+  useMapEvents({ click: e => onPinDrop(e.latlng.lat, e.latlng.lng) });
+  return null;
+}
+
+function FlyToPosition({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([lat, lng], 15, { duration: 0.5 });
+  }, [lat, lng, map]);
+  return null;
+}
+
 /* ─── Extracted Map sub-component to avoid re-render noise ─── */
 function ClinicMap({
   lat, lng, isRTL,
@@ -644,50 +673,52 @@ function ClinicMap({
   onLocate: (lat: string, lng: string) => void;
   onError: (title: string, desc: string) => void;
 }) {
+  const parsedLat = parseFloat(lat) || DEFAULT_LAT;
+  const parsedLng = parseFloat(lng) || DEFAULT_LNG;
+  const position: [number, number] = [parsedLat, parsedLng];
+
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) {
+      onError(
+        isRTL ? "غير مدعوم" : "Not Supported",
+        isRTL ? "المتصفح لا يدعم تحديد الموقع الجغرافي." : "Your browser does not support geolocation.",
+      );
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => onLocate(pos.coords.latitude.toFixed(6), pos.coords.longitude.toFixed(6)),
+      () => onError(
+        isRTL ? "خطأ في تحديد الموقع" : "Location Error",
+        isRTL ? "تعذر الحصول على موقعك. يرجى التحقق من إعدادات الموقع." : "Could not get your location. Please check location settings.",
+      ),
+    );
+  };
+
   return (
-    <div className="mt-1 rounded-xl border overflow-hidden h-44 bg-gray-100 relative group">
-      <img
-        src={`https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=640x320&markers=${lat},${lng},red-pushpin`}
-        alt="Clinic location map"
-        className="w-full h-full object-cover"
-        onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-      />
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-8 h-8 bg-primary rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-          <MapPin className="h-5 w-5 text-white" />
-        </div>
-      </div>
+    <div className="mt-1 rounded-xl border overflow-hidden relative" style={{ height: "176px" }}>
+      <MapContainer
+        center={position}
+        zoom={15}
+        style={{ height: "100%", width: "100%" }}
+        scrollWheelZoom={false}
+        attributionControl={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={position} />
+        <MapClickHandler onPinDrop={(la, lo) => onLocate(la.toFixed(6), lo.toFixed(6))} />
+        <FlyToPosition lat={parsedLat} lng={parsedLng} />
+      </MapContainer>
       <button
         type="button"
-        onClick={() => {
-          if (!navigator.geolocation) {
-            onError(
-              isRTL ? "غير مدعوم" : "Not Supported",
-              isRTL ? "المتصفح لا يدعم تحديد الموقع الجغرافي." : "Your browser does not support geolocation.",
-            );
-            return;
-          }
-          navigator.geolocation.getCurrentPosition(
-            pos => {
-              const la = pos.coords.latitude.toString();
-              const lo = pos.coords.longitude.toString();
-              onLocate(la, lo);
-              window.open(`https://www.openstreetmap.org/?mlat=${la}&mlon=${lo}#map=15/${la}/${lo}`, "_blank");
-            },
-            () => onError(
-              isRTL ? "خطأ في تحديد الموقع" : "Location Error",
-              isRTL ? "تعذر الحصول على موقعك. يرجى التحقق من إعدادات الموقع." : "Could not get your location. Please check location settings.",
-            ),
-          );
-        }}
-        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-xs px-2 py-1 rounded-md shadow-sm font-medium text-gray-700 transition-colors flex items-center gap-1"
+        onClick={handleGeolocate}
+        className="absolute bottom-2 right-2 z-[1000] bg-white/90 hover:bg-white text-xs px-2 py-1 rounded-md shadow-sm font-medium text-gray-700 transition-colors flex items-center gap-1"
       >
         <LocateFixed className="h-3 w-3" />
         {isRTL ? "تحديد موقعي" : "Get My Location"}
       </button>
-      <p className="absolute bottom-2 left-2 text-[10px] text-gray-400 bg-white/80 rounded px-1.5 py-0.5">
-        OpenStreetMap
-      </p>
     </div>
   );
 }
