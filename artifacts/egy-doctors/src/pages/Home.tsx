@@ -7,7 +7,6 @@ import {
   HeartPulse,
   Star,
   Navigation,
-  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
@@ -338,34 +337,19 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Fee + city */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
+                    {/* Fee + clinic area badges */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600 mb-1">
                       <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
-                      {doc.cityName && (
-                        <>
-                          <span className="text-gray-300">·</span>
-                          <span className="flex items-center gap-1 text-gray-500">
-                            <CalendarDays className="w-3 h-3" />
-                            {t.governorates[doc.cityName] ?? t.locations[doc.cityName] ?? doc.cityName}
-                          </span>
-                        </>
-                      )}
+                      {doc.clinics.map((clinic) => (
+                        <span
+                          key={clinic.id}
+                          className="inline-flex items-center gap-1 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
+                        >
+                          <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                          {t.locations[clinic.location] ?? clinic.location}
+                        </span>
+                      ))}
                     </div>
-
-                    {/* Clinic area badges — inline */}
-                    {doc.clinics.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {doc.clinics.map((clinic) => (
-                          <span
-                            key={clinic.id}
-                            className="inline-flex items-center gap-1 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
-                          >
-                            <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
-                            {t.locations[clinic.location] ?? clinic.location}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* Actions */}
