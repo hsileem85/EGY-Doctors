@@ -294,13 +294,13 @@ export default function Home() {
           </div>
 
           {isLoading ? (
-            <div className="flex flex-col gap-3">
-              {[1, 2, 3].map((i) => (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.75rem" }}>
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="bg-white rounded-xl p-4 border border-gray-200 animate-pulse h-32" />
               ))}
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.75rem" }}>
               {sortedDoctors.map((doc) => (
                 <div
                   key={doc.id}
