@@ -93,8 +93,8 @@ export default function Home() {
     <Layout>
       <div className="min-h-screen bg-[#F1F5F9] font-sans pb-20">
         {/* Header: Location & Search */}
-        <header className="bg-[#0F172A] pt-3 pb-6 px-4 shadow-md">
-          <div className="max-w-5xl mx-auto flex flex-col gap-2">
+        <header className="bg-[#0F172A] pt-2 pb-4 px-4 shadow-md">
+          <div className="max-w-5xl mx-auto flex flex-col gap-1.5">
             {/* Top row: badge left, location right */}
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5">
@@ -129,8 +129,8 @@ export default function Home() {
             </div>
 
             {/* Hero Text */}
-            <div className="text-center py-2">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight mb-3">
+            <div className="text-center py-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight mb-1.5">
                 {isRTL ? (
                   <>
                     ابحث واحجز مع{" "}
@@ -219,7 +219,7 @@ export default function Home() {
         </header>
 
         {/* Stats Strip */}
-        <div className="bg-[#1E293B] border-b border-[#334155] py-2.5">
+        <div className="bg-[#1E293B] border-b border-[#334155] py-1.5">
           <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
             {HOME_STATS.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
