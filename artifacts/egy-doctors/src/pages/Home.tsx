@@ -323,7 +323,7 @@ export default function Home() {
                   </div>
 
                   {/* Details */}
-                  <div className="flex-1 w-full">
+                  <div className="flex-1 w-full pl-2">
                     <div className="flex items-start gap-2 mb-1">
                       <div className="flex-1 min-w-0">
                         <Link href={`/doctor/${doc.id}`}>
@@ -338,7 +338,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Fee */}
+                    {/* Fee + city */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
                       <span className="font-bold text-[#0F172A]">{doc.fee} {t.dashboard.egp}</span>
                       {doc.cityName && (
@@ -352,26 +352,20 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* Clinics */}
-                    <div className="flex flex-col gap-1 mb-1">
-                      {doc.clinics.map((clinic) => (
-                        <a
-                          key={clinic.id}
-                          href={clinic.mapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-md px-2.5 py-1.5 transition-colors w-full min-w-0 group"
-                        >
-                          <MapPin className="w-3 h-3 text-[#D4A853] shrink-0" />
-                          <span className="font-medium text-gray-800 truncate">{clinic.name}</span>
-                          <span className="text-gray-400 mx-0.5">·</span>
-                          <span className="text-gray-500 truncate">{t.locations[clinic.location] ?? clinic.location}</span>
-                          <svg className="h-2.5 w-2.5 ml-auto shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      ))}
-                    </div>
+                    {/* Clinic badges — inline */}
+                    {doc.clinics.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {doc.clinics.map((clinic) => (
+                          <span
+                            key={clinic.id}
+                            className="inline-flex items-center gap-1 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
+                          >
+                            <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                            {clinic.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -381,25 +375,14 @@ export default function Home() {
                         {isRTL ? "احجز" : "Book"}
                       </Button>
                     </Link>
-                    <div className="flex gap-1.5">
-                      <a
-                        href={doc.mapUrl || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-1 text-[11px] font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/5 hover:bg-[#D4A853]/10 rounded-lg border border-[#D4A853]/20 hover:border-[#D4A853]/40 py-1.5 transition-colors"
+                    <Link href={`/profile/${doc.id}`}>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
                       >
-                        <Navigation className="w-3 h-3" />
-                        {isRTL ? "الخريطة" : "Map"}
-                      </a>
-                      <Link href={`/profile/${doc.id}`} className="flex-1">
-                        <Button
-                          variant="outline"
-                          className="w-full bg-white text-[#0F172A] rounded-lg py-1.5 font-semibold text-xs border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all h-auto"
-                        >
-                          {isRTL ? "الملف" : "Profile"}
-                        </Button>
-                      </Link>
-                    </div>
+                        {isRTL ? "الملف" : "Profile"}
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               ))}
