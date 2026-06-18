@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminNotification,
   Area,
   AreaInput,
   AreaUpdate,
@@ -500,6 +501,10 @@ export const useUpdateDoctorOnboarding = <TError = ErrorType<unknown>,
     }
 
 export const getDeleteDoctorUrl = (id: number,) => {
+
+
+
+
   return `/api/admin/doctors/${id}`
 }
 
@@ -507,15 +512,23 @@ export const getDeleteDoctorUrl = (id: number,) => {
  * @summary Delete a doctor and their user account
  */
 export const deleteDoctor = async (id: number, options?: RequestInit): Promise<void> => {
-  return customFetch<void>(getDeleteDoctorUrl(id), {
+
+  return customFetch<void>(getDeleteDoctorUrl(id),
+  {
     ...options,
-    method: 'DELETE',
-  });
-}
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
 
 export const getDeleteDoctorMutationOptions = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDoctor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteDoctor>>, TError,{id: number}, TContext> => {
+
 const mutationKey = ['deleteDoctor'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
@@ -523,18 +536,27 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {...options, mutation: {...options.mutation, mutationKey}}
       : {mutation: { mutationKey, }, request: undefined};
 
+
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDoctor>>, {id: number}> = (props) => {
           const {id} = props ?? {};
-          return deleteDoctor(id, requestOptions)
+
+          return  deleteDoctor(id,requestOptions)
         }
 
-  return { mutationFn, ...mutationOptions }
-}
 
-export type DeleteDoctorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDoctor>>>
-export type DeleteDoctorMutationError = ErrorType<unknown>
 
-/**
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDoctorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDoctor>>>
+
+    export type DeleteDoctorMutationError = ErrorType<unknown>
+
+    /**
  * @summary Delete a doctor and their user account
  */
 export const useDeleteDoctor = <TError = ErrorType<unknown>,
@@ -546,6 +568,223 @@ export const useDeleteDoctor = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteDoctorMutationOptions(options));
+    }
+
+export const getListAdminNotificationsUrl = () => {
+
+
+
+
+  return `/api/admin/notifications`
+}
+
+/**
+ * @summary List admin notifications
+ */
+export const listAdminNotifications = async ( options?: RequestInit): Promise<AdminNotification[]> => {
+
+  return customFetch<AdminNotification[]>(getListAdminNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminNotificationsQueryKey = () => {
+    return [
+    `/api/admin/notifications`
+    ] as const;
+    }
+
+
+export const getListAdminNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminNotifications>>> = ({ signal }) => listAdminNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminNotifications>>>
+export type ListAdminNotificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List admin notifications
+ */
+
+export function useListAdminNotifications<TData = Awaited<ReturnType<typeof listAdminNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getClearAdminNotificationsUrl = () => {
+
+
+
+
+  return `/api/admin/notifications`
+}
+
+/**
+ * @summary Clear all admin notifications
+ */
+export const clearAdminNotifications = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getClearAdminNotificationsUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getClearAdminNotificationsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearAdminNotifications>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof clearAdminNotifications>>, TError,void, TContext> => {
+
+const mutationKey = ['clearAdminNotifications'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearAdminNotifications>>, void> = () => {
+
+
+          return  clearAdminNotifications(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClearAdminNotificationsMutationResult = NonNullable<Awaited<ReturnType<typeof clearAdminNotifications>>>
+
+    export type ClearAdminNotificationsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Clear all admin notifications
+ */
+export const useClearAdminNotifications = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearAdminNotifications>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof clearAdminNotifications>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getClearAdminNotificationsMutationOptions(options));
+    }
+
+export const getMarkAdminNotificationReadUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/notifications/${id}/read`
+}
+
+/**
+ * @summary Mark a notification as read
+ */
+export const markAdminNotificationRead = async (id: number, options?: RequestInit): Promise<AdminNotification> => {
+
+  return customFetch<AdminNotification>(getMarkAdminNotificationReadUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getMarkAdminNotificationReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAdminNotificationRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markAdminNotificationRead>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markAdminNotificationRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markAdminNotificationRead>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markAdminNotificationRead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkAdminNotificationReadMutationResult = NonNullable<Awaited<ReturnType<typeof markAdminNotificationRead>>>
+
+    export type MarkAdminNotificationReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark a notification as read
+ */
+export const useMarkAdminNotificationRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAdminNotificationRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markAdminNotificationRead>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkAdminNotificationReadMutationOptions(options));
     }
 
 export const getListSpecialtiesUrl = () => {

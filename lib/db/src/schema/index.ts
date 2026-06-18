@@ -7,3 +7,4 @@ export * from "./clinics";
 export * from "./reviews";
 export * from "./appointments";
 export * from "./password_reset_tokens";
+export * from "./admin_notifications";

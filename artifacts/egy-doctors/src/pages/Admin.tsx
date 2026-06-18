@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useSearch, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,11 +19,15 @@ import {
   useCreateArea,
   useUpdateArea,
   useDeleteArea,
+  useListAdminNotifications,
+  useMarkAdminNotificationRead,
+  useClearAdminNotifications,
   getListDoctorsQueryKey,
   getListSpecialtiesQueryKey,
   getListCitiesQueryKey,
   getListAreasQueryKey,
   type Doctor,
+  type AdminNotification,
 } from "@workspace/api-client-react";
 
 import { Button } from "@/components/ui/button";
@@ -59,7 +63,128 @@ import {
   Trash2,
   ShieldCheck,
   Eye,
+  Bell,
+  UserPlus,
+  Stethoscope as DoctorIcon,
+  Building2,
 } from "lucide-react";
+
+/* ─── Notification Bell ─── */
+
+const notifIcons: Record<string, React.ReactNode> = {
+  new_patient: <UserPlus className="w-4 h-4 text-blue-500" />,
+  new_doctor: <DoctorIcon className="w-4 h-4 text-[#D4A853]" />,
+  new_medical_center: <Building2 className="w-4 h-4 text-purple-500" />,
+};
+
+function NotificationBell({ lang }: { lang: string }) {
+  const qc = useQueryClient();
+  const { data: notifications = [] } = useListAdminNotifications<AdminNotification[]>();
+  const markRead = useMarkAdminNotificationRead();
+  const clearAll = useClearAdminNotifications();
+
+  const unread = notifications.filter((n) => !n.isRead).length;
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleMarkRead = (id: number) => {
+    markRead.mutate({ id }, { onSuccess: () => qc.invalidateQueries({ queryKey: ["listAdminNotifications"] }) });
+  };
+
+  const handleClear = () => {
+    clearAll.mutate(undefined, { onSuccess: () => qc.invalidateQueries({ queryKey: ["listAdminNotifications"] }) });
+    setOpen(false);
+  };
+
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return lang === "ar" ? "الآن" : "just now";
+    if (mins < 60) return lang === "ar" ? `منذ ${mins} د` : `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return lang === "ar" ? `منذ ${hrs} س` : `${hrs}h ago`;
+    return lang === "ar" ? `منذ ${Math.floor(hrs / 24)} ي` : `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+        title={lang === "ar" ? "الإشعارات" : "Notifications"}
+      >
+        <Bell className="w-5 h-5" />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <span className="font-semibold text-gray-900 text-sm">
+              {lang === "ar" ? "الإشعارات" : "Notifications"}
+              {unread > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-bold">{unread}</span>
+              )}
+            </span>
+            {notifications.length > 0 && (
+              <button
+                onClick={handleClear}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              >
+                {lang === "ar" ? "مسح الكل" : "Clear all"}
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                {lang === "ar" ? "لا توجد إشعارات" : "No notifications"}
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className={`flex gap-3 px-4 py-3 border-b border-gray-50 last:border-0 transition-colors ${
+                    n.isRead ? "bg-white" : "bg-blue-50/60"
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">{notifIcons[n.type] ?? <Bell className="w-4 h-4 text-gray-400" />}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 leading-snug">{n.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.body}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                  </div>
+                  {!n.isRead && (
+                    <button
+                      onClick={() => handleMarkRead(n.id)}
+                      className="shrink-0 mt-0.5 text-[10px] text-blue-500 hover:text-blue-700 font-medium whitespace-nowrap"
+                      title={lang === "ar" ? "تحديد كمقروء" : "Mark read"}
+                    >
+                      {lang === "ar" ? "قراءة" : "Read"}
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function useInvalidateAdmin() {
   const qc = useQueryClient();
@@ -109,6 +234,7 @@ export default function Admin() {
                 </span>
               </div>
             </div>
+            <NotificationBell lang={lang} />
           </div>
         </div>
       </div>

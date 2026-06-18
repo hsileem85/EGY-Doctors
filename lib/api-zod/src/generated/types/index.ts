@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminNotification';
 export * from './area';
 export * from './areaInput';
 export * from './areaUpdate';

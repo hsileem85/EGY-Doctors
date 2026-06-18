@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, max } from "drizzle-orm";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 function stringifyDates<T>(rows: T[]): T[] {
@@ -427,6 +427,37 @@ router.delete("/admin/areas/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  res.sendStatus(204);
+});
+
+/* ─── Admin Notifications ─── */
+
+router.get("/admin/notifications", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(adminNotificationsTable)
+    .orderBy(adminNotificationsTable.createdAt);
+  res.json(
+    rows.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() })).reverse()
+  );
+});
+
+router.patch("/admin/notifications/:id/read", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [row] = await db
+    .update(adminNotificationsTable)
+    .set({ isRead: true })
+    .where(eq(adminNotificationsTable.id, id))
+    .returning();
+
+  if (!row) { res.status(404).json({ error: "Notification not found" }); return; }
+  res.json({ ...row, createdAt: row.createdAt.toISOString() });
+});
+
+router.delete("/admin/notifications", async (_req, res): Promise<void> => {
+  await db.delete(adminNotificationsTable);
   res.sendStatus(204);
 });
 

@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
-import { db, usersTable, doctorsTable, passwordResetTokensTable } from "@workspace/db";
+import { db, usersTable, doctorsTable, passwordResetTokensTable, adminNotificationsTable } from "@workspace/db";
 import { sendDoctorPendingEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -78,6 +78,21 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     if (user.email) {
       sendDoctorPendingEmail(user.email, user.name).catch(() => {});
     }
+  }
+
+  const roleLabels: Record<string, { type: "new_patient" | "new_doctor" | "new_medical_center"; titleEn: string; bodyEn: string }> = {
+    patient: { type: "new_patient", titleEn: "New Patient Registered", bodyEn: `${d.name} joined as a patient.` },
+    doctor: { type: "new_doctor", titleEn: "New Doctor Registered", bodyEn: `${d.name} applied as a doctor and is pending review.` },
+    medical_center: { type: "new_medical_center", titleEn: "New Medical Center Registered", bodyEn: `${d.name} registered as a medical center.` },
+  };
+  const label = roleLabels[d.role];
+  if (label) {
+    db.insert(adminNotificationsTable).values({
+      type: label.type,
+      title: label.titleEn,
+      body: label.bodyEn,
+      userId: user.id,
+    }).catch(() => {});
   }
 
   const token = signToken(user.id, user.role);

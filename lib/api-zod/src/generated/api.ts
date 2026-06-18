@@ -198,6 +198,39 @@ export const DeleteDoctorParams = zod.object({
 
 
 /**
+ * @summary List admin notifications
+ */
+export const ListAdminNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "userId": zod.number().nullish(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListAdminNotificationsResponse = zod.array(ListAdminNotificationsResponseItem)
+
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkAdminNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkAdminNotificationReadResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "userId": zod.number().nullish(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary List all specialties
  */
 export const ListSpecialtiesResponseItem = zod.object({

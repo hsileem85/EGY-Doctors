@@ -199,6 +199,17 @@ export interface AreaUpdate {
   isActive?: string;
 }
 
+export interface AdminNotification {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  /** @nullable */
+  userId?: number | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export type ListDoctorsParams = {
 status?: string;
 };
