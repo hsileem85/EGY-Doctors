@@ -247,41 +247,43 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <section className="max-w-5xl mx-auto px-4 pt-6 pb-2">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-[#0F172A]">
-                  {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
-                </h2>
-                <button
-                  onClick={() => setLocation("/search")}
-                  className="text-sm font-semibold text-[#D4A853] hover:underline"
-                >
-                  {isRTL ? "عرض الكل ←" : "View all →"}
-                </button>
-              </div>
-              <div className="grid grid-cols-4 gap-3">
-                {specialties.map((sp) => {
-                  const key = sp.name.toLowerCase();
-                  const emoji = SPECIALTY_EMOJI[key] ?? "🏥";
-                  const count = countBySpecialty[sp.name.toLowerCase()] ?? 0;
-                  return (
-                    <button
-                      key={sp.id}
-                      onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
-                      className="bg-white border border-gray-100 rounded-xl p-2.5 flex flex-col items-center gap-1 hover:border-[#D4A853] hover:shadow-md transition-all group"
-                    >
-                      <span className="text-base">{emoji}</span>
-                      <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
-                        {isRTL ? sp.nameAr : sp.name}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {count} {isRTL ? "طبيب" : "doctors"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+            <div className="bg-slate-50 border-t border-b border-gray-200">
+              <section className="max-w-5xl mx-auto px-4 pt-6 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold text-[#0F172A]">
+                    {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
+                  </h2>
+                  <button
+                    onClick={() => setLocation("/search")}
+                    className="text-sm font-semibold text-[#D4A853] hover:underline"
+                  >
+                    {isRTL ? "عرض الكل ←" : "View all →"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {specialties.map((sp) => {
+                    const key = sp.name.toLowerCase();
+                    const emoji = SPECIALTY_EMOJI[key] ?? "🏥";
+                    const count = countBySpecialty[sp.name.toLowerCase()] ?? 0;
+                    return (
+                      <button
+                        key={sp.id}
+                        onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
+                        className="bg-white border border-gray-100 rounded-xl p-2.5 flex flex-col items-center gap-1 shadow-sm hover:border-[#D4A853] hover:shadow-md transition-all group"
+                      >
+                        <span className="text-base">{emoji}</span>
+                        <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
+                          {isRTL ? sp.nameAr : sp.name}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {count} {isRTL ? "طبيب" : "doctors"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
           );
         })()}
 
