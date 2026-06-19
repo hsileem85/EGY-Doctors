@@ -377,7 +377,7 @@ export default function Home() {
                     </div>
 
                     {/* ── Col 3: Clinic Info ── */}
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 self-center">
                       {doc.clinics.length === 0 && (
                         <span className="text-[11px] text-slate-400 italic">
                           {isRTL ? "لا توجد عيادات" : "No clinics listed"}
