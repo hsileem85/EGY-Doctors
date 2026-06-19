@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
 import { db, usersTable, doctorsTable, passwordResetTokensTable, adminNotificationsTable } from "@workspace/db";
@@ -11,6 +11,29 @@ const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
 function signToken(userId: number, role: string): string {
   return jwt.sign({ sub: userId, role }, JWT_SECRET, { expiresIn: "7d" } as jwt.SignOptions);
+}
+
+/** Generate all common phone format variants so lookups work regardless of
+ *  how the number was stored (with/without country code, with/without leading 0).
+ *  e.g. "+201070200998" → ["01070200998","1070200998","201070200998","+201070200998"]
+ */
+function phoneVariants(phone: string): string[] {
+  const digits = phone.replace(/\D/g, ""); // strip everything non-numeric
+  // Strip Egypt country code (20) if present
+  const local = digits.startsWith("20") && digits.length > 10
+    ? digits.slice(2)
+    : digits;
+  // Egyptian local numbers always start with 0 (e.g. 01070200998)
+  const withZero    = local.startsWith("0") ? local : "0" + local;
+  const withoutZero = local.startsWith("0") ? local.slice(1) : local;
+  return Array.from(new Set([
+    withZero,               // 01070200998
+    withoutZero,            // 1070200998
+    "20" + withoutZero,     // 201070200998
+    "+20" + withoutZero,    // +201070200998
+    digits,                 // raw digits as entered
+    "+" + digits,           // +digits
+  ]));
 }
 
 const router: IRouter = Router();
@@ -125,7 +148,7 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
   }
 
   const [user] = await db.select().from(usersTable)
-    .where(eq(usersTable.phone, parsed.data.phone)).limit(1);
+    .where(inArray(usersTable.phone, phoneVariants(parsed.data.phone))).limit(1);
   if (!user) {
     res.status(401).json({ error: "Invalid phone number or password" });
     return;
@@ -225,10 +248,10 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
 
   const [user] = await db.select({ id: usersTable.id, email: usersTable.email })
     .from(usersTable)
-    .where(eq(usersTable.phone, parsed.data.phone)).limit(1);
+    .where(inArray(usersTable.phone, phoneVariants(parsed.data.phone))).limit(1);
 
   if (!user) {
-    res.json({ message: "If this phone is registered, a reset code has been sent." });
+    res.status(404).json({ error: "No account found with this phone number." });
     return;
   }
 

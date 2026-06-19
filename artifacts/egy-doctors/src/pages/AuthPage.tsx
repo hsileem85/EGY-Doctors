@@ -149,13 +149,19 @@ export default function AuthPage() {
     setForgotLoading(true);
     try {
       const res = await apiForgotPassword(buildPhone(forgotCountryCode, forgotPhone));
-      setMaskedEmail(res.maskedEmail ?? "");
+      if (!res.maskedEmail) {
+        setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
+        return;
+      }
+      setMaskedEmail(res.maskedEmail);
       setResetToken("");
       setForgotStep("reset");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("No email")) {
+      if (msg.includes("No email") || msg.includes("email")) {
         setForgotError(isRTL ? "لا يوجد بريد إلكتروني مرتبط بهذا الحساب. تواصل مع الدعم." : "No email on file for this account. Please contact support.");
+      } else if (msg.includes("No account") || msg.includes("phone")) {
+        setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
       } else {
         setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
       }
