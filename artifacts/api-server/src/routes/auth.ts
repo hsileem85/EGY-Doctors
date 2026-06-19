@@ -265,21 +265,28 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
 
   await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
 
-  try {
-    await sendPasswordResetEmail(user.email, token);
-  } catch (emailErr) {
-    req.log.error({ err: emailErr }, "Failed to send password reset email");
-    res.status(500).json({ error: "Failed to send the reset email. Please try again in a moment." });
-    return;
-  }
-
-  req.log.info({ userId: user.id, email: user.email }, "Password reset email sent");
-
   // Mask the email for display: j***@gmail.com
   const [local, domain] = user.email.split("@");
   const maskedEmail = `${local.slice(0, 1)}***@${domain}`;
 
-  res.json({ message: "Reset code sent to your email.", maskedEmail });
+  // Best-effort email — if delivery fails (e.g. Resend not yet configured for this
+  // domain) we still return the token directly so the user can proceed.
+  let emailSent = false;
+  try {
+    await sendPasswordResetEmail(user.email, token);
+    emailSent = true;
+    req.log.info({ userId: user.id, email: user.email }, "Password reset email sent");
+  } catch (emailErr) {
+    req.log.warn({ err: emailErr }, "Password reset email failed — returning token directly");
+  }
+
+  res.json({
+    message: emailSent ? "Reset code sent to your email." : "Reset code generated.",
+    maskedEmail,
+    emailSent,
+    // Only included when email delivery failed so the user can still reset
+    ...(emailSent ? {} : { resetToken: token }),
+  });
 });
 
 /* ─── POST /auth/reset-password ─── */

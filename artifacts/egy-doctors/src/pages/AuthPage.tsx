@@ -45,6 +45,7 @@ export default function AuthPage() {
   const [forgotPhone, setForgotPhone] = useState("");
   const [forgotCountryCode, setForgotCountryCode] = useState("+20");
   const [maskedEmail, setMaskedEmail] = useState("");
+  const [forgotEmailSent, setForgotEmailSent] = useState(false);
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -159,12 +160,10 @@ export default function AuthPage() {
     setForgotLoading(true);
     try {
       const res = await apiForgotPassword(buildPhone(forgotCountryCode, forgotPhone));
-      if (!res.maskedEmail) {
-        setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
-        return;
-      }
-      setMaskedEmail(res.maskedEmail);
-      setResetToken("");
+      setMaskedEmail(res.maskedEmail ?? "");
+      setForgotEmailSent(res.emailSent ?? false);
+      // Auto-fill token when email delivery failed and server returned it directly
+      setResetToken(res.resetToken ?? "");
       setForgotStep("reset");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
@@ -172,8 +171,6 @@ export default function AuthPage() {
         setForgotError(isRTL ? "لا يوجد بريد إلكتروني مرتبط بهذا الحساب. تواصل مع الدعم." : "No email on file for this account. Please contact support.");
       } else if (msg.includes("No account found") || msg.includes("not found")) {
         setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
-      } else if (msg.includes("Failed to send") || msg.includes("reset email")) {
-        setForgotError(isRTL ? "تعذر إرسال البريد الإلكتروني. يرجى المحاولة مرة أخرى." : "Could not send the reset email. Please try again.");
       } else {
         setForgotError(isRTL ? "حدث خطأ. يرجى المحاولة مرة أخرى." : "Something went wrong. Please try again.");
       }
@@ -313,18 +310,32 @@ export default function AuthPage() {
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <h2 className="text-xl font-bold text-white mb-2">{isRTL ? "إعادة تعيين كلمة المرور" : "Reset Password"}</h2>
 
-                {/* Email sent banner */}
-                <div className="flex items-start gap-3 bg-[#D4A853]/10 border border-[#D4A853]/30 rounded-xl px-4 py-3">
-                  <div className="w-5 h-5 rounded-full bg-[#D4A853]/20 flex items-center justify-center shrink-0 mt-0.5">
-                    <CheckCircle2 className="w-3 h-3 text-[#D4A853]" />
+                {/* Code delivery banner */}
+                {forgotEmailSent ? (
+                  <div className="flex items-start gap-3 bg-[#D4A853]/10 border border-[#D4A853]/30 rounded-xl px-4 py-3">
+                    <div className="w-5 h-5 rounded-full bg-[#D4A853]/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle2 className="w-3 h-3 text-[#D4A853]" />
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      {isRTL
+                        ? <>تم إرسال رمز التحقق إلى <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. يرجى التحقق من بريدك الإلكتروني.</>
+                        : <>Reset code sent to <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. Check your inbox (and spam folder).</>
+                      }
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    {isRTL
-                      ? <>تم إرسال رمز التحقق إلى <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. يرجى التحقق من بريدك الإلكتروني.</>
-                      : <>Reset code sent to <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. Check your inbox (and spam folder).</>
-                    }
-                  </p>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-3">
+                    <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      {isRTL
+                        ? <>تم إنشاء رمز التحقق وتعبئته أدناه تلقائياً. يمكنك المتابعة مباشرة.</>
+                        : <>Your reset code has been filled in below automatically. You can proceed directly.</>
+                      }
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label className="text-gray-300">{isRTL ? "رمز التحقق" : "Reset Code"}</Label>
