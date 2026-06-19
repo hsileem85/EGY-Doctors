@@ -16,6 +16,16 @@ import { PhoneInput, buildPhone } from "@/components/ui/PhoneInput";
 type UserType = "patient" | "doctor" | "medical";
 type MedicalSubtype = "hospital" | "clinic" | "polyclinic" | "lab" | "scan";
 
+/** Strip leading English doctor title prefixes (case-insensitive): "Dr.", "Dr ", "Dr/" */
+function stripEnTitle(value: string): string {
+  return value.replace(/^dr[.\s/]+/i, "").trimStart();
+}
+
+/** Strip leading Arabic doctor title prefixes: "د.", "د ", "د/" */
+function stripArTitle(value: string): string {
+  return value.replace(/^د[.\s/]+/, "").trimStart();
+}
+
 export default function AuthPage() {
   const { dir, lang } = useLanguage();
   const isRTL = dir === "rtl";
@@ -559,7 +569,7 @@ export default function AuthPage() {
                       <Input
                         id="signupName"
                         value={signupData.fullName}
-                        onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                        onChange={(e) => setSignupData({ ...signupData, fullName: stripEnTitle(e.target.value) })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                         required
                       />
@@ -573,7 +583,7 @@ export default function AuthPage() {
                         id="signupNameAr"
                         dir="rtl"
                         value={signupData.fullNameAr}
-                        onChange={(e) => setSignupData({ ...signupData, fullNameAr: e.target.value })}
+                        onChange={(e) => setSignupData({ ...signupData, fullNameAr: stripArTitle(e.target.value) })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>

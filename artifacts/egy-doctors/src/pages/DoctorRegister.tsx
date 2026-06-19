@@ -11,6 +11,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { getSpecialties, getCities, signUp as apiSignUp } from "@/lib/api";
 
+/** Strip leading English doctor title prefixes (case-insensitive): "Dr.", "Dr ", "Dr/" */
+function stripEnTitle(value: string): string {
+  return value.replace(/^dr[.\s/]+/i, "").trimStart();
+}
+
+/** Strip leading Arabic doctor title prefixes: "د.", "د ", "د/" */
+function stripArTitle(value: string): string {
+  return value.replace(/^د[.\s/]+/, "").trimStart();
+}
+
 export default function DoctorRegister() {
   const { t, lang } = useLanguage();
   const [, setLocation] = useLocation();
@@ -119,7 +129,7 @@ export default function DoctorRegister() {
                 <Input 
                   id="fullName" 
                   value={formData.fullName} 
-                  onChange={e => setFormData({...formData, fullName: e.target.value})} 
+                  onChange={e => setFormData({...formData, fullName: stripEnTitle(e.target.value)})} 
                   data-testid="input-register-fullname"
                 />
               </div>
@@ -131,7 +141,7 @@ export default function DoctorRegister() {
                   id="fullNameAr"
                   dir="rtl"
                   value={formData.fullNameAr} 
-                  onChange={e => setFormData({...formData, fullNameAr: e.target.value})} 
+                  onChange={e => setFormData({...formData, fullNameAr: stripArTitle(e.target.value)})} 
                   data-testid="input-register-fullname-ar"
                 />
               </div>
