@@ -426,26 +426,24 @@ export default function Home() {
                     </div>
 
                     {/* ── Col 4: Price + Actions ── */}
-                    <div className="flex flex-col items-center gap-2 shrink-0">
-                      <div className="text-center">
+                    <div className="flex flex-col items-end gap-2 ml-auto shrink-0">
+                      <div className="text-right">
                         <span className="text-base font-bold text-slate-900">{doc.fee}</span>
                         <span className="text-[10px] font-medium text-slate-400 ml-1">{t.dashboard.egp}</span>
                       </div>
-                      <div className="flex gap-1.5">
-                        <Link href={`/doctor/${doc.id}`}>
-                          <Button className="bg-[#0F172A] text-white rounded-xl font-semibold text-[11px] hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-8 px-4 whitespace-nowrap">
-                            {isRTL ? "احجز" : "Book"}
-                          </Button>
-                        </Link>
-                        <Link href={`/profile/${doc.id}`}>
-                          <Button
-                            variant="outline"
-                            className="text-slate-700 rounded-xl font-semibold text-[11px] border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all h-8 px-4 whitespace-nowrap"
-                          >
-                            {isRTL ? "الملف" : "Profile"}
-                          </Button>
-                        </Link>
-                      </div>
+                      <Link href={`/doctor/${doc.id}`} className="w-28">
+                        <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-[11px] hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-8 whitespace-nowrap">
+                          {isRTL ? "احجز" : "Book"}
+                        </Button>
+                      </Link>
+                      <Link href={`/profile/${doc.id}`} className="w-28">
+                        <Button
+                          variant="outline"
+                          className="w-full text-slate-700 rounded-xl font-semibold text-[11px] border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all h-8 whitespace-nowrap"
+                        >
+                          {isRTL ? "الملف" : "Profile"}
+                        </Button>
+                      </Link>
                     </div>
 
                   </div>
