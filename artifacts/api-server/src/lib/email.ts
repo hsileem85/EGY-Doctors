@@ -49,8 +49,8 @@ export async function sendDoctorPendingEmail(to: string, doctorName: string): Pr
 }
 
 export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
-  try {
-    await sendEmail(
+  // Do NOT swallow errors here — let them propagate so the caller can tell the user
+  await sendEmail(
       to,
       "Your EGY Doctors password reset code",
       `
@@ -76,9 +76,6 @@ export async function sendPasswordResetEmail(to: string, code: string): Promise<
       </div>
       `
     );
-  } catch {
-    // Email failures should not block the reset flow
-  }
 }
 
 export async function sendDoctorApprovedEmail(to: string, doctorName: string): Promise<void> {

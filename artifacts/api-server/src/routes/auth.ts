@@ -265,9 +265,15 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
 
   await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
 
-  await sendPasswordResetEmail(user.email, token);
+  try {
+    await sendPasswordResetEmail(user.email, token);
+  } catch (emailErr) {
+    req.log.error({ err: emailErr }, "Failed to send password reset email");
+    res.status(500).json({ error: "Failed to send the reset email. Please try again in a moment." });
+    return;
+  }
 
-  req.log.info({ userId: user.id }, "Password reset email sent");
+  req.log.info({ userId: user.id, email: user.email }, "Password reset email sent");
 
   // Mask the email for display: j***@gmail.com
   const [local, domain] = user.email.split("@");
