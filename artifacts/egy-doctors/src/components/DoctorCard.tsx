@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "wouter";
-import { MapPin, Stethoscope, Star, Calendar } from "lucide-react";
+import { MapPin, Stethoscope, Star, Calendar, Phone } from "lucide-react";
 import { type ApiDoctor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +11,29 @@ interface DoctorCardProps {
   showSlots?: boolean;
 }
 
+function mapsUrl(clinic: ApiDoctor["clinics"][number]): string {
+  if (clinic.lat && clinic.lng) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`;
+  }
+  if (clinic.mapUrl) return clinic.mapUrl;
+  const q = encodeURIComponent([clinic.address, clinic.location].filter(Boolean).join(", "));
+  return `https://www.google.com/maps/search/?api=1&query=${q}`;
+}
+
 export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
+  const [shownPhones, setShownPhones] = useState<Set<number>>(new Set());
 
   const specialty = t.specialties[doctor.specialty] ?? doctor.specialty;
+
+  function togglePhone(i: number) {
+    setShownPhones(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col">
@@ -43,18 +62,54 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             <Stethoscope className="h-3.5 w-3.5" />
             {specialty}
           </p>
-          {/* Clinic location pills — one per clinic */}
+
+          {/* Clinic pills — one per clinic */}
           {doctor.clinics.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {doctor.clinics.map((clinic, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium"
-                >
-                  <MapPin className="h-2.5 w-2.5 text-gray-400 shrink-0" />
-                  {clinic.location || doctor.location}
-                </span>
-              ))}
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {doctor.clinics.map((clinic, i) => {
+                const phoneVisible = shownPhones.has(i);
+                const hasPhone = Boolean(clinic.phone);
+                return (
+                  <div key={i} className="flex items-center gap-0.5">
+                    {/* Location pill → opens Google Maps */}
+                    <a
+                      href={mapsUrl(clinic)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-[11px] bg-gray-100 hover:bg-primary/10 hover:text-primary text-gray-600 rounded-md px-2 py-0.5 font-medium transition-colors cursor-pointer"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <MapPin className="h-2.5 w-2.5 shrink-0" />
+                      {clinic.location || doctor.location}
+                    </a>
+
+                    {/* Phone icon → toggles number display */}
+                    {hasPhone && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); togglePhone(i); }}
+                        className={`inline-flex items-center gap-0.5 text-[11px] rounded-md px-1.5 py-0.5 font-medium transition-colors ${
+                          phoneVisible
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 hover:bg-green-50 hover:text-green-700 text-gray-500"
+                        }`}
+                        title={isRTL ? "اعرض رقم الهاتف" : "Show phone"}
+                      >
+                        <Phone className="h-2.5 w-2.5 shrink-0" />
+                        {phoneVisible && (
+                          <a
+                            href={`tel:${clinic.phone}`}
+                            className="ml-0.5 hover:underline"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {clinic.phone}
+                          </a>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
