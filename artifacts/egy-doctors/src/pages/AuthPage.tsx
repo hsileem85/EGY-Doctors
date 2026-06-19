@@ -346,7 +346,7 @@ export default function AuthPage() {
             </div>
             <div>
               <span className="text-2xl font-bold text-white tracking-tight font-brand">EGY Doctors</span>
-              <p className="text-xs text-[#D4A853] tracking-wider">{isRTL ? "إجي دكتورز" : "EGY Doctors"}</p>
+              <p className="text-xs text-[#D4A853] tracking-wider">{isRTL ? "إي جي دكتورز" : "EGY Doctors"}</p>
             </div>
           </Link>
 

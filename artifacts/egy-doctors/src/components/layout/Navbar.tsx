@@ -27,7 +27,7 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
             {lang === "ar" ? (
               <span className="text-xl font-bold text-white tracking-tight font-brand">
-                إجي <span className="text-[#D4A853]">دكتورز</span>
+                إي جي <span className="text-[#D4A853]">دكتورز</span>
               </span>
             ) : (
               <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
