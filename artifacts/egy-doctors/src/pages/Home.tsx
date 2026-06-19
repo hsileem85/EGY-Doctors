@@ -374,9 +374,20 @@ export default function Home() {
                           {doc.name}
                         </h3>
                       </Link>
-                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-                        {t.specialties[doc.specialty] ?? doc.specialty}
-                        {doc.reviewCount ? ` · ${doc.reviewCount} ${isRTL ? "تقييم" : "reviews"}` : ""}
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5 flex items-center gap-1.5">
+                        <span>{t.specialties[doc.specialty] ?? doc.specialty}</span>
+                        {doc.reviewsCount > 0 && (
+                          <>
+                            <span className="text-slate-300">·</span>
+                            <Link
+                              href={`/profile/${doc.id}#reviews`}
+                              onClick={e => e.stopPropagation()}
+                              className="text-[#D4A853] hover:underline font-semibold whitespace-nowrap"
+                            >
+                              {doc.reviewsCount} {isRTL ? "تقييم" : "reviews"}
+                            </Link>
+                          </>
+                        )}
                       </p>
 
                       {/* Clinic pills inline */}
