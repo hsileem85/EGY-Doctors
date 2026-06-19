@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getSpecialties, getCities, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword } from "@/lib/api";
+import { PhoneInput, buildPhone } from "@/components/ui/PhoneInput";
 
 type UserType = "patient" | "doctor" | "medical";
 type MedicalSubtype = "hospital" | "clinic" | "polyclinic" | "lab" | "scan";
@@ -32,10 +33,14 @@ export default function AuthPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotStep, setForgotStep] = useState<"phone" | "reset" | "done">("phone");
   const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotCountryCode, setForgotCountryCode] = useState("+20");
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
+
+  const [loginCountryCode, setLoginCountryCode] = useState("+20");
+  const [signupCountryCode, setSignupCountryCode] = useState("+20");
 
   const [loginData, setLoginData] = useState({ phone: "", password: "" });
 
@@ -84,7 +89,7 @@ export default function AuthPage() {
     setError(null);
     setIsLoading(true);
     try {
-      const result = await signIn(loginData.phone, loginData.password);
+      const result = await signIn(buildPhone(loginCountryCode, loginData.phone), loginData.password);
       const path = getRedirectFromRole(result.user.role, false);
       if (result.user.role === "patient") {
         setLocation(path);
@@ -115,7 +120,7 @@ export default function AuthPage() {
         name: signupData.fullName,
         nameAr: signupData.fullNameAr || undefined,
         email: signupData.email,
-        phone: signupData.phone,
+        phone: buildPhone(signupCountryCode, signupData.phone),
         password: signupData.password,
         role: userType === "medical" ? "medical_center" : userType,
         nationalId: signupData.nationalId || undefined,
@@ -142,7 +147,7 @@ export default function AuthPage() {
     setForgotError(null);
     setForgotLoading(true);
     try {
-      const res = await apiForgotPassword(forgotPhone);
+      const res = await apiForgotPassword(buildPhone(forgotCountryCode, forgotPhone));
       if (res.resetToken) setResetToken(res.resetToken);
       setForgotStep("reset");
     } catch {
@@ -204,7 +209,7 @@ export default function AuthPage() {
     medical: isRTL ? "مركز طبي" : "Medical Center",
     email: isRTL ? "البريد الإلكتروني" : "Email",
     password: isRTL ? "كلمة المرور" : "Password",
-    fullName: isRTL ? "الاسم الكامل" : "Full Name",
+    fullName: isRTL ? "الاسم بالإنجليزية" : "English Name",
     centerName: isRTL ? "اسم المركز" : "Center Name",
     phone: isRTL ? "رقم الهاتف" : "Phone",
     nationalId: isRTL ? "الرقم القومي (اختياري)" : "National ID (Optional)",
@@ -264,13 +269,12 @@ export default function AuthPage() {
                 <p className="text-sm text-gray-400 mb-4">{isRTL ? "أدخل رقم هاتفك وسنرسل رمز إعادة التعيين." : "Enter your phone number and we'll send you a reset code."}</p>
                 <div className="space-y-2">
                   <Label className="text-gray-300">{isRTL ? "رقم الهاتف" : "Phone Number"}</Label>
-                  <Input
-                    type="tel"
-                    value={forgotPhone}
-                    onChange={e => setForgotPhone(e.target.value)}
-                    placeholder="01xxxxxxxxx"
-                    className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853]"
-                    required
+                  <PhoneInput
+                    countryCode={forgotCountryCode}
+                    onCountryCodeChange={setForgotCountryCode}
+                    phone={forgotPhone}
+                    onPhoneChange={setForgotPhone}
+                    placeholder="1234567890"
                   />
                 </div>
                 {forgotError && <p className="text-red-400 text-sm">{forgotError}</p>}
@@ -444,14 +448,13 @@ export default function AuthPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="loginPhone" className="text-gray-300">{isRTL ? "رقم الهاتف" : "Phone Number"}</Label>
-                      <Input
+                      <PhoneInput
                         id="loginPhone"
-                        type="tel"
-                        value={loginData.phone}
-                        onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
-                        placeholder="01xxxxxxxxx"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
-                        required
+                        countryCode={loginCountryCode}
+                        onCountryCodeChange={setLoginCountryCode}
+                        phone={loginData.phone}
+                        onPhoneChange={(v) => setLoginData({ ...loginData, phone: v })}
+                        placeholder="1234567890"
                       />
                     </div>
 
@@ -560,13 +563,13 @@ export default function AuthPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signupPhone" className="text-gray-300">{tl.phone}</Label>
-                      <Input
+                      <PhoneInput
                         id="signupPhone"
-                        type="tel"
-                        value={signupData.phone}
-                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
-                        required
+                        countryCode={signupCountryCode}
+                        onCountryCodeChange={setSignupCountryCode}
+                        phone={signupData.phone}
+                        onPhoneChange={(v) => setSignupData({ ...signupData, phone: v })}
+                        placeholder="1234567890"
                       />
                     </div>
 

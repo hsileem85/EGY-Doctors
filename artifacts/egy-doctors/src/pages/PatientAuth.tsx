@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 export default function PatientAuth() {
   const { t, dir } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const [loginCountryCode, setLoginCountryCode] = useState("+20");
+  const [signupCountryCode, setSignupCountryCode] = useState("+20");
 
   const [loginData, setLoginData] = useState({ phone: "", password: "" });
   const [signupData, setSignupData] = useState({
@@ -185,16 +189,14 @@ export default function PatientAuth() {
                       <Label htmlFor="loginPhone" className="text-gray-300">
                         {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
                       </Label>
-                      <Input
+                      <PhoneInput
                         id="loginPhone"
-                        type="tel"
-                        value={loginData.phone}
-                        onChange={(e) =>
-                          setLoginData({ ...loginData, phone: e.target.value })
-                        }
-                        placeholder={dir === "rtl" ? "01xxxxxxxxx" : "01xxxxxxxxx"}
+                        countryCode={loginCountryCode}
+                        onCountryCodeChange={setLoginCountryCode}
+                        phone={loginData.phone}
+                        onPhoneChange={(v) => setLoginData({ ...loginData, phone: v })}
+                        placeholder="1234567890"
                         data-testid="input-patient-login-phone"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
@@ -250,7 +252,7 @@ export default function PatientAuth() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signupName" className="text-gray-300">
-                        {dir === "rtl" ? "الاسم الكامل" : "Full Name"}
+                        {dir === "rtl" ? "الاسم بالإنجليزية" : "English Name"}
                       </Label>
                       <Input
                         id="signupName"
@@ -283,15 +285,14 @@ export default function PatientAuth() {
                       <Label htmlFor="signupPhone" className="text-gray-300">
                         {dir === "rtl" ? "رقم الهاتف" : "Phone"}
                       </Label>
-                      <Input
+                      <PhoneInput
                         id="signupPhone"
-                        type="tel"
-                        value={signupData.phone}
-                        onChange={(e) =>
-                          setSignupData({ ...signupData, phone: e.target.value })
-                        }
+                        countryCode={signupCountryCode}
+                        onCountryCodeChange={setSignupCountryCode}
+                        phone={signupData.phone}
+                        onPhoneChange={(v) => setSignupData({ ...signupData, phone: v })}
+                        placeholder="1234567890"
                         data-testid="input-patient-signup-phone"
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>
 
