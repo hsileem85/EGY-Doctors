@@ -48,6 +48,39 @@ export async function sendDoctorPendingEmail(to: string, doctorName: string): Pr
   }
 }
 
+export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
+  try {
+    await sendEmail(
+      to,
+      "Your EGY Doctors password reset code",
+      `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
+        <div style="text-align:center;margin-bottom:24px">
+          <h1 style="color:#0F172A;font-size:24px;margin:0">EGY<span style="color:#D4A853"> Doctors</span></h1>
+        </div>
+        <h2 style="color:#0F172A;font-size:20px;margin-bottom:8px">Reset Your Password</h2>
+        <p style="color:#475569;line-height:1.6;margin-bottom:24px">
+          We received a request to reset the password for your EGY Doctors account.
+          Use the code below to set a new password. This code expires in <strong>15 minutes</strong>.
+        </p>
+        <div style="background:#0F172A;border-radius:12px;padding:28px;text-align:center;margin:24px 0">
+          <p style="color:#94A3B8;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 12px">Your Reset Code</p>
+          <p style="color:#D4A853;font-size:38px;font-weight:800;letter-spacing:0.25em;margin:0;font-family:monospace">${code}</p>
+        </div>
+        <p style="color:#475569;font-size:14px;line-height:1.6">
+          If you didn't request a password reset, you can safely ignore this email — your password will not change.
+        </p>
+        <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px">
+          EGY Doctors — Egypt's trusted medical directory
+        </p>
+      </div>
+      `
+    );
+  } catch {
+    // Email failures should not block the reset flow
+  }
+}
+
 export async function sendDoctorApprovedEmail(to: string, doctorName: string): Promise<void> {
   try {
     await sendEmail(

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
 import { db, usersTable, doctorsTable, passwordResetTokensTable, adminNotificationsTable } from "@workspace/db";
-import { sendDoctorPendingEmail } from "../lib/email.js";
+import { sendDoctorPendingEmail, sendPasswordResetEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
@@ -223,11 +223,17 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     return;
   }
 
-  const [user] = await db.select({ id: usersTable.id }).from(usersTable)
+  const [user] = await db.select({ id: usersTable.id, email: usersTable.email })
+    .from(usersTable)
     .where(eq(usersTable.phone, parsed.data.phone)).limit(1);
 
   if (!user) {
     res.json({ message: "If this phone is registered, a reset code has been sent." });
+    return;
+  }
+
+  if (!user.email) {
+    res.status(400).json({ error: "No email address on file for this account. Please contact support." });
     return;
   }
 
@@ -236,8 +242,15 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
 
   await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
 
-  req.log.info({ userId: user.id }, "Password reset token generated");
-  res.json({ message: "Reset code generated. Check your SMS.", resetToken: token });
+  await sendPasswordResetEmail(user.email, token);
+
+  req.log.info({ userId: user.id }, "Password reset email sent");
+
+  // Mask the email for display: j***@gmail.com
+  const [local, domain] = user.email.split("@");
+  const maskedEmail = `${local.slice(0, 1)}***@${domain}`;
+
+  res.json({ message: "Reset code sent to your email.", maskedEmail });
 });
 
 /* ─── POST /auth/reset-password ─── */

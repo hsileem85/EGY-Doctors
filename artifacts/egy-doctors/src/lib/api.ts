@@ -155,7 +155,7 @@ export function getMe(): Promise<AuthUser> {
   return request("/auth/me");
 }
 
-export function forgotPassword(phone: string): Promise<{ message: string; resetToken?: string }> {
+export function forgotPassword(phone: string): Promise<{ message: string; maskedEmail?: string }> {
   return request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ phone }) });
 }
 
