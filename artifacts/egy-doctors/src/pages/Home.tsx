@@ -304,33 +304,22 @@ export default function Home() {
             <div className="bg-[#0F172A] py-12">
               <div className="max-w-5xl mx-auto px-4">
 
-                  {/* Header */}
-                  <div className={`flex items-center justify-between mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
-                    <div>
-                      <div className={`flex items-center gap-2 mb-1.5 ${isRTL ? "flex-row-reverse" : ""}`}>
-                        <div className="h-px w-5 bg-[#D4A853]" />
-                        <p className="text-[#D4A853] text-[10px] font-black uppercase tracking-[0.2em]">
-                          {isRTL ? "التخصصات الطبية" : "Medical Specialties"}
-                        </p>
-                      </div>
-                      <h2 className="text-[22px] font-black text-white leading-tight tracking-tight">
-                        {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
-                      </h2>
-                      <p className="text-slate-500 text-xs mt-1">
-                        {isRTL ? "اختر التخصص المناسب لك" : "Find the right expert for your health needs"}
+                  {/* Header — single compact row */}
+                  <div className={`flex items-center justify-between pb-4 mb-6 border-b border-slate-700/50 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+                      <div className="h-px w-5 bg-[#D4A853]" />
+                      <p className="text-[#D4A853] text-[10px] font-black uppercase tracking-[0.2em]">
+                        {isRTL ? "التخصصات الطبية" : "Medical Specialties"}
                       </p>
                     </div>
                     <button
                       onClick={() => setLocation("/search")}
-                      className={`flex items-center gap-1.5 text-xs font-bold text-[#D4A853] border border-[#D4A853]/30 hover:border-[#D4A853] rounded-full px-4 py-2 transition-all duration-200 hover:bg-[#D4A853]/5 ${isRTL ? "flex-row-reverse" : ""}`}
+                      className={`flex items-center gap-1 text-[10px] font-black text-[#D4A853] uppercase tracking-[0.2em] hover:opacity-70 transition-opacity ${isRTL ? "flex-row-reverse" : ""}`}
                     >
                       {isRTL ? "عرض الكل" : "View all"}
-                      <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
+                      <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
-
-                  {/* Gold rule */}
-                  <div className={`h-px mb-8 bg-gradient-to-r ${isRTL ? "from-transparent via-[#D4A853]/10 to-[#D4A853]/40" : "from-[#D4A853]/40 via-[#D4A853]/10 to-transparent"}`} />
 
                   {/* Grid */}
                   <div className="grid grid-cols-4 gap-2.5">
