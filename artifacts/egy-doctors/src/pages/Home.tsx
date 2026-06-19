@@ -347,7 +347,7 @@ export default function Home() {
                   className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-200 w-full px-5 py-4"
                 >
                   {/* 4-column grid on sm+, vertical stack on mobile */}
-                  <div className="flex flex-col sm:grid sm:items-center gap-3 sm:gap-4"
+                  <div className="flex flex-col sm:grid sm:items-start gap-3 sm:gap-4"
                     style={{ gridTemplateColumns: "auto 1fr 1fr auto" }}>
 
                     {/* ── Col 1: Avatar + Rating ── */}
@@ -366,7 +366,7 @@ export default function Home() {
                     {/* ── Col 2: Doctor Info ── */}
                     <div className="flex flex-col gap-1.5 min-w-0">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate">
+                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors">
                           {doc.name}
                         </h3>
                       </Link>
@@ -426,20 +426,20 @@ export default function Home() {
                     </div>
 
                     {/* ── Col 4: Price + Actions ── */}
-                    <div className="flex flex-col items-end gap-2 ml-auto shrink-0">
-                      <div className="text-right">
+                    <div className="flex flex-col items-center gap-2 ml-auto shrink-0">
+                      <div className="text-center">
                         <span className="text-base font-bold text-slate-900">{doc.fee}</span>
                         <span className="text-[10px] font-medium text-slate-400 ml-1">{t.dashboard.egp}</span>
                       </div>
-                      <Link href={`/doctor/${doc.id}`} className="w-28">
-                        <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-[11px] hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] h-8 whitespace-nowrap">
+                      <Link href={`/doctor/${doc.id}`} className="w-24">
+                        <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-xs hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] py-1.5 px-4 h-auto whitespace-nowrap">
                           {isRTL ? "احجز" : "Book"}
                         </Button>
                       </Link>
-                      <Link href={`/profile/${doc.id}`} className="w-28">
+                      <Link href={`/profile/${doc.id}`} className="w-24">
                         <Button
                           variant="outline"
-                          className="w-full text-slate-700 rounded-xl font-semibold text-[11px] border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all h-8 whitespace-nowrap"
+                          className="w-full text-slate-700 rounded-xl font-semibold text-xs border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all py-1.5 px-4 h-auto whitespace-nowrap"
                         >
                           {isRTL ? "الملف" : "Profile"}
                         </Button>
