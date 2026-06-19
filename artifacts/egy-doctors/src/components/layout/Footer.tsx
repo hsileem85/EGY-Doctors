@@ -6,13 +6,13 @@ export function Footer() {
   const { lang, t } = useLanguage();
 
   return (
-    <footer className="bg-gray-50 border-t border-gray-200 py-16 mt-auto">
+    <footer className="bg-[#0F172A] border-t border-[#1E293B] py-16 mt-auto">
       <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="text-center md:text-start">
           {lang === "ar" ? (
-            <p className="text-lg font-bold text-gray-900 font-brand tracking-tight">إي جي <span className="text-[#D4A853]">دكتورز</span></p>
+            <p className="text-lg font-bold text-white font-brand tracking-tight">إي جي <span className="text-[#D4A853]">دكتورز</span></p>
           ) : (
-            <p className="text-lg font-bold text-gray-900 font-brand tracking-tight">
+            <p className="text-lg font-bold text-white font-brand tracking-tight">
               EG<span className="text-[#D4A853]">Y Doctors</span>
             </p>
           )}
@@ -20,7 +20,7 @@ export function Footer() {
             &copy; {new Date().getFullYear()} {lang === "ar" ? "إي جي دكتورز" : "EGY Doctors"}. {t.footer.rights}
           </p>
         </div>
-        <div className="flex gap-6 text-sm text-gray-500">
+        <div className="flex gap-6 text-sm text-gray-400">
           <a href="#" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-privacy">
             {t.footer.privacy}
           </a>

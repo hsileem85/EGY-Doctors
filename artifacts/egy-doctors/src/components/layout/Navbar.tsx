@@ -30,26 +30,26 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="bg-white border-b border-gray-200 z-50 w-full shadow-sm">
+    <nav className="bg-[#0F172A] border-b border-[#1E293B] z-50 w-full">
       {/* ── Main row ── */}
       <div className="max-w-5xl mx-auto flex h-14 sm:h-16 items-center justify-between px-4">
         {/* Logo + hotline */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
             {lang === "ar" ? (
-              <span className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight font-brand">
+              <span className="text-lg sm:text-xl font-bold text-white tracking-tight font-brand">
                 إي جي <span className="text-[#D4A853]">دكتورز</span>
               </span>
             ) : (
               <span className="flex items-center gap-0 text-lg sm:text-xl font-bold tracking-tight font-brand">
-                <span className="text-gray-900">EG</span>
+                <span className="text-white">EG</span>
                 <span className="text-[#D4A853]">Y Doctors</span>
               </span>
             )}
           </Link>
-          <div className="hidden sm:flex items-center gap-1 bg-gray-100 rounded-full px-2.5 py-1">
+          <div className="hidden sm:flex items-center gap-1 bg-[#1E293B] rounded-full px-2.5 py-1">
             <PhoneCall className="w-3 h-3 text-[#D4A853]" />
-            <span className="text-xs font-bold text-gray-700 tracking-wide">15992</span>
+            <span className="text-xs font-bold text-white tracking-wide">15992</span>
           </div>
         </div>
 
@@ -61,7 +61,7 @@ export function Navbar() {
               <Link key={href} href={href}>
                 <Button
                   variant="ghost"
-                  className="text-sm font-normal h-8 px-3 text-gray-600 hover:text-[#D4A853] hover:bg-gray-50"
+                  className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
                 >
                   <Icon className="h-4 w-4 mr-1" />
                   {lang === "ar" ? labelAr : labelEn}
@@ -70,13 +70,13 @@ export function Navbar() {
             ))}
           </div>
 
-          <div className="w-px h-6 bg-gray-200 hidden md:block" />
+          <div className="w-px h-6 bg-[#334155] hidden md:block" />
 
           {/* Language toggle */}
           <button
             onClick={() => setLang(lang === "en" ? "ar" : "en")}
             data-testid="button-toggle-language"
-            className="text-sm text-gray-600 hover:text-gray-900 transition-colors px-2 py-1 shrink-0"
+            className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-1 shrink-0"
           >
             {lang === "en" ? "ع" : "EN"}
           </button>
@@ -90,30 +90,30 @@ export function Navbar() {
                     {user.image ? (
                       <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-[#D4A853] text-white flex items-center justify-center text-sm font-bold">
+                      <div className="w-full h-full bg-[#D4A853] text-[#0F172A] flex items-center justify-center text-sm font-bold">
                         {initials}
                       </div>
                     )}
                   </div>
-                  <span className="hidden sm:block text-sm text-gray-700 group-hover:text-gray-900 transition-colors max-w-[120px] truncate">
+                  <span className="hidden sm:block text-sm text-gray-300 group-hover:text-white transition-colors max-w-[120px] truncate">
                     {user.name}
                   </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 bg-white border-gray-200 text-gray-900">
-                <div className="px-3 py-3 border-b border-gray-100 flex items-center gap-3">
+              <DropdownMenuContent align="end" className="w-52 bg-[#1E293B] border-[#334155] text-white">
+                <div className="px-3 py-3 border-b border-[#334155] flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                     {user.image ? (
                       <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-[#D4A853] text-white flex items-center justify-center text-sm font-bold">
+                      <div className="w-full h-full bg-[#D4A853] text-[#0F172A] flex items-center justify-center text-sm font-bold">
                         {initials}
                       </div>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role}</p>
+                    <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                    <p className="text-xs text-gray-400 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role}</p>
                   </div>
                 </div>
                 {user.role === "patient" && (
@@ -143,9 +143,9 @@ export function Navbar() {
                     {lang === "ar" ? "تعديل الملف الشخصي" : "Edit Profile"}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator className="bg-gray-100" />
+                <DropdownMenuSeparator className="bg-[#334155]" />
                 <DropdownMenuItem
-                  className="gap-2 cursor-pointer text-red-500 hover:bg-red-50 focus:bg-red-50 focus:text-red-500"
+                  className="gap-2 cursor-pointer text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-400"
                   onClick={() => { signOut(); setLocation("/"); }}
                 >
                   <LogOut className="h-4 w-4" />
@@ -158,13 +158,13 @@ export function Navbar() {
               <Link href="/auth" data-testid="link-sign-in" className="hidden sm:block">
                 <Button
                   variant="ghost"
-                  className="text-sm font-normal h-8 px-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className="text-sm font-normal h-8 px-3 text-gray-300 hover:text-white hover:bg-transparent"
                 >
                   {lang === "ar" ? "تسجيل الدخول" : "Sign In"}
                 </Button>
               </Link>
               <Link href="/auth?tab=signup" data-testid="link-sign-up">
-                <Button className="text-sm font-normal h-8 px-3 bg-[#D4A853] text-white hover:bg-[#C49A48] border-none">
+                <Button className="text-sm font-normal h-8 px-3 bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] border-none">
                   {lang === "ar" ? "إنشاء حساب" : "Sign Up"}
                 </Button>
               </Link>
@@ -174,7 +174,7 @@ export function Navbar() {
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="md:hidden p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1E293B] transition-colors"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -184,12 +184,12 @@ export function Navbar() {
 
       {/* ── Mobile drawer ── */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-0.5">
+        <div className="md:hidden border-t border-[#1E293B] bg-[#0A1120] px-4 py-3 space-y-0.5">
           {navLinks.map(({ href, icon: Icon, labelEn, labelAr }) => (
             <Link key={href} href={href}>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:text-[#D4A853] hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:text-[#D4A853] hover:bg-[#1E293B] transition-colors text-left"
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 {lang === "ar" ? labelAr : labelEn}
@@ -201,7 +201,7 @@ export function Navbar() {
             <Link href="/auth">
               <button
                 onClick={() => setMobileOpen(false)}
-                className="w-full flex items-center justify-center gap-2 mt-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-[#D4A853] border border-[#D4A853]/40 hover:bg-[#D4A853]/10 transition-colors"
+                className="w-full flex items-center justify-center gap-2 mt-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-[#D4A853] border border-[#D4A853]/30 hover:bg-[#D4A853]/10 transition-colors"
               >
                 {lang === "ar" ? "تسجيل الدخول" : "Sign In"}
               </button>
@@ -211,7 +211,7 @@ export function Navbar() {
           {user && (
             <button
               onClick={() => { signOut(); setLocation("/"); setMobileOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors mt-2"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors mt-2"
             >
               <LogOut className="h-4 w-4 shrink-0" />
               {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}

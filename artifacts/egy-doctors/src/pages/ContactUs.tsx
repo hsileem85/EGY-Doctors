@@ -240,7 +240,7 @@ export default function ContactUs() {
                   <Button
                     type="submit"
                     disabled={formState === "submitting"}
-                    className="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 text-white h-11 px-8"
+                    className="w-full sm:w-auto bg-[#0F172A] hover:bg-[#1E293B] text-white h-11 px-8"
                   >
                     {formState === "submitting" ? (
                       <span className="flex items-center gap-2">
@@ -261,7 +261,7 @@ export default function ContactUs() {
         </div>
 
         {/* FAQ teaser */}
-        <div className="mt-12 bg-gray-900 rounded-xl p-8 text-center">
+        <div className="mt-12 bg-[#0F172A] rounded-xl p-8 text-center">
           <h2 className="text-xl font-bold text-white mb-2">
             {isRTL ? "هل تحتاج إلى مساعدة سريعة؟" : "Need Quick Help?"}
           </h2>

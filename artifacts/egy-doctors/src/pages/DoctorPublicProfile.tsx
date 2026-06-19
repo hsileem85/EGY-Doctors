@@ -41,9 +41,9 @@ export default function DoctorPublicProfile() {
     return (
       <Layout>
         <div className="min-h-screen bg-[#F1F5F9] pb-20">
-          <div className="bg-white border-b border-gray-200 py-8">
+          <div className="bg-[#0F172A] text-white py-8">
             <div className="container mx-auto px-4 max-w-5xl">
-              <div className="animate-pulse h-40 bg-gray-200 rounded-xl" />
+              <div className="animate-pulse h-40 bg-[#1E293B] rounded-xl" />
             </div>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function DoctorPublicProfile() {
     <Layout>
       <div className="min-h-screen bg-[#F1F5F9] pb-20">
         {/* Header banner */}
-        <div className="bg-white border-b border-gray-200 py-8">
+        <div className="bg-[#0F172A] text-white py-8">
           <div className="container mx-auto px-4 max-w-5xl">
             <button
               onClick={() => window.history.back()}
@@ -106,7 +106,7 @@ export default function DoctorPublicProfile() {
               />
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-900">{doctor.name}</h1>
+                  <h1 className="text-2xl font-bold text-white">{doctor.name}</h1>
                   <Badge className="bg-[#D4A853]/20 text-[#D4A853] border-[#D4A853]/30 hover:bg-[#D4A853]/30">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     {isRTL ? "موثق" : "Verified"}
@@ -121,14 +121,14 @@ export default function DoctorPublicProfile() {
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
                   <button
                     onClick={() => document.getElementById("reviews-section")?.scrollIntoView({ behavior: "smooth" })}
-                    className="flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
                   >
                     <div className="flex text-amber-400">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star key={i} className="h-4 w-4 fill-current" />
                       ))}
                     </div>
-                    <span className="font-medium text-gray-900">{doctor.rating}</span>
+                    <span className="font-medium text-white">{doctor.rating}</span>
                     <span className="text-gray-400">({doctor.reviews} {t.card.reviews})</span>
                   </button>
                   <div className="flex items-center gap-1">
@@ -372,7 +372,7 @@ export default function DoctorPublicProfile() {
                         <Button
                           type="submit"
                           disabled={reviewStatus === "submitting"}
-                          className="bg-gray-900 hover:bg-gray-800 text-white font-semibold px-6"
+                          className="bg-[#0F172A] hover:bg-[#1e293b] text-white font-semibold px-6"
                         >
                           {reviewStatus === "submitting"
                             ? (isRTL ? "جارٍ الإرسال..." : "Submitting...")
@@ -421,7 +421,7 @@ export default function DoctorPublicProfile() {
               </Card>
 
               {/* Book CTA */}
-              <Card className="bg-gray-50 border-[#D4A853]/20">
+              <Card className="bg-[#0F172A] border-[#D4A853]/20">
                 <CardContent className="p-6 text-center">
                   <p className="text-gray-300 text-sm mb-4">
                     {isRTL
