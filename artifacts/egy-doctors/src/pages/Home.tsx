@@ -369,7 +369,7 @@ export default function Home() {
 
                     {/* Doctor info */}
                     <div className="flex-1 min-w-0">
-                      <Link href={`/doctor/${doc.id}`}>
+                      <Link href={`/profile/${doc.id}`}>
                         <h3 className="text-sm font-extrabold text-slate-900 truncate hover:text-[#D4A853] transition-colors cursor-pointer">
                           {doc.name}
                         </h3>
