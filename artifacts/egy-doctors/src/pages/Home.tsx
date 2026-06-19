@@ -300,12 +300,11 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div className="py-8">
+            <div className="bg-[#0F172A] py-12">
               <div className="max-w-5xl mx-auto px-4">
-                <div className="bg-[#0F172A] rounded-3xl shadow-2xl overflow-hidden">
 
                   {/* Header */}
-                  <div className={`flex items-center justify-between px-8 pt-7 pb-5 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <div className={`flex items-center justify-between mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
                     <div>
                       <div className={`flex items-center gap-2 mb-1.5 ${isRTL ? "flex-row-reverse" : ""}`}>
                         <div className="h-px w-5 bg-[#D4A853]" />
@@ -330,11 +329,10 @@ export default function Home() {
                   </div>
 
                   {/* Gold rule */}
-                  <div className={`mx-8 h-px mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-[#D4A853]/10 to-[#D4A853]/40" : "from-[#D4A853]/40 via-[#D4A853]/10 to-transparent"}`} />
+                  <div className={`h-px mb-8 bg-gradient-to-r ${isRTL ? "from-transparent via-[#D4A853]/10 to-[#D4A853]/40" : "from-[#D4A853]/40 via-[#D4A853]/10 to-transparent"}`} />
 
                   {/* Unified grid */}
-                  <div className="px-8 pb-7">
-                    <div className="grid grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-4 gap-2.5">
                       {specialties.map((sp) => {
                         const key = sp.name.toLowerCase();
                         const Icon = SPECIALTY_ICON[key] ?? Stethoscope;
@@ -362,9 +360,6 @@ export default function Home() {
                         );
                       })}
                     </div>
-                  </div>
-
-                </div>
               </div>
             </div>
           );
