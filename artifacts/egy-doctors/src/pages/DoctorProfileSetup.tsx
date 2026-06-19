@@ -76,6 +76,13 @@ export default function DoctorProfileSetup() {
   const isEditMode = pathname.includes("edit-profile");
   const isRTL = dir === "rtl";
 
+  // Block access for doctors who are not yet approved — redirect to dashboard (pending screen)
+  const accountStatus = user?.accountStatus ?? null;
+  const isBlocked = !!user && user.role === "doctor" && accountStatus !== "approved";
+  useEffect(() => {
+    if (isBlocked) setLocation("/dashboard");
+  }, [isBlocked, setLocation]);
+
   const { data: apiSpecialties = [] } = useQuery({
     queryKey: ["specialties"],
     queryFn: getSpecialties,
@@ -278,6 +285,8 @@ export default function DoctorProfileSetup() {
       setIsSaving(false);
     }
   };
+
+  if (isBlocked) return null;
 
   return (
     <Layout>

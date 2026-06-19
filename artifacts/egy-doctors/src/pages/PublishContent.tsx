@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 import { 
   FileText, Video, MessageSquare, CheckCircle2, 
@@ -28,17 +30,19 @@ const ICONS = [Heart, Brain, Shield, Activity, Stethoscope, Baby];
 
 export default function PublishContent() {
   const { t, dir } = useLanguage();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [publishedItems, setPublishedItems] = useState<PublishedItem[]>([]);
   const [successTab, setSuccessTab] = useState<string | null>(null);
-
-  // Article state
   const [article, setArticle] = useState({ title: "", category: "", coverUrl: "", content: "", tagInput: "", tags: [] as string[] });
-  
-  // Video state
   const [video, setVideo] = useState({ title: "", url: "", description: "" });
-  
-  // Advice state
   const [advice, setAdvice] = useState({ title: "", category: "", body: "", iconIdx: 0 });
+
+  const isBlocked = !!user && user.role === "doctor" && user.accountStatus !== "approved";
+  useEffect(() => {
+    if (isBlocked) setLocation("/dashboard");
+  }, [isBlocked, setLocation]);
+  if (isBlocked) return null;
 
   const categories = Object.entries(t.publish.categories).map(([k, v]) => ({ key: k, label: v as string }));
 
