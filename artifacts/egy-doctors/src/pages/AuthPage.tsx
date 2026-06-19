@@ -158,12 +158,14 @@ export default function AuthPage() {
       setForgotStep("reset");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("No email") || msg.includes("email")) {
+      if (msg.includes("No email address on file") || msg.includes("No email on file")) {
         setForgotError(isRTL ? "لا يوجد بريد إلكتروني مرتبط بهذا الحساب. تواصل مع الدعم." : "No email on file for this account. Please contact support.");
-      } else if (msg.includes("No account") || msg.includes("phone")) {
+      } else if (msg.includes("No account found") || msg.includes("not found")) {
         setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
+      } else if (msg.includes("Failed to send") || msg.includes("reset email")) {
+        setForgotError(isRTL ? "تعذر إرسال البريد الإلكتروني. يرجى المحاولة مرة أخرى." : "Could not send the reset email. Please try again.");
       } else {
-        setForgotError(isRTL ? "رقم الهاتف غير موجود" : "Phone number not found");
+        setForgotError(isRTL ? "حدث خطأ. يرجى المحاولة مرة أخرى." : "Something went wrong. Please try again.");
       }
     } finally {
       setForgotLoading(false);
