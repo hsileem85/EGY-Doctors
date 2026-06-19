@@ -67,7 +67,10 @@ import {
   UserPlus,
   Stethoscope as DoctorIcon,
   Building2,
+  KeyRound,
+  Search,
 } from "lucide-react";
+import { adminSearchUser, adminResetUserPassword } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -287,6 +290,7 @@ function AdminLoginGate() {
 
 const tabs = [
   { id: "doctors", label: "Doctors", labelAr: "الأطباء", icon: Users },
+  { id: "users", label: "Users", labelAr: "المستخدمون", icon: KeyRound },
   { id: "specialties", label: "Specialties", labelAr: "التخصصات", icon: Stethoscope },
   { id: "cities", label: "Cities", labelAr: "المحافظات", icon: MapPinHouse },
   { id: "areas", label: "Areas", labelAr: "المناطق", icon: MapPin },
@@ -370,6 +374,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {activeTab === "doctors" && <DoctorsSection lang={lang} />}
+        {activeTab === "users" && <UsersSection lang={lang} />}
         {activeTab === "specialties" && <SpecialtiesSection lang={lang} />}
         {activeTab === "cities" && <CitiesSection lang={lang} />}
         {activeTab === "areas" && <AreasSection lang={lang} />}
@@ -379,6 +384,135 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
 }
 
 /* ─── Doctors Section ─── */
+
+/* ─── Users Section (admin password reset) ─── */
+function UsersSection({ lang }: { lang: string }) {
+  const isAr = lang === "ar";
+  const [phone, setPhone] = useState("");
+  const [foundUser, setFoundUser] = useState<{ id: number; name: string; phone: string; email: string | null; role: string } | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFoundUser(null);
+    setSearchError(null);
+    setResetSuccess(null);
+    setResetError(null);
+    setNewPassword("");
+    setSearching(true);
+    try {
+      const user = await adminSearchUser(phone.trim());
+      setFoundUser(user);
+    } catch (err: unknown) {
+      setSearchError(err instanceof Error ? err.message : "User not found");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!foundUser) return;
+    setResetError(null);
+    setResetSuccess(null);
+    setResetting(true);
+    try {
+      await adminResetUserPassword(foundUser.phone, newPassword);
+      setResetSuccess(isAr ? `تم تغيير كلمة مرور ${foundUser.name} بنجاح` : `Password for ${foundUser.name} has been reset successfully.`);
+      setNewPassword("");
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : "Reset failed");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-lg">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-[#D4A853]/10 flex items-center justify-center">
+            <KeyRound className="w-5 h-5 text-[#D4A853]" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">{isAr ? "إعادة تعيين كلمة المرور" : "Reset User Password"}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{isAr ? "ابحث عن المستخدم برقم الهاتف ثم عيّن كلمة مرور جديدة" : "Find user by phone number, then set a new password directly."}</p>
+          </div>
+        </div>
+
+        {/* Step 1: Search */}
+        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+          <Input
+            value={phone}
+            onChange={(e) => { setPhone(e.target.value); setSearchError(null); setFoundUser(null); setResetSuccess(null); }}
+            placeholder={isAr ? "رقم الهاتف (مثال: 01070200998)" : "Phone number (e.g. 01070200998)"}
+            className="flex-1 font-mono text-sm"
+            dir="ltr"
+          />
+          <Button type="submit" disabled={searching || !phone.trim()} className="bg-[#0F172A] text-white hover:bg-[#1E293B] shrink-0">
+            {searching ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Search className="w-4 h-4" />}
+          </Button>
+        </form>
+
+        {searchError && (
+          <p className="text-sm text-red-500 mb-4 flex items-center gap-1.5">
+            <X className="w-3.5 h-3.5 shrink-0" /> {searchError}
+          </p>
+        )}
+
+        {/* Step 2: Found user + reset form */}
+        {foundUser && (
+          <div className="mt-2">
+            <div className="rounded-lg bg-[#F8FAFC] border border-gray-200 p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#D4A853]/15 flex items-center justify-center text-[#D4A853] font-bold text-sm shrink-0">
+                  {foundUser.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{foundUser.name}</p>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">{foundUser.phone}</p>
+                  {foundUser.email && <p className="text-xs text-gray-500 mt-0.5">{foundUser.email}</p>}
+                  <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] font-medium rounded-full bg-[#D4A853]/10 text-[#92400E] capitalize">{foundUser.role}</span>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleReset} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">{isAr ? "كلمة المرور الجديدة" : "New Password"}</label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setResetError(null); }}
+                  placeholder={isAr ? "6 أحرف على الأقل" : "At least 6 characters"}
+                  className="font-mono"
+                  dir="ltr"
+                  minLength={6}
+                />
+              </div>
+              {resetError && <p className="text-sm text-red-500 flex items-center gap-1.5"><X className="w-3.5 h-3.5 shrink-0" />{resetError}</p>}
+              {resetSuccess && <p className="text-sm text-green-600 flex items-center gap-1.5"><Check className="w-3.5 h-3.5 shrink-0" />{resetSuccess}</p>}
+              <Button
+                type="submit"
+                disabled={resetting || newPassword.length < 6}
+                className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] font-semibold"
+              >
+                {resetting
+                  ? (isAr ? "جارٍ التغيير..." : "Resetting...")
+                  : (isAr ? "تعيين كلمة المرور" : "Reset Password")}
+              </Button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 type AdminDoctor = Doctor & {
   specialtyName?: string | null;

@@ -280,6 +280,18 @@ export function submitReview(
   });
 }
 
+export async function adminSearchUser(phone: string): Promise<{ id: number; name: string; phone: string; email: string | null; role: string }> {
+  return request(`/admin/users/search?phone=${encodeURIComponent(phone)}`);
+}
+
+export async function adminResetUserPassword(phone: string, newPassword: string): Promise<{ ok: boolean; user: { id: number; name: string; phone: string; email: string | null; role: string } }> {
+  return request("/admin/users/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, newPassword }),
+  });
+}
+
 export function getAppointments(params?: {
   doctorId?: number;
   patientUserId?: number;

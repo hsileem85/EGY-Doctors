@@ -1,7 +1,17 @@
 import { Router, type IRouter } from "express";
-import { eq, max } from "drizzle-orm";
+import { eq, max, inArray } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
+
+function phoneVariants(phone: string): string[] {
+  const digits = phone.replace(/\D/g, "");
+  const local = digits.startsWith("20") && digits.length > 10 ? digits.slice(2) : digits;
+  const withZero    = local.startsWith("0") ? local : "0" + local;
+  const withoutZero = local.startsWith("0") ? local.slice(1) : local;
+  return Array.from(new Set([withZero, withoutZero, "20"+withoutZero, "+20"+withoutZero, digits, "+"+digits]));
+}
 
 function stringifyDates<T>(rows: T[]): T[] {
   return rows.map((row) => stringifyRow(row));
@@ -459,6 +469,56 @@ router.patch("/admin/notifications/:id/read", async (req, res): Promise<void> =>
 router.delete("/admin/notifications", async (_req, res): Promise<void> => {
   await db.delete(adminNotificationsTable);
   res.sendStatus(204);
+});
+
+/* ─── POST /admin/users/reset-password ─── */
+router.post("/admin/users/reset-password", async (req, res): Promise<void> => {
+  const Schema = z.object({
+    phone: z.string().min(7, "Phone is required"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  });
+  const parsed = Schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const [user] = await db
+    .select({ id: usersTable.id, name: usersTable.name, phone: usersTable.phone, email: usersTable.email, role: usersTable.role })
+    .from(usersTable)
+    .where(inArray(usersTable.phone, phoneVariants(parsed.data.phone)))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: "No account found with this phone number." });
+    return;
+  }
+
+  const hash = await bcrypt.hash(parsed.data.newPassword, 10);
+  await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, user.id));
+
+  req.log.info({ userId: user.id }, "Admin reset user password");
+  res.json({ ok: true, user: { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role } });
+});
+
+/* ─── GET /admin/users/search ─── */
+router.get("/admin/users/search", async (req, res): Promise<void> => {
+  const phone = String(req.query.phone ?? "").trim();
+  if (!phone) {
+    res.status(400).json({ error: "phone query param is required" });
+    return;
+  }
+  const [user] = await db
+    .select({ id: usersTable.id, name: usersTable.name, phone: usersTable.phone, email: usersTable.email, role: usersTable.role })
+    .from(usersTable)
+    .where(inArray(usersTable.phone, phoneVariants(phone)))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: "No account found with this phone number." });
+    return;
+  }
+  res.json(user);
 });
 
 export default router;
