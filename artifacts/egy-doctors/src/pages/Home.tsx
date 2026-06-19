@@ -387,7 +387,7 @@ export default function Home() {
                         const phoneVisible = shownPhones.get(doc.id)?.has(ci) ?? false;
                         const hasPhone = Boolean(clinic.phone);
                         return (
-                          <div key={clinic.id} className="flex items-center gap-1 flex-wrap">
+                          <div key={clinic.id} className="flex items-center gap-1">
                             <a
                               href={mapsUrl(clinic)}
                               target="_blank"
