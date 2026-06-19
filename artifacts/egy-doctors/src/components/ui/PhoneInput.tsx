@@ -294,14 +294,54 @@ export function PhoneInput({
       <Input
         id={id}
         type="tel"
+        inputMode="numeric"
         value={phone}
-        onChange={(e) => onPhoneChange(e.target.value)}
+        onChange={(e) => onPhoneChange(normalizePhoneInput(e.target.value, countryCode))}
         placeholder={placeholder}
+        maxLength={(MAX_LOCAL_DIGITS[countryCode] ?? 15)}
         data-testid={testId}
         className="rounded-l-none bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
       />
     </div>
   );
+}
+
+/** Max local-number length by dial code (digits only, no leading zero, no country code).
+ *  Covers all countries in the list. Falls back to 15 (ITU max) for unknowns. */
+const MAX_LOCAL_DIGITS: Record<string, number> = {
+  "+20": 10,  // Egypt  01XXXXXXXXX → 10 digits without leading 0
+  "+966": 9,  // Saudi Arabia
+  "+971": 9,  // UAE
+  "+965": 8,  // Kuwait
+  "+974": 8,  // Qatar
+  "+973": 8,  // Bahrain
+  "+968": 8,  // Oman
+  "+962": 9,  // Jordan
+  "+961": 8,  // Lebanon
+  "+970": 9,  // Palestine
+  "+1":   10, // US/Canada
+  "+44":  10, // UK
+  "+49":  11, // Germany
+  "+33":  9,  // France
+  "+39":  10, // Italy
+  "+34":  9,  // Spain
+  "+90":  10, // Turkey
+  "+91":  10, // India
+  "+86":  11, // China
+  "+55":  11, // Brazil
+  "+7":   10, // Russia
+};
+
+/** Normalize a phone input value:
+ *  1. Keep digits only (strip spaces, dashes, letters, +, parens).
+ *  2. Strip all leading zeros (country code prefix already in dropdown).
+ *  3. Clamp to the max local-number length for the selected country.
+ */
+export function normalizePhoneInput(raw: string, countryCode: string): string {
+  const digits = raw.replace(/\D/g, "");               // digits only
+  const stripped = digits.replace(/^0+/, "");          // strip leading zeros
+  const max = MAX_LOCAL_DIGITS[countryCode] ?? 15;
+  return stripped.slice(0, max);
 }
 
 export function buildPhone(countryCode: string, localNumber: string): string {
