@@ -131,24 +131,24 @@ export default function Home() {
     <Layout>
       <div className="min-h-screen bg-white font-sans pb-20">
         {/* Header: Location & Search */}
-        <header className="bg-[#0F172A] pt-2 pb-4 px-4 shadow-md">
+        <header className="bg-white pt-2 pb-4 px-4 border-b border-gray-100">
           <div className="max-w-5xl mx-auto flex flex-col gap-1.5">
             {/* Top row: badge left, location right */}
             <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-                <span className="text-xs font-medium text-gray-300 tracking-wide">
+              <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+                <span className="text-xs font-medium text-green-700 tracking-wide">
                   {isRTL ? "المنصة الطبية الأولى في مصر" : "Egypt's #1 Medical Booking Platform"}
                 </span>
               </div>
               {/* Location indicator */}
-              <div className="inline-flex items-center gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm">
+              <div className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full text-gray-700 backdrop-blur-sm">
                 <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
                 <div className="flex flex-col">
-                  <span className="text-[8px] text-gray-400 font-medium leading-none">
+                  <span className="text-[8px] text-gray-500 font-medium leading-none">
                     {isRTL ? "الموقع الحالي" : "Current Location"}
                   </span>
-                  <span className="text-[10px] font-bold tracking-wide">
+                  <span className="text-[10px] font-bold tracking-wide text-gray-800">
                     {isDetecting
                       ? (isRTL ? "جاري التحديد..." : "Detecting...")
                       : locationName || (isRTL ? "غير محدد" : "Unknown")}
@@ -157,7 +157,7 @@ export default function Home() {
                 <button
                   onClick={detectLocation}
                   disabled={isDetecting}
-                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors disabled:opacity-50"
+                  className="ml-1 pl-1 border-l border-gray-300 text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors disabled:opacity-50"
                 >
                   {isDetecting
                     ? isRTL ? "..." : "..."
@@ -168,7 +168,7 @@ export default function Home() {
 
             {/* Hero Text */}
             <div className="text-center py-1">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight mb-1.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight mb-1.5">
                 {isRTL ? (
                   <>
                     ابحث واحجز مع{" "}
@@ -183,7 +183,7 @@ export default function Home() {
                   </>
                 )}
               </h1>
-              <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
+              <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto leading-relaxed">
                 {isRTL
                   ? "تواصل مع أكثر من 2,500 طبيب موثق."
                   : "Connect with 2,500+ verified medical professionals."}
@@ -257,12 +257,12 @@ export default function Home() {
         </header>
 
         {/* Stats Strip */}
-        <div className="bg-[#1E293B] border-b border-[#334155] py-1.5">
-          <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
+        <div className="bg-slate-50 border-b border-slate-200 py-1.5">
+          <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-slate-700 gap-x-8 gap-y-4">
             {HOME_STATS.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
                 <span className="text-[#D4A853] font-bold">{s.value}</span>
-                <span className="font-medium text-gray-400 uppercase text-[11px] sm:text-xs tracking-wider">
+                <span className="font-medium text-slate-500 uppercase text-[11px] sm:text-xs tracking-wider">
                   {isRTL ? s.labelAr : s.label}
                 </span>
               </div>
@@ -301,7 +301,7 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div className="bg-[#0F172A] pt-5 pb-8 sm:pt-6 sm:pb-12">
+            <div className="bg-slate-50 pt-5 pb-8 sm:pt-6 sm:pb-12">
               <div className="max-w-5xl mx-auto px-4">
 
                   {/* Header — single compact row */}
@@ -322,7 +322,7 @@ export default function Home() {
                   </div>
 
                   {/* Gold gradient divider */}
-                  <div className={`h-[1px] w-full mb-4 sm:mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-slate-700/40 to-yellow-500/60" : "from-yellow-500/60 via-slate-700/40 to-transparent"}`} />
+                  <div className={`h-[1px] w-full mb-4 sm:mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-slate-200 to-yellow-400/60" : "from-yellow-400/60 via-slate-200 to-transparent"}`} />
 
                   {/* Grid — 2 cols mobile, 3 tablet, 4 desktop */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
@@ -334,16 +334,16 @@ export default function Home() {
                       <button
                         key={sp.id}
                         onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
-                        className={`group relative rounded-xl p-2.5 sm:p-3.5 flex items-center sm:items-start gap-2 sm:gap-3 text-left transition-all duration-200 border border-white/[0.06] bg-white/[0.04] hover:bg-[#D4A853]/8 hover:border-[#D4A853]/35 active:scale-[0.97] hover:-translate-y-px hover:shadow-lg hover:shadow-[#D4A853]/8 ${isRTL ? "flex-row-reverse text-right" : ""}`}
+                        className={`group relative rounded-xl p-2.5 sm:p-3.5 flex items-center sm:items-start gap-2 sm:gap-3 text-left transition-all duration-200 border border-gray-200 bg-white hover:bg-[#D4A853]/5 hover:border-[#D4A853]/40 active:scale-[0.97] hover:-translate-y-px hover:shadow-md hover:shadow-[#D4A853]/10 ${isRTL ? "flex-row-reverse text-right" : ""}`}
                       >
-                        <div className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#D4A853]/12 flex items-center justify-center transition-all duration-200 group-hover:bg-[#D4A853]/22">
+                        <div className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#D4A853]/10 flex items-center justify-center transition-all duration-200 group-hover:bg-[#D4A853]/20">
                           <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A853]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[11px] sm:text-[13px] font-bold text-white leading-snug truncate">
+                          <p className="text-[11px] sm:text-[13px] font-bold text-gray-800 leading-snug truncate">
                             {isRTL ? sp.nameAr : sp.name}
                           </p>
-                          <span className="inline-block mt-0.5 sm:mt-1 text-[9px] sm:text-[10px] font-semibold text-[#D4A853]/70 bg-[#D4A853]/8 rounded-full px-1.5 py-px">
+                          <span className="inline-block mt-0.5 sm:mt-1 text-[9px] sm:text-[10px] font-semibold text-[#D4A853] bg-[#D4A853]/10 rounded-full px-1.5 py-px">
                             {count} {isRTL ? "طبيب" : count === 1 ? "doctor" : "doctors"}
                           </span>
                         </div>

@@ -275,11 +275,11 @@ export default function Magazine() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F172A]">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
       {/* Hero Header */}
-      <div className="bg-[#0F172A] border-b border-[#1E293B]">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
             {/* Stethoscope SVG Icon */}
@@ -324,7 +324,7 @@ export default function Magazine() {
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 filter === f.key
                   ? "bg-[#D4A853] text-[#0F172A]"
-                  : "bg-[#1E293B] text-gray-400 hover:text-white hover:bg-[#334155]"
+                  : "bg-gray-100 text-gray-500 hover:text-gray-900 hover:bg-gray-200"
               }`}
             >
               {f.icon}
@@ -340,7 +340,7 @@ export default function Magazine() {
             <Badge
               key={tag}
               variant="outline"
-              className="bg-[#1E293B]/50 border-[#334155] text-[#D4A853] hover:bg-[#D4A853]/10 cursor-pointer"
+              className="bg-gray-100 border-gray-200 text-[#D4A853] hover:bg-[#D4A853]/10 cursor-pointer"
             >
               {tag}
             </Badge>
@@ -361,7 +361,7 @@ export default function Magazine() {
             return (
               <Card
                 key={post.id}
-                className="bg-[#1E293B]/80 border-[#334155] overflow-hidden hover:border-[#D4A853]/30 transition-colors"
+                className="bg-white border-gray-200 overflow-hidden hover:border-[#D4A853]/30 transition-colors"
               >
                 <CardContent className="p-0">
                   {/* Header */}
@@ -381,7 +381,7 @@ export default function Magazine() {
                           </h3>
                         </Link>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
-                          <span className="text-gray-400">{post.specialty}</span>
+                          <span className="text-gray-500">{post.specialty}</span>
                           <span className="text-gray-600 hidden sm:inline">·</span>
                           <span className="text-gray-500 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -398,7 +398,7 @@ export default function Magazine() {
                         className={`h-8 px-2 text-xs border transition-all ${
                           isFollowing
                             ? "bg-[#D4A853]/10 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/20"
-                            : "bg-transparent border-[#334155] text-gray-400 hover:text-[#D4A853] hover:border-[#D4A853]/50"
+                            : "bg-transparent border-gray-200 text-gray-500 hover:text-[#D4A853] hover:border-[#D4A853]/50"
                         }`}
                       >
                         {isFollowing ? (
@@ -430,7 +430,7 @@ export default function Magazine() {
                         <Badge
                           key={tag}
                           variant="outline"
-                          className="bg-[#0F172A]/50 border-[#334155] text-gray-400 text-xs shrink-0"
+                          className="bg-gray-50 border-gray-200 text-gray-400 text-xs shrink-0"
                         >
                           {tag}
                         </Badge>
@@ -460,7 +460,7 @@ export default function Magazine() {
                   )}
 
                   {/* Action Bar */}
-                  <div className="px-5 py-3 border-t border-[#334155] flex items-center justify-between">
+                  <div className="px-5 py-3 border-t border-gray-200 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <button
                         onClick={() => toggleLike(post.id)}
@@ -509,7 +509,7 @@ export default function Magazine() {
 
                   {/* Comments Section */}
                   {isExpanded && (
-                    <div className="px-5 py-4 border-t border-[#334155] bg-[#0F172A]/30">
+                    <div className="px-5 py-4 border-t border-gray-200 bg-gray-50">
                       <div className="space-y-4 mb-4">
                         {comments.length === 0 ? (
                           <p className="text-gray-500 text-sm text-center py-4">
@@ -519,12 +519,12 @@ export default function Magazine() {
                           comments.map(comment => (
                             <div key={comment.id} className="flex items-start gap-3">
                               <Avatar className="w-8 h-8 border border-[#334155]">
-                                <AvatarFallback className="bg-[#1E293B] text-[#D4A853] text-xs font-bold">
+                                <AvatarFallback className="bg-gray-100 text-[#D4A853] text-xs font-bold">
                                   {comment.avatar}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
-                                <div className="bg-[#1E293B] rounded-lg px-3 py-2">
+                                <div className="bg-gray-100 rounded-lg px-3 py-2">
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className="font-medium text-sm text-white">{comment.author}</span>
                                     <span className="text-xs text-gray-500">{comment.time}</span>
@@ -561,7 +561,7 @@ export default function Magazine() {
                               if (e.key === "Enter") addComment(post.id);
                             }}
                             placeholder={isRTL ? "أكتب تعليقاً..." : "Write a comment..."}
-                            className="bg-[#0F172A] border-[#334155] text-white placeholder:text-gray-500 focus-visible:ring-[#D4A853] focus-visible:ring-1 h-9 text-sm"
+                            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#D4A853] focus-visible:ring-1 h-9 text-sm"
                           />
                           <Button
                             size="icon"
