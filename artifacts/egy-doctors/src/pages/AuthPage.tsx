@@ -572,7 +572,6 @@ export default function AuthPage() {
                       <Input
                         id="signupNameAr"
                         dir="rtl"
-                        placeholder="د. محمد أحمد"
                         value={signupData.fullNameAr}
                         onChange={(e) => setSignupData({ ...signupData, fullNameAr: e.target.value })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"

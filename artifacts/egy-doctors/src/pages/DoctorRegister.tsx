@@ -130,7 +130,6 @@ export default function DoctorRegister() {
                 <Input 
                   id="fullNameAr"
                   dir="rtl"
-                  placeholder="د. محمد أحمد"
                   value={formData.fullNameAr} 
                   onChange={e => setFormData({...formData, fullNameAr: e.target.value})} 
                   data-testid="input-register-fullname-ar"
