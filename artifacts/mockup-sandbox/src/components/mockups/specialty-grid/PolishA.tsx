@@ -35,7 +35,7 @@ export function PolishA() {
               <div className="h-px w-5 bg-[#D4A853]" />
               <p className="text-[#D4A853] text-[10px] font-black uppercase tracking-[0.2em]">Medical Specialties</p>
             </div>
-            <h2 className="text-[22px] font-black text-white leading-tight tracking-tight">Browse by Specialty</h2>
+            <h2 className="font-black text-white tracking-tight text-[16px]">Browse by Specialty</h2>
             <p className="text-slate-500 text-xs mt-1">Find the right expert for your health needs</p>
           </div>
           <button className="flex items-center gap-1.5 text-xs font-bold text-[#D4A853] border border-[#D4A853]/30 hover:border-[#D4A853] rounded-full px-4 py-2 transition-all duration-200 hover:bg-[#D4A853]/5">
