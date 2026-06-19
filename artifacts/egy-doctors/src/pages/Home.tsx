@@ -431,10 +431,7 @@ export default function Home() {
                     </div>
 
                     {/* Fee */}
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] font-medium text-slate-400">
-                        {isRTL ? "الكشف" : "Consultation"}
-                      </p>
+                    <div className="text-right shrink-0 self-start">
                       <p className="text-xl font-black text-slate-900 leading-tight">{doc.fee}</p>
                       <p className="text-[10px] text-slate-400 -mt-0.5">{t.dashboard.egp}</p>
                     </div>
