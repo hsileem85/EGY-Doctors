@@ -364,13 +364,13 @@ export default function Home() {
                     </div>
 
                     {/* ── Col 2: Doctor Info ── */}
-                    <div className="flex flex-col gap-1.5 min-w-0">
+                    <div className="flex flex-col justify-between min-w-0 h-full">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors">
+                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate whitespace-nowrap">
                           {doc.name}
                         </h3>
                       </Link>
-                      <span className="inline-flex items-center gap-1 self-start bg-blue-50 text-blue-700 rounded-full px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 self-start bg-blue-50 text-blue-700 rounded-full px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap mt-auto">
                         <HeartPulse className="w-2.5 h-2.5 shrink-0" />
                         {t.specialties[doc.specialty] ?? doc.specialty}
                       </span>
