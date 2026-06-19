@@ -271,6 +271,69 @@ export default function Home() {
         </div>
 
 
+        {/* Browse by Specialty — grid only, no header text */}
+        {specialties.length > 0 && (() => {
+          const SPECIALTY_ICON: Record<string, LucideIcon> = {
+            neurology: Brain,
+            cardiology: Heart,
+            dentistry: Smile,
+            ophthalmology: Eye,
+            orthopedics: Bone,
+            dermatology: Sparkles,
+            pediatrics: Baby,
+            oncology: Microscope,
+            general: Stethoscope,
+            "general medicine": Stethoscope,
+            "internal medicine": Stethoscope,
+            pulmonology: Wind,
+            endocrinology: FlaskConical,
+            psychiatry: Pill,
+            gynecology: Flower2,
+            urology: Droplets,
+            gastroenterology: Activity,
+            nephrology: Droplets,
+            rheumatology: Activity,
+            radiology: Scan,
+            ent: Brain,
+          };
+          const countBySpecialty: Record<string, number> = {};
+          allDoctors.forEach(d => {
+            if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
+          });
+          return (
+            <div className="bg-[#0F172A] py-8">
+              <div className="max-w-5xl mx-auto px-4">
+                <div className="grid grid-cols-4 gap-2.5">
+                  {specialties.map((sp) => {
+                    const key = sp.name.toLowerCase();
+                    const Icon = SPECIALTY_ICON[key] ?? Stethoscope;
+                    const count = countBySpecialty[key] ?? 0;
+                    return (
+                      <button
+                        key={sp.id}
+                        onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
+                        className={`group relative rounded-xl p-3.5 flex items-start gap-3 text-left transition-all duration-200 border border-white/[0.06] bg-white/[0.04] hover:bg-[#D4A853]/8 hover:border-[#D4A853]/35 hover:-translate-y-px hover:shadow-lg hover:shadow-[#D4A853]/8 ${isRTL ? "flex-row-reverse text-right" : ""}`}
+                      >
+                        <div className="shrink-0 w-9 h-9 rounded-full bg-[#D4A853]/12 flex items-center justify-center transition-all duration-200 group-hover:bg-[#D4A853]/22 mt-0.5">
+                          <Icon className="w-4 h-4 text-[#D4A853]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-white leading-snug truncate">
+                            {isRTL ? sp.nameAr : sp.name}
+                          </p>
+                          <span className="inline-block mt-1 text-[10px] font-semibold text-[#D4A853]/70 bg-[#D4A853]/8 rounded-full px-1.5 py-px">
+                            {count} {isRTL ? "طبيب" : count === 1 ? "doctor" : "doctors"}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Main List */}
         <main className="max-w-5xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-4">
