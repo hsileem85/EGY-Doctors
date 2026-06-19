@@ -301,7 +301,7 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div className="bg-[#0F172A] pt-6 pb-12">
+            <div className="bg-[#0F172A] pt-5 pb-8 sm:pt-6 sm:pb-12">
               <div className="max-w-5xl mx-auto px-4">
 
                   {/* Header — single compact row */}
@@ -322,10 +322,10 @@ export default function Home() {
                   </div>
 
                   {/* Gold gradient divider */}
-                  <div className={`h-[1px] w-full mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-slate-700/40 to-yellow-500/60" : "from-yellow-500/60 via-slate-700/40 to-transparent"}`} />
+                  <div className={`h-[1px] w-full mb-4 sm:mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-slate-700/40 to-yellow-500/60" : "from-yellow-500/60 via-slate-700/40 to-transparent"}`} />
 
-                  {/* Grid */}
-                  <div className="grid grid-cols-4 gap-2.5">
+                  {/* Grid — 2 cols mobile, 3 tablet, 4 desktop */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
                   {specialties.map((sp) => {
                     const key = sp.name.toLowerCase();
                     const Icon = SPECIALTY_ICON[key] ?? Stethoscope;
@@ -334,16 +334,16 @@ export default function Home() {
                       <button
                         key={sp.id}
                         onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
-                        className={`group relative rounded-xl p-3.5 flex items-start gap-3 text-left transition-all duration-200 border border-white/[0.06] bg-white/[0.04] hover:bg-[#D4A853]/8 hover:border-[#D4A853]/35 hover:-translate-y-px hover:shadow-lg hover:shadow-[#D4A853]/8 ${isRTL ? "flex-row-reverse text-right" : ""}`}
+                        className={`group relative rounded-xl p-2.5 sm:p-3.5 flex items-center sm:items-start gap-2 sm:gap-3 text-left transition-all duration-200 border border-white/[0.06] bg-white/[0.04] hover:bg-[#D4A853]/8 hover:border-[#D4A853]/35 active:scale-[0.97] hover:-translate-y-px hover:shadow-lg hover:shadow-[#D4A853]/8 ${isRTL ? "flex-row-reverse text-right" : ""}`}
                       >
-                        <div className="shrink-0 w-9 h-9 rounded-full bg-[#D4A853]/12 flex items-center justify-center transition-all duration-200 group-hover:bg-[#D4A853]/22 mt-0.5">
-                          <Icon className="w-4 h-4 text-[#D4A853]" />
+                        <div className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#D4A853]/12 flex items-center justify-center transition-all duration-200 group-hover:bg-[#D4A853]/22">
+                          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A853]" />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-bold text-white leading-snug truncate">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] sm:text-[13px] font-bold text-white leading-snug truncate">
                             {isRTL ? sp.nameAr : sp.name}
                           </p>
-                          <span className="inline-block mt-1 text-[10px] font-semibold text-[#D4A853]/70 bg-[#D4A853]/8 rounded-full px-1.5 py-px">
+                          <span className="inline-block mt-0.5 sm:mt-1 text-[9px] sm:text-[10px] font-semibold text-[#D4A853]/70 bg-[#D4A853]/8 rounded-full px-1.5 py-px">
                             {count} {isRTL ? "طبيب" : count === 1 ? "doctor" : "doctors"}
                           </span>
                         </div>
@@ -357,8 +357,8 @@ export default function Home() {
         })()}
 
         {/* Main List */}
-        <main className="max-w-5xl mx-auto px-4 py-5">
-          <div className="flex items-center justify-between mb-4">
+        <main className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-5">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h1 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
               {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
             </h1>

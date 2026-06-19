@@ -1,4 +1,5 @@
-import { Newspaper, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall } from "lucide-react";
+import { useState } from "react";
+import { Newspaper, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall, Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -15,22 +16,32 @@ export function Navbar() {
   const { lang, setLang, t } = useLanguage();
   const { user, signOut } = useAuth();
   const [, setLocation] = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const initials = user?.name
     ? user.name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()
     : "?";
 
+  const navLinks = [
+    { href: "/", icon: Home, labelEn: "Home", labelAr: "الرئيسية" },
+    { href: "/magazine", icon: Newspaper, labelEn: "Magazine", labelAr: "المجلة" },
+    { href: "/about", icon: Info, labelEn: "About", labelAr: "من نحن" },
+    { href: "/contact", icon: PhoneCall, labelEn: "Contact Us", labelAr: "تواصل معنا" },
+  ];
+
   return (
     <nav className="bg-[#0F172A] border-b border-[#1E293B] z-50 w-full">
-      <div className="max-w-5xl mx-auto flex h-16 items-center justify-between px-4">
+      {/* ── Main row ── */}
+      <div className="max-w-5xl mx-auto flex h-14 sm:h-16 items-center justify-between px-4">
+        {/* Logo + hotline */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
             {lang === "ar" ? (
-              <span className="text-xl font-bold text-white tracking-tight font-brand">
+              <span className="text-lg sm:text-xl font-bold text-white tracking-tight font-brand">
                 إي جي <span className="text-[#D4A853]">دكتورز</span>
               </span>
             ) : (
-              <span className="flex items-center gap-0 text-xl font-bold tracking-tight font-brand">
+              <span className="flex items-center gap-0 text-lg sm:text-xl font-bold tracking-tight font-brand">
                 <span className="text-white">EG</span>
                 <span className="text-[#D4A853]">Y Doctors</span>
               </span>
@@ -41,57 +52,36 @@ export function Navbar() {
             <span className="text-xs font-bold text-white tracking-wide">15992</span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {/* Desktop Nav Links */}
+
+        {/* Right side */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
-            <Link href="/">
-              <Button
-                variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
-              >
-                <Home className="h-4 w-4 mr-1" />
-                {lang === "ar" ? "الرئيسية" : "Home"}
-              </Button>
-            </Link>
-            <Link href="/magazine">
-              <Button
-                variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
-              >
-                <Newspaper className="h-4 w-4 mr-1" />
-                {lang === "ar" ? "المجلة" : "Magazine"}
-              </Button>
-            </Link>
-            <Link href="/about">
-              <Button
-                variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
-              >
-                <Info className="h-4 w-4 mr-1" />
-                {lang === "ar" ? "من نحن" : "About"}
-              </Button>
-            </Link>
-            <Link href="/contact">
-              <Button
-                variant="ghost"
-                className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
-              >
-                <PhoneCall className="h-4 w-4 mr-1" />
-                {lang === "ar" ? "تواصل معنا" : "Contact Us"}
-              </Button>
-            </Link>
+            {navLinks.map(({ href, icon: Icon, labelEn, labelAr }) => (
+              <Link key={href} href={href}>
+                <Button
+                  variant="ghost"
+                  className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
+                >
+                  <Icon className="h-4 w-4 mr-1" />
+                  {lang === "ar" ? labelAr : labelEn}
+                </Button>
+              </Link>
+            ))}
           </div>
 
           <div className="w-px h-6 bg-[#334155] hidden md:block" />
 
+          {/* Language toggle */}
           <button
             onClick={() => setLang(lang === "en" ? "ar" : "en")}
             data-testid="button-toggle-language"
-            className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-1"
+            className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-1 shrink-0"
           >
             {lang === "en" ? "ع" : "EN"}
           </button>
 
+          {/* Auth: logged-in dropdown or guest buttons */}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -165,10 +155,10 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <>
-              <Link href="/auth" data-testid="link-sign-in">
+              <Link href="/auth" data-testid="link-sign-in" className="hidden sm:block">
                 <Button
                   variant="ghost"
-                  className="text-sm font-normal hidden sm:inline-flex h-8 px-3 text-gray-300 hover:text-white hover:bg-transparent"
+                  className="text-sm font-normal h-8 px-3 text-gray-300 hover:text-white hover:bg-transparent"
                 >
                   {lang === "ar" ? "تسجيل الدخول" : "Sign In"}
                 </Button>
@@ -180,8 +170,55 @@ export function Navbar() {
               </Link>
             </>
           )}
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileOpen((o) => !o)}
+            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1E293B] transition-colors"
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {/* ── Mobile drawer ── */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-[#1E293B] bg-[#0A1120] px-4 py-3 space-y-0.5">
+          {navLinks.map(({ href, icon: Icon, labelEn, labelAr }) => (
+            <Link key={href} href={href}>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:text-[#D4A853] hover:bg-[#1E293B] transition-colors text-left"
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {lang === "ar" ? labelAr : labelEn}
+              </button>
+            </Link>
+          ))}
+
+          {!user && (
+            <Link href="/auth">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="w-full flex items-center justify-center gap-2 mt-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-[#D4A853] border border-[#D4A853]/30 hover:bg-[#D4A853]/10 transition-colors"
+              >
+                {lang === "ar" ? "تسجيل الدخول" : "Sign In"}
+              </button>
+            </Link>
+          )}
+
+          {user && (
+            <button
+              onClick={() => { signOut(); setLocation("/"); setMobileOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors mt-2"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
