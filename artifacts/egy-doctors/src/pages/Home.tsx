@@ -8,6 +8,7 @@ import {
   Star,
   Navigation,
   LocateFixed,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
@@ -31,8 +32,27 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [isDetecting, setIsDetecting] = useState(false);
   const [locationName, setLocationName] = useState("");
+  const [shownPhones, setShownPhones] = useState<Map<number, Set<number>>>(new Map());
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
+
+  function togglePhone(docId: number, clinicIdx: number) {
+    setShownPhones(prev => {
+      const next = new Map(prev);
+      const set = new Set(next.get(docId) ?? []);
+      set.has(clinicIdx) ? set.delete(clinicIdx) : set.add(clinicIdx);
+      next.set(docId, set);
+      return next;
+    });
+  }
+
+  function mapsUrl(clinic: ApiDoctor["clinics"][number]): string {
+    if (clinic.lat && clinic.lng)
+      return `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`;
+    if (clinic.mapUrl) return clinic.mapUrl;
+    const q = encodeURIComponent([clinic.address, clinic.location].filter(Boolean).join(", "));
+    return `https://www.google.com/maps/search/?api=1&query=${q}`;
+  }
 
   const detectLocation = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -351,15 +371,46 @@ export default function Home() {
                       <HeartPulse className="w-2.5 h-2.5 shrink-0" />
                       <span className="truncate">{t.specialties[doc.specialty] ?? doc.specialty}</span>
                     </span>
-                    {doc.clinics.slice(0, 1).map((clinic) => (
-                      <span
-                        key={clinic.id}
-                        className="inline-flex items-center gap-1 self-start bg-slate-100 text-slate-500 rounded-full px-2 py-0.5 text-[9px] font-medium"
-                      >
-                        <MapPin className="w-2 h-2 shrink-0" />
-                        {t.locations[clinic.location] ?? clinic.location}
-                      </span>
-                    ))}
+                    {doc.clinics.map((clinic, ci) => {
+                      const phoneVisible = shownPhones.get(doc.id)?.has(ci) ?? false;
+                      const hasPhone = Boolean(clinic.phone);
+                      return (
+                        <div key={clinic.id} className="flex items-center gap-0.5 flex-wrap">
+                          <a
+                            href={mapsUrl(clinic)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 bg-slate-100 hover:bg-primary/10 hover:text-primary text-slate-500 rounded-full px-2 py-0.5 text-[9px] font-medium transition-colors"
+                          >
+                            <MapPin className="w-2 h-2 shrink-0" />
+                            {clinic.location || doc.location}
+                          </a>
+                          {hasPhone && (
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); togglePhone(doc.id, ci); }}
+                              className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium transition-colors ${
+                                phoneVisible
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-slate-100 hover:bg-green-50 hover:text-green-700 text-slate-400"
+                              }`}
+                            >
+                              <Phone className="w-2 h-2 shrink-0" />
+                              {phoneVisible && (
+                                <a
+                                  href={`tel:${clinic.phone}`}
+                                  onClick={e => e.stopPropagation()}
+                                  className="hover:underline"
+                                >
+                                  {clinic.phone}
+                                </a>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Buttons: side-by-side, right-aligned */}
