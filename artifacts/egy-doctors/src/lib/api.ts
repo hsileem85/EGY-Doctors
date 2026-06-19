@@ -269,6 +269,17 @@ export function bookAppointment(data: {
   return request("/appointments", { method: "POST", body: JSON.stringify(data) });
 }
 
+export function submitReview(
+  doctorId: number,
+  data: { patientName: string; rating: number; text?: string },
+): Promise<{ ok: boolean }> {
+  return request(`/doctors/${doctorId}/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
 export function getAppointments(params?: {
   doctorId?: number;
   patientUserId?: number;

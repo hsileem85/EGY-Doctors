@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, avg, count } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
@@ -253,6 +253,52 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       date: serializeDate(r.createdAt),
     })),
   });
+});
+
+/* ─── POST /doctors/:id/reviews ─── */
+const insertReviewBodySchema = z.object({
+  patientName: z.string().min(1).max(255),
+  rating: z.number().int().min(1).max(5),
+  text: z.string().max(2000).optional(),
+});
+
+router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid doctor id" }); return; }
+
+  const parsed = insertReviewBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(422).json({ error: "Validation failed", issues: parsed.error.issues });
+    return;
+  }
+
+  const { patientName, rating, text } = parsed.data;
+
+  // Optionally resolve patientUserId from JWT (not required)
+  let patientUserId: number | null = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { sub: number };
+      patientUserId = payload.sub;
+    } catch { /* anonymous review */ }
+  }
+
+  await db.insert(reviewsTable).values({ doctorId: id, patientName, rating, text, patientUserId });
+
+  // Recalculate avg rating + count and update doctor row
+  const [agg] = await db
+    .select({ avgRating: avg(reviewsTable.rating), total: count() })
+    .from(reviewsTable)
+    .where(eq(reviewsTable.doctorId, id));
+
+  const newRating = agg.avgRating ? Math.round(parseFloat(agg.avgRating) * 10) / 10 : 0;
+  const newCount = agg.total ?? 0;
+  await db.update(doctorsTable)
+    .set({ rating: newRating, reviews: newCount })
+    .where(eq(doctorsTable.id, id));
+
+  res.status(201).json({ ok: true });
 });
 
 /* ─── GET /doctor/profile  (own profile — requires JWT) ─── */

@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle } from "lucide-react";
+import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle, Send } from "lucide-react";
+import { useState } from "react";
 
 function whatsappUrl(phone: string) {
   const digits = phone.replace(/[^\d]/g, "");
@@ -12,13 +13,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
-import { useQuery } from "@tanstack/react-query";
-import { getDoctor } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDoctor, submitReview } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DoctorPublicProfile() {
   const { id } = useParams();
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [reviewName, setReviewName] = useState("");
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewStatus, setReviewStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [reviewError, setReviewError] = useState("");
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ["doctor", id],
@@ -52,6 +63,26 @@ export default function DoctorPublicProfile() {
 
   const specialty = t.specialties[doctor.specialty] ?? doctor.specialty;
   const location = t.locations[doctor.cityName] ?? t.governorates[doctor.cityName] ?? doctor.cityName;
+
+  async function handleSubmitReview(e: React.FormEvent) {
+    e.preventDefault();
+    const name = reviewName.trim() || (user?.name ?? "");
+    if (!name) { setReviewError(isRTL ? "الرجاء إدخال اسمك" : "Please enter your name"); return; }
+    if (reviewRating === 0) { setReviewError(isRTL ? "الرجاء اختيار تقييم" : "Please select a rating"); return; }
+    setReviewError("");
+    setReviewStatus("submitting");
+    try {
+      await submitReview(parseInt(id!, 10), { patientName: name, rating: reviewRating, text: reviewText.trim() || undefined });
+      setReviewStatus("success");
+      setReviewName("");
+      setReviewRating(0);
+      setReviewText("");
+      await queryClient.invalidateQueries({ queryKey: ["doctor", id] });
+    } catch {
+      setReviewStatus("error");
+      setReviewError(isRTL ? "حدث خطأ، حاول مجدداً" : "Something went wrong, please try again.");
+    }
+  }
 
   return (
     <Layout>
@@ -252,6 +283,104 @@ export default function DoctorPublicProfile() {
                       {isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}
                     </p>
                   )}
+
+                  {/* Write a review form */}
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Send className="h-4 w-4 text-[#D4A853]" />
+                      {isRTL ? "اكتب تقييماً" : "Write a Review"}
+                    </h3>
+
+                    {reviewStatus === "success" ? (
+                      <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
+                        <p className="text-green-700 font-semibold text-sm">
+                          {isRTL ? "شكراً! تم إرسال تقييمك بنجاح." : "Thank you! Your review has been submitted."}
+                        </p>
+                        <button
+                          onClick={() => setReviewStatus("idle")}
+                          className="mt-2 text-xs text-green-600 hover:text-green-800 underline"
+                        >
+                          {isRTL ? "إضافة تقييم آخر" : "Add another review"}
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSubmitReview} className="space-y-4">
+                        {/* Name */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            {isRTL ? "الاسم" : "Your Name"} <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={reviewName || (user?.name ?? "")}
+                            onChange={e => setReviewName(e.target.value)}
+                            placeholder={isRTL ? "اسمك" : "Enter your name"}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853]"
+                          />
+                        </div>
+
+                        {/* Star rating */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-2">
+                            {isRTL ? "تقييمك" : "Your Rating"} <span className="text-red-400">*</span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setReviewRating(star)}
+                                onMouseEnter={() => setReviewHover(star)}
+                                onMouseLeave={() => setReviewHover(0)}
+                                className="focus:outline-none"
+                              >
+                                <Star
+                                  className={`h-7 w-7 transition-colors ${
+                                    star <= (reviewHover || reviewRating)
+                                      ? "text-amber-400 fill-current"
+                                      : "text-gray-300"
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                            {reviewRating > 0 && (
+                              <span className="ml-2 text-xs text-gray-500">
+                                {["", isRTL ? "سيئ" : "Poor", isRTL ? "مقبول" : "Fair", isRTL ? "جيد" : "Good", isRTL ? "جيد جداً" : "Very Good", isRTL ? "ممتاز" : "Excellent"][reviewRating]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Comment */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            {isRTL ? "تعليقك (اختياري)" : "Your Comment (optional)"}
+                          </label>
+                          <textarea
+                            value={reviewText}
+                            onChange={e => setReviewText(e.target.value)}
+                            rows={3}
+                            placeholder={isRTL ? "شارك تجربتك مع هذا الطبيب..." : "Share your experience with this doctor..."}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853] resize-none"
+                          />
+                        </div>
+
+                        {reviewError && (
+                          <p className="text-red-500 text-xs">{reviewError}</p>
+                        )}
+
+                        <Button
+                          type="submit"
+                          disabled={reviewStatus === "submitting"}
+                          className="bg-[#0F172A] hover:bg-[#1e293b] text-white font-semibold px-6"
+                        >
+                          {reviewStatus === "submitting"
+                            ? (isRTL ? "جارٍ الإرسال..." : "Submitting...")
+                            : (isRTL ? "إرسال التقييم" : "Submit Review")}
+                        </Button>
+                      </form>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
