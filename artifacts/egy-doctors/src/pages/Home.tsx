@@ -344,109 +344,120 @@ export default function Home() {
               {sortedDoctors.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-200 w-full px-5 py-4"
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 w-full"
+                  style={{ border: "1px solid #EBEBF5" }}
                 >
-                  {/* 4-column grid on sm+, vertical stack on mobile */}
-                  <div className="flex flex-col sm:grid sm:items-start gap-3 sm:gap-4"
-                    style={{ gridTemplateColumns: "auto 1fr 1fr auto" }}>
+                  {/* ── Zone 1: Info row ── */}
+                  <div className="flex items-center gap-4 px-5 pt-4 pb-3">
 
-                    {/* ── Col 1: Avatar + Rating ── */}
-                    <div className="relative shrink-0 self-center">
+                    {/* Avatar + gold rating badge */}
+                    <div className="relative shrink-0">
                       <img
                         src={doc.image}
-                        className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
+                        className="w-14 h-14 rounded-2xl object-cover shadow-md"
+                        style={{ background: "#0F172A" }}
                         alt={doc.name}
                       />
-                      <div className="absolute -bottom-1.5 -right-1.5 bg-white rounded-full px-1.5 py-0.5 shadow-md border border-slate-100 flex items-center gap-0.5">
-                        <Star className="w-2.5 h-2.5 fill-[#F59E0B] text-[#F59E0B]" />
-                        <span className="text-[10px] font-bold text-slate-800 leading-none">{doc.rating}</span>
+                      <div
+                        className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 flex items-center gap-0.5 shadow whitespace-nowrap"
+                        style={{ background: "#D4A853" }}
+                      >
+                        <Star className="w-2.5 h-2.5 fill-white text-white" />
+                        <span className="text-[9px] font-black text-white">{doc.rating}</span>
                       </div>
                     </div>
 
-                    {/* ── Col 2: Doctor Info ── */}
-                    <div className="flex flex-col justify-between min-w-0 h-full">
+                    {/* Doctor info */}
+                    <div className="flex-1 min-w-0">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate whitespace-nowrap">
+                        <h3 className="text-sm font-extrabold text-slate-900 truncate hover:text-[#D4A853] transition-colors cursor-pointer">
                           {doc.name}
                         </h3>
                       </Link>
-                      <span className="inline-flex items-center gap-1 self-start bg-blue-50 text-blue-700 rounded-full px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap mt-auto">
-                        <HeartPulse className="w-2.5 h-2.5 shrink-0" />
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">
                         {t.specialties[doc.specialty] ?? doc.specialty}
-                      </span>
-                    </div>
+                        {doc.reviewCount ? ` · ${doc.reviewCount} ${isRTL ? "تقييم" : "reviews"}` : ""}
+                      </p>
 
-                    {/* ── Col 3: Clinic Info ── */}
-                    <div className="flex flex-col gap-1.5 self-center">
-                      {doc.clinics.length === 0 && (
-                        <span className="text-[11px] text-slate-400 italic">
-                          {isRTL ? "لا توجد عيادات" : "No clinics listed"}
-                        </span>
-                      )}
-                      {doc.clinics.map((clinic, ci) => {
-                        const phoneVisible = shownPhones.get(doc.id)?.has(ci) ?? false;
-                        const hasPhone = Boolean(clinic.phone);
-                        return (
-                          <div key={clinic.id} className="flex items-center gap-1">
-                            <a
-                              href={mapsUrl(clinic)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              className="inline-flex items-center gap-0.5 bg-slate-100 hover:bg-primary/10 hover:text-primary text-slate-500 rounded-full px-1.5 py-px text-[9px] font-medium transition-colors"
-                            >
-                              <MapPin className="w-2 h-2 shrink-0" />
-                              {clinic.location || doc.location}
-                            </a>
-                            {hasPhone && (
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); togglePhone(doc.id, ci); }}
-                                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-px text-[9px] font-medium transition-colors ${
-                                  phoneVisible
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-slate-100 hover:bg-green-50 hover:text-green-700 text-slate-400"
-                                }`}
+                      {/* Clinic pills inline */}
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {doc.clinics.length === 0 && (
+                          <span className="text-[10px] text-slate-400 italic">
+                            {isRTL ? "لا توجد عيادات" : "No clinics"}
+                          </span>
+                        )}
+                        {doc.clinics.map((clinic, ci) => {
+                          const phoneVisible = shownPhones.get(doc.id)?.has(ci) ?? false;
+                          const hasPhone = Boolean(clinic.phone);
+                          return (
+                            <div key={clinic.id} className="flex items-center gap-0.5">
+                              <a
+                                href={mapsUrl(clinic)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-px text-[9px] font-semibold transition-colors"
+                                style={{ background: "#F3F0E8", color: "#8B6914" }}
                               >
-                                <Phone className="w-2 h-2 shrink-0" />
-                                {phoneVisible && (
-                                  <a
-                                    href={`tel:${clinic.phone}`}
-                                    onClick={e => e.stopPropagation()}
-                                    className="hover:underline"
-                                  >
-                                    {clinic.phone}
-                                  </a>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* ── Col 4: Price + Actions ── */}
-                    <div className="flex flex-col items-center gap-2 ml-auto shrink-0">
-                      <div className="text-center">
-                        <span className="text-base font-bold text-slate-900">{doc.fee}</span>
-                        <span className="text-[10px] font-medium text-slate-400 ml-1">{t.dashboard.egp}</span>
+                                <MapPin className="w-2 h-2 shrink-0" />
+                                {clinic.location || doc.location}
+                              </a>
+                              {hasPhone && (
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); togglePhone(doc.id, ci); }}
+                                  className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-px text-[9px] font-medium transition-colors ${
+                                    phoneVisible
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-slate-100 hover:bg-green-50 hover:text-green-700 text-slate-400"
+                                  }`}
+                                >
+                                  <Phone className="w-2 h-2 shrink-0" />
+                                  {phoneVisible && (
+                                    <a
+                                      href={`tel:${clinic.phone}`}
+                                      onClick={e => e.stopPropagation()}
+                                      className="hover:underline"
+                                    >
+                                      {clinic.phone}
+                                    </a>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <Link href={`/doctor/${doc.id}`} className="w-24">
-                        <Button className="w-full bg-[#0F172A] text-white rounded-xl font-semibold text-xs hover:bg-slate-700 shadow-sm transition-all active:scale-[0.97] py-1.5 px-4 h-auto whitespace-nowrap">
-                          {isRTL ? "احجز" : "Book"}
-                        </Button>
-                      </Link>
-                      <Link href={`/profile/${doc.id}`} className="w-24">
-                        <Button
-                          variant="outline"
-                          className="w-full text-slate-700 rounded-xl font-semibold text-xs border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all py-1.5 px-4 h-auto whitespace-nowrap"
-                        >
-                          {isRTL ? "الملف" : "Profile"}
-                        </Button>
-                      </Link>
                     </div>
 
+                    {/* Fee */}
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-medium text-slate-400">
+                        {isRTL ? "الكشف" : "Consultation"}
+                      </p>
+                      <p className="text-xl font-black text-slate-900 leading-tight">{doc.fee}</p>
+                      <p className="text-[10px] text-slate-400 -mt-0.5">{t.dashboard.egp}</p>
+                    </div>
                   </div>
+
+                  {/* ── Zone 2: Action bar ── */}
+                  <div className="flex border-t border-slate-100">
+                    <Link href={`/profile/${doc.id}`} className="flex-1">
+                      <button className="w-full py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors">
+                        {isRTL ? "عرض الملف" : "View Profile"}
+                      </button>
+                    </Link>
+                    <div className="w-px bg-slate-100" />
+                    <Link href={`/doctor/${doc.id}`} className="flex-[2]">
+                      <button
+                        className="w-full py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                        style={{ background: "linear-gradient(135deg, #1E293B, #0F172A)" }}
+                      >
+                        {isRTL ? "احجز موعد" : "Book Appointment"}
+                      </button>
+                    </Link>
+                  </div>
+
                 </div>
               ))}
             </div>
