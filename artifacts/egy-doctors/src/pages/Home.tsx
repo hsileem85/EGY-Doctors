@@ -9,6 +9,23 @@ import {
   Navigation,
   LocateFixed,
   Phone,
+  Brain,
+  Heart,
+  Eye,
+  Smile,
+  Activity,
+  Sparkles,
+  Baby,
+  Microscope,
+  Stethoscope,
+  Wind,
+  FlaskConical,
+  Pill,
+  Flower2,
+  Droplets,
+  Scan,
+  Bone,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
@@ -254,50 +271,90 @@ export default function Home() {
 
         {/* Browse by Specialty */}
         {specialties.length > 0 && (() => {
-          const SPECIALTY_EMOJI: Record<string, string> = {
-            neurology: "🧠", cardiology: "❤️", dentistry: "🦷",
-            ophthalmology: "👁️", orthopedics: "🦴", dermatology: "🌿",
-            pediatrics: "👶", oncology: "🧬", general: "🩺",
-            pulmonology: "🫁", endocrinology: "🧪", psychiatry: "💊",
-            gynecology: "🌸", urology: "🔬", gastroenterology: "🍃",
-            nephrology: "💧", rheumatology: "🩹", "internal medicine": "⚕️",
+          const SPECIALTY_ICON: Record<string, LucideIcon> = {
+            neurology: Brain,
+            cardiology: Heart,
+            dentistry: Smile,
+            ophthalmology: Eye,
+            orthopedics: Bone,
+            dermatology: Sparkles,
+            pediatrics: Baby,
+            oncology: Microscope,
+            general: Stethoscope,
+            "general medicine": Stethoscope,
+            "internal medicine": Stethoscope,
+            pulmonology: Wind,
+            endocrinology: FlaskConical,
+            psychiatry: Pill,
+            gynecology: Flower2,
+            urology: Droplets,
+            gastroenterology: Activity,
+            nephrology: Droplets,
+            rheumatology: Activity,
+            radiology: Scan,
+            ent: Brain,
           };
           const countBySpecialty: Record<string, number> = {};
           allDoctors.forEach(d => {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div style={{ backgroundColor: '#e8eef5', borderTop: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1' }}>
-              <section className="max-w-5xl mx-auto px-4 pt-6 pb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-[#0F172A]">
-                    {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
-                  </h2>
+            <div className="bg-slate-50 border-y border-slate-200">
+              <section className="max-w-5xl mx-auto px-4 py-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0F172A]">
+                      {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {isRTL ? "اختر التخصص المناسب لك" : "Find the right specialist for you"}
+                    </p>
+                  </div>
                   <button
                     onClick={() => setLocation("/search")}
-                    className="text-sm font-semibold text-[#D4A853] hover:underline"
+                    className="text-sm font-semibold text-[#D4A853] hover:text-[#b8922e] transition-colors flex items-center gap-1"
                   >
                     {isRTL ? "عرض الكل ←" : "View all →"}
                   </button>
                 </div>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-4">
                   {specialties.map((sp) => {
                     const key = sp.name.toLowerCase();
-                    const emoji = SPECIALTY_EMOJI[key] ?? "🏥";
-                    const count = countBySpecialty[sp.name.toLowerCase()] ?? 0;
+                    const Icon = SPECIALTY_ICON[key] ?? Stethoscope;
+                    const count = countBySpecialty[key] ?? 0;
+                    const hasActive = count > 0;
                     return (
                       <button
                         key={sp.id}
                         onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
-                        className="rounded-xl p-2.5 flex flex-col items-center gap-1 transition-all group hover:border-[#D4A853]"
-                        style={{ backgroundColor: '#ffffff', border: '1px solid #f1f5f9', boxShadow: '0 1px 6px 0 rgba(0,0,0,0.08)' }}
+                        className={[
+                          "group rounded-2xl p-4 flex flex-col items-center gap-3 text-center",
+                          "border transition-all duration-300",
+                          "hover:-translate-y-1 hover:shadow-lg hover:border-[#D4A853]",
+                          hasActive
+                            ? "bg-white border-slate-200 shadow-sm"
+                            : "bg-white border-slate-100 shadow-sm opacity-75",
+                        ].join(" ")}
                       >
-                        <span className="text-base">{emoji}</span>
-                        <span className="text-sm font-semibold text-[#0F172A] group-hover:text-[#D4A853] transition-colors text-center">
+                        {/* Icon container */}
+                        <div className={[
+                          "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300",
+                          "bg-slate-100 group-hover:bg-[#D4A853]/10",
+                        ].join(" ")}>
+                          <Icon className="w-6 h-6 text-[#0F172A] group-hover:text-[#D4A853] transition-colors duration-300" />
+                        </div>
+                        {/* Name */}
+                        <span className="text-sm font-bold text-slate-800 group-hover:text-[#D4A853] transition-colors duration-300 leading-tight">
                           {isRTL ? sp.nameAr : sp.name}
                         </span>
-                        <span className="text-xs text-gray-400">
-                          {count} {isRTL ? "طبيب" : "doctors"}
+                        {/* Count */}
+                        <span className={[
+                          "text-xs font-medium px-2.5 py-0.5 rounded-full transition-all duration-300",
+                          hasActive
+                            ? "bg-[#D4A853]/10 text-[#8B6914] group-hover:bg-[#D4A853]/20"
+                            : "bg-slate-100 text-slate-400",
+                        ].join(" ")}>
+                          {count} {isRTL ? "طبيب" : count === 1 ? "doctor" : "doctors"}
                         </span>
                       </button>
                     );
