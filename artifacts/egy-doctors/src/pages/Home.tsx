@@ -371,11 +371,14 @@ export default function Home() {
                     <div className="flex-1 min-w-0">
                       <Link href={`/profile/${doc.id}`}>
                         <h3 className="text-sm font-extrabold text-slate-900 truncate hover:text-[#D4A853] transition-colors cursor-pointer">
-                          {doc.name}
+                          {isRTL
+                            ? `د. ${(doc.nameAr || doc.name).replace(/^(د\.\s*|Dr\.\s*)/i, "")}`
+                            : `Dr. ${doc.name.replace(/^(Dr\.\s*|د\.\s*)/i, "")}`
+                          }
                         </h3>
                       </Link>
                       <p className="text-[11px] font-medium text-slate-500 mt-0.5 flex items-center gap-1.5">
-                        <span>{t.specialties[doc.specialty] ?? doc.specialty}</span>
+                        <span>{isRTL ? (doc.specialtyAr || t.specialties[doc.specialty] || doc.specialty) : (t.specialties[doc.specialty] ?? doc.specialty)}</span>
                         {doc.reviewsCount > 0 && (
                           <>
                             <span className="text-slate-300">·</span>
