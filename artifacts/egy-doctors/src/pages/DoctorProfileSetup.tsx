@@ -45,6 +45,7 @@ type Clinic = {
   cityName: string;
   areaId: string;
   address: string;
+  phone: string;
   lat: string;
   lng: string;
   fee: string;
@@ -58,6 +59,7 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
     cityName: "",
     areaId: "",
     address: "",
+    phone: "",
     lat: "",
     lng: "",
     fee: "",
@@ -171,6 +173,7 @@ export default function DoctorProfileSetup() {
           cityName: city?.name ?? "",
           areaId: c.areaId ? String(c.areaId) : "",
           address: c.address ?? "",
+          phone: c.phone ?? "",
           lat: c.lat != null ? String(c.lat) : "",
           lng: c.lng != null ? String(c.lng) : "",
           fee: c.fee != null ? String(c.fee) : "",
@@ -242,6 +245,7 @@ export default function DoctorProfileSetup() {
         const data = {
           name: clinic.name || `Clinic`,
           address: clinic.address || undefined,
+          phone: clinic.phone || undefined,
           fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
           areaId: areaId && !isNaN(areaId) ? areaId : undefined,
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
@@ -542,6 +546,17 @@ export default function DoctorProfileSetup() {
                               onChange={e => updateClinic(clinic.id, { address: e.target.value })}
                               placeholder={isRTL ? "عنوان العيادة" : "Street address"}
                               data-testid={`input-clinic-address-${idx}`}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>{isRTL ? "رقم هاتف العيادة" : "Clinic Phone Number"}</Label>
+                            <Input
+                              value={clinic.phone}
+                              onChange={e => updateClinic(clinic.id, { phone: e.target.value })}
+                              placeholder={isRTL ? "مثال: 01012345678" : "e.g. 01012345678"}
+                              type="tel"
+                              data-testid={`input-clinic-phone-${idx}`}
                             />
                           </div>
 
