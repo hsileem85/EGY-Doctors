@@ -301,11 +301,11 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div className="bg-[#0F172A] py-12">
+            <div className="bg-[#0F172A] pt-6 pb-12">
               <div className="max-w-5xl mx-auto px-4">
 
                   {/* Header — single compact row */}
-                  <div className={`flex items-center justify-between pb-4 mb-6 border-b border-slate-700/50 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <div className={`flex items-center justify-between pb-2 ${isRTL ? "flex-row-reverse" : ""}`}>
                     <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
                       <div className="h-px w-5 bg-[#D4A853]" />
                       <p className="text-[#D4A853] text-[10px] font-black uppercase tracking-[0.2em]">
@@ -320,6 +320,9 @@ export default function Home() {
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
+
+                  {/* Gold gradient divider */}
+                  <div className={`h-[1px] w-full mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-slate-700/40 to-yellow-500/60" : "from-yellow-500/60 via-slate-700/40 to-transparent"}`} />
 
                   {/* Grid */}
                   <div className="grid grid-cols-4 gap-2.5">
