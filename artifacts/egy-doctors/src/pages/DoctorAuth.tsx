@@ -430,31 +430,6 @@ export default function DoctorAuth() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="signupLocation" className="text-gray-300">
-                          {dir === "rtl" ? "الموقع" : "Location"}
-                        </Label>
-                        <Select
-                          value={signupData.location}
-                          onValueChange={(v) =>
-                            setSignupData({ ...signupData, location: v })
-                          }
-                        >
-                          <SelectTrigger id="signupLocation" data-testid="select-signup-location" className="bg-[#0F172A]/60 border-[#334155] text-white">
-                            <SelectValue
-                              placeholder={dir === "rtl" ? "اختر الموقع" : "Choose location"}
-                            />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1E293B] border-[#334155]">
-                            {locations.map((l) => (
-                              <SelectItem key={l} value={l} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
-                                {l}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
                         <Label htmlFor="signupExperience" className="text-gray-300">
                           {dir === "rtl" ? "سنوات الخبرة" : "Years of Experience"}
                         </Label>

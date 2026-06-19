@@ -611,21 +611,6 @@ export default function AuthPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-gray-300">{tl.location}</Label>
-                          <Select value={signupData.location} onValueChange={(v) => setSignupData({ ...signupData, location: v })}>
-                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
-                              <SelectValue placeholder={isRTL ? "اختر الموقع" : "Choose location"} />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {apiCities.map((c) => (
-                                <SelectItem key={c.id} value={c.name} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
                           <Label className="text-gray-300">{tl.syndicateMembership}</Label>
                           <Input
                             value={signupData.syndicateMembership}
