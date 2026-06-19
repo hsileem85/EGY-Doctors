@@ -347,7 +347,7 @@ export default function Home() {
                   className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-200 w-full px-5 py-4"
                 >
                   {/* 4-column grid on sm+, vertical stack on mobile */}
-                  <div className="flex flex-col sm:grid sm:items-center gap-4 sm:gap-6"
+                  <div className="flex flex-col sm:grid sm:items-center gap-3 sm:gap-4"
                     style={{ gridTemplateColumns: "auto 1fr 1fr auto" }}>
 
                     {/* ── Col 1: Avatar + Rating ── */}
@@ -366,7 +366,7 @@ export default function Home() {
                     {/* ── Col 2: Doctor Info ── */}
                     <div className="flex flex-col gap-1.5 min-w-0">
                       <Link href={`/doctor/${doc.id}`}>
-                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors">
+                        <h3 className="text-sm font-bold text-slate-900 leading-snug hover:text-[#D4A853] cursor-pointer transition-colors truncate">
                           {doc.name}
                         </h3>
                       </Link>
@@ -393,22 +393,22 @@ export default function Home() {
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={e => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 bg-slate-100 hover:bg-primary/10 hover:text-primary text-slate-500 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors"
+                              className="inline-flex items-center gap-0.5 bg-slate-100 hover:bg-primary/10 hover:text-primary text-slate-500 rounded-full px-1.5 py-px text-[9px] font-medium transition-colors"
                             >
-                              <MapPin className="w-2.5 h-2.5 shrink-0" />
+                              <MapPin className="w-2 h-2 shrink-0" />
                               {clinic.location || doc.location}
                             </a>
                             {hasPhone && (
                               <button
                                 type="button"
                                 onClick={e => { e.stopPropagation(); togglePhone(doc.id, ci); }}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-px text-[9px] font-medium transition-colors ${
                                   phoneVisible
                                     ? "bg-green-100 text-green-700"
                                     : "bg-slate-100 hover:bg-green-50 hover:text-green-700 text-slate-400"
                                 }`}
                               >
-                                <Phone className="w-2.5 h-2.5 shrink-0" />
+                                <Phone className="w-2 h-2 shrink-0" />
                                 {phoneVisible && (
                                   <a
                                     href={`tel:${clinic.phone}`}
