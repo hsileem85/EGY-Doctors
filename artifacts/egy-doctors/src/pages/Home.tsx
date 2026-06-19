@@ -9,6 +9,7 @@ import {
   Navigation,
   LocateFixed,
   Phone,
+  ChevronRight,
   Brain,
   Heart,
   Eye,
@@ -299,68 +300,72 @@ export default function Home() {
             if (d.specialty) countBySpecialty[d.specialty.toLowerCase()] = (countBySpecialty[d.specialty.toLowerCase()] ?? 0) + 1;
           });
           return (
-            <div className="bg-slate-50 border-y border-slate-200">
-              <section className="max-w-5xl mx-auto px-4 py-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-lg font-bold text-[#0F172A]">
-                      {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {isRTL ? "اختر التخصص المناسب لك" : "Find the right specialist for you"}
-                    </p>
+            <div className="py-8">
+              <div className="max-w-5xl mx-auto px-4">
+                <div className="bg-[#0F172A] rounded-3xl shadow-2xl overflow-hidden">
+
+                  {/* Header */}
+                  <div className={`flex items-center justify-between px-8 pt-7 pb-5 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <div>
+                      <div className={`flex items-center gap-2 mb-1.5 ${isRTL ? "flex-row-reverse" : ""}`}>
+                        <div className="h-px w-5 bg-[#D4A853]" />
+                        <p className="text-[#D4A853] text-[10px] font-black uppercase tracking-[0.2em]">
+                          {isRTL ? "التخصصات الطبية" : "Medical Specialties"}
+                        </p>
+                      </div>
+                      <h2 className="text-[22px] font-black text-white leading-tight tracking-tight">
+                        {isRTL ? "تصفح حسب التخصص" : "Browse by Specialty"}
+                      </h2>
+                      <p className="text-slate-500 text-xs mt-1">
+                        {isRTL ? "اختر التخصص المناسب لك" : "Find the right expert for your health needs"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setLocation("/search")}
+                      className={`flex items-center gap-1.5 text-xs font-bold text-[#D4A853] border border-[#D4A853]/30 hover:border-[#D4A853] rounded-full px-4 py-2 transition-all duration-200 hover:bg-[#D4A853]/5 ${isRTL ? "flex-row-reverse" : ""}`}
+                    >
+                      {isRTL ? "عرض الكل" : "View all"}
+                      <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setLocation("/search")}
-                    className="text-sm font-semibold text-[#D4A853] hover:text-[#b8922e] transition-colors flex items-center gap-1"
-                  >
-                    {isRTL ? "عرض الكل ←" : "View all →"}
-                  </button>
+
+                  {/* Gold rule */}
+                  <div className={`mx-8 h-px mb-5 bg-gradient-to-r ${isRTL ? "from-transparent via-[#D4A853]/10 to-[#D4A853]/40" : "from-[#D4A853]/40 via-[#D4A853]/10 to-transparent"}`} />
+
+                  {/* Unified grid */}
+                  <div className="px-8 pb-7">
+                    <div className="grid grid-cols-4 gap-2.5">
+                      {specialties.map((sp) => {
+                        const key = sp.name.toLowerCase();
+                        const Icon = SPECIALTY_ICON[key] ?? Stethoscope;
+                        const count = countBySpecialty[key] ?? 0;
+                        return (
+                          <button
+                            key={sp.id}
+                            onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
+                            className={`group relative rounded-xl p-3.5 flex items-start gap-3 text-left transition-all duration-200 border border-white/[0.06] bg-white/[0.04] hover:bg-[#D4A853]/8 hover:border-[#D4A853]/35 hover:-translate-y-px hover:shadow-lg hover:shadow-[#D4A853]/8 ${isRTL ? "flex-row-reverse text-right" : ""}`}
+                          >
+                            {/* Circular icon */}
+                            <div className="shrink-0 w-9 h-9 rounded-full bg-[#D4A853]/12 flex items-center justify-center transition-all duration-200 group-hover:bg-[#D4A853]/22 mt-0.5">
+                              <Icon className="w-4 h-4 text-[#D4A853]" />
+                            </div>
+                            {/* Text */}
+                            <div className="min-w-0">
+                              <p className="text-[13px] font-bold text-white leading-snug truncate">
+                                {isRTL ? sp.nameAr : sp.name}
+                              </p>
+                              <span className="inline-block mt-1 text-[10px] font-semibold text-[#D4A853]/70 bg-[#D4A853]/8 rounded-full px-1.5 py-px">
+                                {count} {isRTL ? "طبيب" : count === 1 ? "doctor" : "doctors"}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
-                <div className="grid grid-cols-4 gap-4">
-                  {specialties.map((sp) => {
-                    const key = sp.name.toLowerCase();
-                    const Icon = SPECIALTY_ICON[key] ?? Stethoscope;
-                    const count = countBySpecialty[key] ?? 0;
-                    const hasActive = count > 0;
-                    return (
-                      <button
-                        key={sp.id}
-                        onClick={() => setLocation(`/search?specialty=${encodeURIComponent(sp.name)}`)}
-                        className={[
-                          "group rounded-2xl p-4 flex flex-col items-center gap-3 text-center",
-                          "border transition-all duration-300",
-                          "hover:-translate-y-1 hover:shadow-lg hover:border-[#D4A853]",
-                          hasActive
-                            ? "bg-white border-slate-200 shadow-sm"
-                            : "bg-white border-slate-100 shadow-sm opacity-75",
-                        ].join(" ")}
-                      >
-                        {/* Icon container */}
-                        <div className={[
-                          "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300",
-                          "bg-slate-100 group-hover:bg-[#D4A853]/10",
-                        ].join(" ")}>
-                          <Icon className="w-6 h-6 text-[#0F172A] group-hover:text-[#D4A853] transition-colors duration-300" />
-                        </div>
-                        {/* Name */}
-                        <span className="text-sm font-bold text-slate-800 group-hover:text-[#D4A853] transition-colors duration-300 leading-tight">
-                          {isRTL ? sp.nameAr : sp.name}
-                        </span>
-                        {/* Count */}
-                        <span className={[
-                          "text-xs font-medium px-2.5 py-0.5 rounded-full transition-all duration-300",
-                          hasActive
-                            ? "bg-[#D4A853]/10 text-[#8B6914] group-hover:bg-[#D4A853]/20"
-                            : "bg-slate-100 text-slate-400",
-                        ].join(" ")}>
-                          {count} {isRTL ? "طبيب" : count === 1 ? "doctor" : "doctors"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+              </div>
             </div>
           );
         })()}
