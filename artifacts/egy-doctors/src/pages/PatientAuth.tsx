@@ -176,7 +176,7 @@ export default function PatientAuth() {
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="mb-6">
                       <h2 className="text-xl font-bold text-white text-start">
-                        {dir === "rtl" ? "تسجيل دخول المريض" : "Patient Login"}
+                        {dir === "rtl" ? "تسجيل دخول المستخدم" : "User Login"}
                       </h2>
                       <p className="text-sm text-gray-400 mt-1 text-start">
                         {dir === "rtl"
@@ -241,7 +241,7 @@ export default function PatientAuth() {
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="mb-6">
                       <h2 className="text-xl font-bold text-white text-start">
-                        {dir === "rtl" ? "إنشاء حساب مريض" : "Patient Sign Up"}
+                        {dir === "rtl" ? "إنشاء حساب مستخدم" : "User Sign Up"}
                       </h2>
                       <p className="text-sm text-gray-400 mt-1 text-start">
                         {dir === "rtl"

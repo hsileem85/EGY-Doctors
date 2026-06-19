@@ -45,7 +45,7 @@ export default function PatientDashboard() {
               </div>
               <div>
                 <h3 className="font-bold text-sm">{user?.name ?? firstName}</h3>
-                <p className="text-xs text-gray-500">{isRTL ? "مريض" : "Patient"}</p>
+                <p className="text-xs text-gray-500">{isRTL ? "مستخدم" : "User"}</p>
               </div>
             </div>
 

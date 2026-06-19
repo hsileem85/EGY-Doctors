@@ -204,7 +204,7 @@ export default function AuthPage() {
     signIn: isRTL ? "تسجيل الدخول" : "Sign In",
     signUp: isRTL ? "إنشاء حساب" : "Sign Up",
     whoAreYou: isRTL ? "من أنت؟" : "Who are you?",
-    patient: isRTL ? "مريض" : "Patient",
+    patient: isRTL ? "مستخدم" : "User",
     doctor: isRTL ? "طبيب" : "Doctor",
     medical: isRTL ? "مركز طبي" : "Medical Center",
     email: isRTL ? "البريد الإلكتروني" : "Email",
