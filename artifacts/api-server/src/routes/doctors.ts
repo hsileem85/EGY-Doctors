@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
-  clinicsTable, reviewsTable, usersTable,
+  clinicsTable, reviewsTable, usersTable, adminNotificationsTable,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -33,6 +33,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
 
   const conditions: ReturnType<typeof eq>[] = [
     eq(doctorsTable.accountStatus, "approved"),
+    eq(doctorsTable.isActive, true),
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));
@@ -279,7 +280,7 @@ router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) {
     try {
-      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { sub: number };
+      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
       patientUserId = payload.sub;
     } catch { /* anonymous review */ }
   }
@@ -555,6 +556,49 @@ router.delete("/doctor/clinics/:id", async (req, res): Promise<void> => {
   }
 
   res.sendStatus(204);
+});
+
+/* ─── POST /doctors/profile/submit-for-review ─── */
+router.post("/doctors/profile/submit-for-review", async (req, res): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  let payload: { sub: number };
+  try {
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+
+  const [row] = await db
+    .select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus, nameEn: doctorsTable.nameEn })
+    .from(doctorsTable)
+    .where(eq(doctorsTable.userId, payload.sub))
+    .limit(1);
+
+  if (!row) {
+    res.status(404).json({ error: "Doctor profile not found" });
+    return;
+  }
+  if (row.accountStatus !== "incomplete") {
+    res.status(400).json({ error: "Profile has already been submitted" });
+    return;
+  }
+
+  await db.update(doctorsTable).set({ accountStatus: "pending" }).where(eq(doctorsTable.id, row.id));
+
+  db.insert(adminNotificationsTable).values({
+    type: "new_doctor",
+    title: "Doctor Submitted for Review",
+    body: `Dr. ${row.nameEn} has completed their profile and submitted for admin review.`,
+    userId: payload.sub,
+  }).catch(() => {});
+
+  req.log.info({ doctorId: row.id }, "Doctor submitted profile for review");
+  res.json({ message: "Your profile has been submitted for review. You will be notified by email once approved." });
 });
 
 export default router;

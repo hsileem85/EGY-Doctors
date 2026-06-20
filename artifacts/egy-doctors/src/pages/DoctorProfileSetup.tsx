@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { getSpecialties, getCities, getAreas, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic } from "@/lib/api";
+import { getSpecialties, getCities, getAreas, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic, submitDoctorForReview } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 import { queryClient } from "@/App";
@@ -78,7 +78,7 @@ export default function DoctorProfileSetup() {
 
   // Block access for doctors who are not yet approved — redirect to dashboard (pending screen)
   const accountStatus = user?.accountStatus ?? null;
-  const isBlocked = !!user && user.role === "doctor" && accountStatus !== "approved";
+  const isBlocked = !!user && user.role === "doctor" && (accountStatus === "pending" || accountStatus === "rejected");
   useEffect(() => {
     if (isBlocked) setLocation("/dashboard");
   }, [isBlocked, setLocation]);

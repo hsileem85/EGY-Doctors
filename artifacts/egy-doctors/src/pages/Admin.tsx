@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useSearch, useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   useListDoctors,
   useApproveDoctor,
   useRejectDoctor,
-  useUpdateDoctorOnboarding,
   useDeleteDoctor,
   useListSpecialties,
   useCreateSpecialty,
@@ -74,7 +73,7 @@ import {
   Globe,
   Save,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -721,7 +720,7 @@ function DoctorDetailModal({ doctor, lang, onClose }: {
         {row(isAr ? "عنوان العيادة" : "Clinic Address", doctor.clinicAddress)}
         {row(isAr ? "النبذة التعريفية" : "Bio", doctor.bio)}
         {row(isAr ? "حالة الحساب" : "Account Status", doctor.accountStatus)}
-        {row(isAr ? "حالة الإعداد" : "Onboarding Status", doctor.onboardingStatus)}
+        {row(isAr ? "الحالة النشطة" : "Active", (doctor as unknown as Record<string, unknown>).isActive === false ? (isAr ? "معطل" : "Deactivated") : (isAr ? "نشط" : "Active"))}
         {row(isAr ? "تاريخ التسجيل" : "Registered", new Date(doctor.createdAt).toLocaleDateString())}
       </div>
     </DialogContent>
@@ -732,23 +731,27 @@ function DoctorsSection({ lang }: { lang: string }) {
   const { data: doctors = [], isLoading } = useListDoctors();
   const approve = useApproveDoctor();
   const reject = useRejectDoctor();
-  const updateOnboarding = useUpdateDoctorOnboarding();
   const deleteDoc = useDeleteDoctor();
   const invalidate = useInvalidateAdmin();
+  const qc = useQueryClient();
   const [selectedDoctor, setSelectedDoctor] = useState<AdminDoctor | null>(null as AdminDoctor | null);
 
+  const incomplete = doctors.filter((d) => d.accountStatus === "incomplete");
   const pending = doctors.filter((d) => d.accountStatus === "pending");
   const approved = doctors.filter((d) => d.accountStatus === "approved");
   const rejected = doctors.filter((d) => d.accountStatus === "rejected");
+  const inactive = doctors.filter((d) => (d as unknown as Record<string, unknown>).isActive === false);
+
+  const toggleActive = useMutation({
+    mutationFn: (id: number) => toggleDoctorActive(id),
+    onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ["doctors"] }); },
+  });
 
   const handleApprove = (id: number) => {
     approve.mutate({ id }, { onSuccess: invalidate });
   };
   const handleReject = (id: number) => {
     reject.mutate({ id }, { onSuccess: invalidate });
-  };
-  const handleOnboarding = (id: number, status: "pending" | "approved" | "rejected") => {
-    updateOnboarding.mutate({ id, data: { status } }, { onSuccess: invalidate });
   };
   const handleDelete = (id: number, name: string) => {
     if (confirm(lang === "ar" ? `هل أنت متأكد من حذف الطبيب "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.` : `Delete doctor "${name}"? This cannot be undone.`)) {
@@ -758,6 +761,7 @@ function DoctorsSection({ lang }: { lang: string }) {
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
+      incomplete: "bg-gray-100 text-gray-600",
       pending: "bg-yellow-100 text-yellow-800",
       approved: "bg-green-100 text-green-800",
       rejected: "bg-red-100 text-red-800",
@@ -765,15 +769,30 @@ function DoctorsSection({ lang }: { lang: string }) {
     return map[status] || "bg-gray-100 text-gray-800";
   };
 
+  const statusLabel = (status: string, isAr: boolean) => {
+    const map: Record<string, [string, string]> = {
+      incomplete: ["Incomplete", "غير مكتمل"],
+      pending: ["Pending", "معلق"],
+      approved: ["Approved", "معتمد"],
+      rejected: ["Rejected", "مرفوض"],
+    };
+    const [en, ar] = map[status] ?? [status, status];
+    return isAr ? ar : en;
+  };
+
+  const isAr = lang === "ar";
+
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         {[
           { label: "Total", labelAr: "الإجمالي", value: doctors.length },
+          { label: "Incomplete", labelAr: "غير مكتمل", value: incomplete.length, color: "text-gray-500" },
           { label: "Pending", labelAr: "معلق", value: pending.length, color: "text-yellow-600" },
           { label: "Approved", labelAr: "معتمد", value: approved.length, color: "text-green-600" },
           { label: "Rejected", labelAr: "مرفوض", value: rejected.length, color: "text-red-600" },
+          { label: "Inactive", labelAr: "معطل", value: inactive.length, color: "text-orange-500" },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-sm text-gray-500">{lang === "ar" ? stat.labelAr : stat.label}</p>
@@ -797,28 +816,31 @@ function DoctorsSection({ lang }: { lang: string }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
-                    <TableHead>{lang === "ar" ? "الحساب" : "Account"}</TableHead>
-                    <TableHead>{lang === "ar" ? "الإعداد" : "Onboarding"}</TableHead>
-                    <TableHead>{lang === "ar" ? "التخصص" : "Specialty"}</TableHead>
-                    <TableHead>{lang === "ar" ? "المدينة" : "City"}</TableHead>
-                    <TableHead>{lang === "ar" ? "الترخيص" : "License"}</TableHead>
-                    <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
+                    <TableHead>{isAr ? "الاسم" : "Name"}</TableHead>
+                    <TableHead>{isAr ? "الحالة" : "Status"}</TableHead>
+                    <TableHead>{isAr ? "التخصص" : "Specialty"}</TableHead>
+                    <TableHead>{isAr ? "المدينة" : "City"}</TableHead>
+                    <TableHead>{isAr ? "الترخيص" : "License"}</TableHead>
+                    <TableHead>{isAr ? "الإجراءات" : "Actions"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {doctors.map((doctor) => (
+                  {doctors.map((doctor) => {
+                    const doctorIsActive = (doctor as unknown as Record<string, unknown>).isActive !== false;
+                    return (
                     <TableRow key={doctor.id}>
                       <TableCell className="font-medium">{doctor.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={statusBadge(doctor.accountStatus)}>
-                          {doctor.accountStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusBadge(doctor.onboardingStatus)}>
-                          {doctor.onboardingStatus}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="outline" className={statusBadge(doctor.accountStatus)}>
+                            {statusLabel(doctor.accountStatus, isAr)}
+                          </Badge>
+                          {doctor.accountStatus === "approved" && !doctorIsActive && (
+                            <Badge variant="outline" className="bg-orange-100 text-orange-700 text-xs">
+                              {isAr ? "معطل" : "Inactive"}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-gray-500">
                         {(doctor as unknown as Record<string, string>).specialtyName ?? "-"}
@@ -836,7 +858,7 @@ function DoctorsSection({ lang }: { lang: string }) {
                             variant="outline"
                             className="text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                             onClick={() => setSelectedDoctor(doctor as AdminDoctor)}
-                            title={lang === "ar" ? "عرض التفاصيل" : "View details"}
+                            title={isAr ? "عرض التفاصيل" : "View details"}
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
@@ -848,7 +870,7 @@ function DoctorsSection({ lang }: { lang: string }) {
                                 className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                 onClick={() => handleApprove(doctor.id)}
                                 disabled={approve.isPending}
-                                title={lang === "ar" ? "قبول" : "Approve"}
+                                title={isAr ? "قبول" : "Approve"}
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </Button>
@@ -858,41 +880,45 @@ function DoctorsSection({ lang }: { lang: string }) {
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => handleReject(doctor.id)}
                                 disabled={reject.isPending}
-                                title={lang === "ar" ? "رفض" : "Reject"}
+                                title={isAr ? "رفض" : "Reject"}
                               >
                                 <X className="w-3.5 h-3.5" />
                               </Button>
                             </>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() =>
-                              handleOnboarding(
-                                doctor.id,
-                                doctor.onboardingStatus === "pending" ? "approved" : "pending"
-                              )
-                            }
-                            disabled={updateOnboarding.isPending}
-                            title={lang === "ar" ? "تحديث الإعداد" : "Toggle onboarding"}
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                          </Button>
+                          {doctor.accountStatus === "approved" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className={doctorIsActive
+                                ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                : "text-green-600 hover:text-green-700 hover:bg-green-50"}
+                              onClick={() => toggleActive.mutate(doctor.id)}
+                              disabled={toggleActive.isPending}
+                              title={doctorIsActive
+                                ? (isAr ? "تعطيل الطبيب" : "Deactivate doctor")
+                                : (isAr ? "تفعيل الطبيب" : "Activate doctor")}
+                            >
+                              {doctorIsActive
+                                ? <ShieldCheck className="w-3.5 h-3.5" />
+                                : <Check className="w-3.5 h-3.5" />}
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => handleDelete(doctor.id, doctor.name)}
                             disabled={deleteDoc.isPending}
-                            title={lang === "ar" ? "حذف" : "Delete"}
+                            title={isAr ? "حذف" : "Delete"}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -81,7 +81,7 @@ async function listDoctorsWithDetails() {
       rating: doctorsTable.rating,
       reviews: doctorsTable.reviews,
       accountStatus: doctorsTable.accountStatus,
-      onboardingStatus: doctorsTable.onboardingStatus,
+      isActive: doctorsTable.isActive,
       createdAt: doctorsTable.createdAt,
       updatedAt: doctorsTable.updatedAt,
     })
@@ -183,31 +183,28 @@ router.patch("/admin/doctors/:id/reject", async (req, res): Promise<void> => {
   res.json(stringifyRow(doctor));
 });
 
-router.patch("/admin/doctors/:id/onboarding", async (req, res): Promise<void> => {
+/* ─── PATCH /admin/doctors/:id/toggle-active ─── */
+router.patch("/admin/doctors/:id/toggle-active", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const params = UpdateDoctorOnboardingParams.safeParse({ id: raw });
-  if (!params.success) {
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
 
-  const parsed = UpdateDoctorOnboardingBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+  const [current] = await db.select({ isActive: doctorsTable.isActive }).from(doctorsTable).where(eq(doctorsTable.id, id));
+  if (!current) {
+    res.status(404).json({ error: "Doctor not found" });
     return;
   }
 
   const [doctor] = await db
     .update(doctorsTable)
-    .set({ onboardingStatus: parsed.data.status })
-    .where(eq(doctorsTable.id, params.data.id))
+    .set({ isActive: !current.isActive })
+    .where(eq(doctorsTable.id, id))
     .returning();
 
-  if (!doctor) {
-    res.status(404).json({ error: "Doctor not found" });
-    return;
-  }
-
+  req.log.info({ doctorId: id, isActive: doctor.isActive }, "Doctor active status toggled");
   res.json(stringifyRow(doctor));
 });
 

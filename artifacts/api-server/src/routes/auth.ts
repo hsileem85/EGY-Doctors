@@ -98,14 +98,11 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     doctorId = doc.id;
     accountStatus = doc.accountStatus;
 
-    if (user.email) {
-      sendDoctorPendingEmail(user.email, user.name).catch(() => {});
-    }
+    // Doctor starts as incomplete — no email/notification until they submit for review
   }
 
-  const roleLabels: Record<string, { type: "new_patient" | "new_doctor" | "new_medical_center"; titleEn: string; bodyEn: string }> = {
+  const roleLabels: Record<string, { type: "new_patient" | "new_medical_center"; titleEn: string; bodyEn: string }> = {
     patient: { type: "new_patient", titleEn: "New Patient Registered", bodyEn: `${d.name} joined as a patient.` },
-    doctor: { type: "new_doctor", titleEn: "New Doctor Registered", bodyEn: `${d.name} applied as a doctor and is pending review.` },
     medical_center: { type: "new_medical_center", titleEn: "New Medical Center Registered", bodyEn: `${d.name} registered as a medical center.` },
   };
   const label = roleLabels[d.role];

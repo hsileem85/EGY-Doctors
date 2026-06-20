@@ -1,4 +1,5 @@
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { getAppointments, type ApiAppointment } from "@/lib/api";
+import { getAppointments, type ApiAppointment, submitDoctorForReview } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirmed: string } }) {
@@ -25,6 +26,112 @@ function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirm
     completed: "Completed",
   };
   return <Badge variant="outline" className={map[status]}>{labels[status]}</Badge>;
+}
+
+function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
+  doctorName: string;
+  signOut: () => void;
+  isRTL: boolean;
+  refreshUser: () => Promise<void>;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitDoctorForReview();
+      await refreshUser();
+      setSubmitted(true);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(isRTL ? "حدث خطأ، يرجى المحاولة مجدداً." : msg || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+            <UserCheck className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRTL ? "تم إرسال الطلب!" : "Application Submitted!"}
+          </h1>
+          <p className="text-gray-500 mb-8">
+            {isRTL
+              ? "سيتم مراجعة ملفك الشخصي من قِبل فريقنا وستتلقى إشعاراً بالبريد الإلكتروني عند الموافقة."
+              : "Your profile will be reviewed by our team and you'll be notified by email once approved."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md text-center">
+        <div className="w-20 h-20 rounded-full bg-[#D4A853]/10 flex items-center justify-center mx-auto mb-6">
+          <UserCheck className="w-10 h-10 text-[#D4A853]" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {isRTL ? `مرحباً، ${doctorName}` : `Welcome, ${doctorName}`}
+        </h1>
+        <p className="text-gray-500 mb-8 leading-relaxed">
+          {isRTL
+            ? "لكي تظهر على المنصة وتستقبل الحجوزات، أكمل إعداد ملفك الشخصي أولاً ثم أرسل طلبك للمراجعة."
+            : "To appear on the platform and receive bookings, complete your profile setup first, then submit your application for review."}
+        </p>
+
+        <div className="bg-[#FEF9F0] border border-[#D4A853]/30 rounded-xl p-4 mb-6 text-sm text-start">
+          <p className="font-medium text-[#92400E] mb-2">
+            {isRTL ? "خطوات الظهور على المنصة:" : "Steps to appear on the platform:"}
+          </p>
+          <ul className="space-y-1.5 text-[#78350F]">
+            <li className="flex items-start gap-2">✅ <span>{isRTL ? "تم إنشاء حسابك بنجاح" : "Account created"}</span></li>
+            <li className="flex items-start gap-2">📋 <span>{isRTL ? "أكمل ملفك الشخصي (التخصص، السيرة، العيادات)" : "Complete your profile (specialty, bio, clinics)"}</span></li>
+            <li className="flex items-start gap-2">📤 <span>{isRTL ? "أرسل طلبك للمراجعة" : "Submit for admin review"}</span></li>
+            <li className="flex items-start gap-2">✨ <span>{isRTL ? "بعد الموافقة، ستظهر في نتائج البحث" : "After approval, you'll appear in search results"}</span></li>
+          </ul>
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+        )}
+
+        <div className="flex flex-col gap-3">
+          <Link href="/profile-setup">
+            <Button size="lg" className="w-full gap-2" data-testid="button-complete-profile">
+              <UserCheck className="w-4 h-4" />
+              {isRTL ? "إكمال إعداد الملف الشخصي" : "Complete Profile Setup"}
+            </Button>
+          </Link>
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full gap-2 border-[#D4A853] text-[#D4A853] hover:bg-[#D4A853]/10"
+            onClick={handleSubmit}
+            disabled={submitting}
+            data-testid="button-submit-for-review"
+          >
+            <Clock className="w-4 h-4" />
+            {submitting
+              ? (isRTL ? "جاري الإرسال..." : "Submitting...")
+              : (isRTL ? "إرسال الطلب للمراجعة" : "Submit for Review")}
+          </Button>
+          <Button variant="ghost" className="gap-2 text-gray-500" onClick={signOut}>
+            <LogOut className="w-4 h-4" />
+            {isRTL ? "تسجيل الخروج" : "Sign Out"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function PendingScreen({ status, doctorName, signOut, isRTL }: {
@@ -58,7 +165,7 @@ function PendingScreen({ status, doctorName, signOut, isRTL }: {
                 ? "نأسف، لم يتم قبول طلب تسجيلك في الوقت الحالي. يرجى التواصل مع الدعم للمزيد من المعلومات."
                 : "We're sorry, your registration was not approved at this time. Please contact support for more information.")
             : (isRTL
-                ? "شكراً لتسجيلك في EGY Doctors. يراجع فريقنا طلبك حالياً وسيتم إخطارك بالبريد الإلكتروني عند القبول."
+                ? "شكراً لتسجيلك في إيجي دكتورز. يراجع فريقنا طلبك حالياً وسيتم إخطارك بالبريد الإلكتروني عند القبول."
                 : "Thank you for registering with EGY Doctors. Our team is reviewing your application and you'll be notified by email once approved.")
           }
         </p>
@@ -68,7 +175,7 @@ function PendingScreen({ status, doctorName, signOut, isRTL }: {
               {isRTL ? "ما الذي يحدث الآن؟" : "What happens next?"}
             </p>
             <ul className="space-y-1 text-[#78350F]">
-              <li>✅ {isRTL ? "تم إنشاء حسابك بنجاح" : "Your account has been created"}</li>
+              <li>✅ {isRTL ? "تم إرسال طلبك للمراجعة" : "Your application has been submitted"}</li>
               <li>⏳ {isRTL ? "يراجع فريقنا بياناتك" : "Our team is reviewing your details"}</li>
               <li>📧 {isRTL ? "ستصلك رسالة بريدية عند الموافقة" : "You'll get an email when approved"}</li>
             </ul>
@@ -90,7 +197,7 @@ function PendingScreen({ status, doctorName, signOut, isRTL }: {
 
 export default function Dashboard() {
   const { t, dir } = useLanguage();
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshUser } = useAuth();
   const isRTL = dir === "rtl";
 
   const accountStatus = user?.accountStatus ?? "approved";
@@ -102,6 +209,17 @@ export default function Dashboard() {
   });
 
   const doctorName = user?.name ?? "Doctor";
+
+  if (user?.role === "doctor" && accountStatus === "incomplete") {
+    return (
+      <IncompleteScreen
+        doctorName={doctorName}
+        signOut={signOut}
+        isRTL={isRTL}
+        refreshUser={refreshUser}
+      />
+    );
+  }
 
   if (user?.role === "doctor" && (accountStatus === "pending" || accountStatus === "rejected")) {
     return (

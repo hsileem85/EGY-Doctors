@@ -1,7 +1,7 @@
-import { pgTable, serial, text, varchar, integer, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, timestamp, doublePrecision, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
-export const doctorStatusEnum = ["pending", "approved", "rejected"] as const;
+export const doctorStatusEnum = ["incomplete", "pending", "approved", "rejected"] as const;
 export const doctorOnboardingEnum = ["pending", "approved", "rejected"] as const;
 
 export const doctorsTable = pgTable("doctors", {
@@ -21,8 +21,9 @@ export const doctorsTable = pgTable("doctors", {
   license: varchar("license", { length: 100 }),
   rating: doublePrecision("rating").default(0),
   reviews: integer("reviews").default(0),
-  accountStatus: text("account_status", { enum: doctorStatusEnum }).notNull().default("pending"),
+  accountStatus: text("account_status", { enum: doctorStatusEnum }).notNull().default("incomplete"),
   onboardingStatus: text("onboarding_status", { enum: doctorOnboardingEnum }).notNull().default("pending"),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

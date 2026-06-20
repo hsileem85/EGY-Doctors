@@ -169,6 +169,14 @@ export interface ContactSettings {
   whatsapp: string;
 }
 
+export function submitDoctorForReview(): Promise<{ message: string }> {
+  return request("/doctors/profile/submit-for-review", { method: "POST" });
+}
+
+export function toggleDoctorActive(id: number): Promise<{ isActive: boolean }> {
+  return request(`/admin/doctors/${id}/toggle-active`, { method: "PATCH" });
+}
+
 export function getContactSettings(): Promise<ContactSettings> {
   return request("/settings/contact");
 }
