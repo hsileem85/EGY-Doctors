@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, max, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 function phoneVariants(phone: string): string[] {
@@ -519,6 +519,58 @@ router.get("/admin/users/search", async (req, res): Promise<void> => {
     return;
   }
   res.json(user);
+});
+
+/* ─── GET /admin/settings/contact ─── */
+router.get("/admin/settings/contact", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(siteSettingsTable);
+  res.json(rows);
+});
+
+/* ─── PUT /admin/settings/contact ─── */
+router.put("/admin/settings/contact", async (req, res): Promise<void> => {
+  const Schema = z.object({
+    phone:       z.string().min(1),
+    phoneSubEn:  z.string(),
+    phoneSubAr:  z.string(),
+    email:       z.string().min(1),
+    address:     z.string().min(1),
+    addressAr:   z.string(),
+    hoursEn:     z.string(),
+    hoursAr:     z.string(),
+    daysEn:      z.string(),
+    daysAr:      z.string(),
+    whatsapp:    z.string(),
+  });
+
+  const parsed = Schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const d = parsed.data;
+  const entries: Array<{ key: string; value: string }> = [
+    { key: "contact_phone",       value: d.phone },
+    { key: "contact_phone_sub_en",value: d.phoneSubEn },
+    { key: "contact_phone_sub_ar",value: d.phoneSubAr },
+    { key: "contact_email",       value: d.email },
+    { key: "contact_address_en",  value: d.address },
+    { key: "contact_address_ar",  value: d.addressAr },
+    { key: "contact_hours_en",    value: d.hoursEn },
+    { key: "contact_hours_ar",    value: d.hoursAr },
+    { key: "contact_days_en",     value: d.daysEn },
+    { key: "contact_days_ar",     value: d.daysAr },
+    { key: "contact_whatsapp",    value: d.whatsapp },
+  ];
+
+  for (const entry of entries) {
+    await db.insert(siteSettingsTable).values(entry)
+      .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: entry.value } });
+  }
+
+  req.log.info("Contact settings updated");
+  res.json({ message: "Contact settings saved." });
 });
 
 export default router;

@@ -69,8 +69,12 @@ import {
   Building2,
   KeyRound,
   Search,
+  Phone,
+  Mail,
+  Globe,
+  Save,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -294,6 +298,7 @@ const tabs = [
   { id: "specialties", label: "Specialties", labelAr: "التخصصات", icon: Stethoscope },
   { id: "cities", label: "Cities", labelAr: "المحافظات", icon: MapPinHouse },
   { id: "areas", label: "Areas", labelAr: "المناطق", icon: MapPin },
+  { id: "contact", label: "Contact Info", labelAr: "معلومات التواصل", icon: Globe },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -378,6 +383,162 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         {activeTab === "specialties" && <SpecialtiesSection lang={lang} />}
         {activeTab === "cities" && <CitiesSection lang={lang} />}
         {activeTab === "areas" && <AreasSection lang={lang} />}
+        {activeTab === "contact" && <ContactInfoSection lang={lang} />}
+      </div>
+    </div>
+  );
+}
+
+/* ─── ContactInfoSection ─── */
+const CONTACT_DEFAULTS: ContactSettings = {
+  phone: "+20 2 1234 5678",
+  phoneSubEn: "Available Sun–Thu",
+  phoneSubAr: "متاح من الأحد إلى الخميس",
+  email: "support@egydoctors.com",
+  address: "15 Teseen St, New Cairo, Cairo",
+  addressAr: "١٥ شارع التسعين، التجمع الخامس، القاهرة",
+  hoursEn: "9:00 AM – 6:00 PM",
+  hoursAr: "٩:٠٠ ص – ٦:٠٠ م",
+  daysEn: "Sunday – Thursday",
+  daysAr: "الأحد – الخميس",
+  whatsapp: "201234567890",
+};
+
+function ContactInfoSection({ lang }: { lang: "en" | "ar" }) {
+  const isAr = lang === "ar";
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [form, setForm] = useState<ContactSettings>(CONTACT_DEFAULTS);
+
+  useEffect(() => {
+    getContactSettings()
+      .then((data) => setForm(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleChange(key: keyof ContactSettings, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+    setSaveError(null);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    setSaved(false);
+    try {
+      await updateContactSettings(form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setSaveError(isAr ? "فشل الحفظ، حاول مجددًا." : "Save failed, please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-gray-400">
+        <div className="h-6 w-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mr-2" />
+        {isAr ? "جارٍ التحميل..." : "Loading..."}
+      </div>
+    );
+  }
+
+  const field = (label: string, key: keyof ContactSettings, placeholder?: string) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <input
+        className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
+        value={form[key]}
+        placeholder={placeholder}
+        onChange={(e) => handleChange(key, e.target.value)}
+      />
+    </div>
+  );
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <Globe className="w-5 h-5 text-teal-600" />
+          {isAr ? "معلومات التواصل" : "Contact Page Info"}
+        </h2>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60 transition-colors"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ" : "Save")}
+        </button>
+      </div>
+
+      {saved && (
+        <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm">
+          {isAr ? "تم الحفظ بنجاح ✓" : "Changes saved successfully ✓"}
+        </div>
+      )}
+      {saveError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+          {saveError}
+        </div>
+      )}
+
+      {/* Phone */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-1">
+          <Phone className="w-4 h-4 text-teal-600" />
+          {isAr ? "الهاتف" : "Phone"}
+        </div>
+        {field(isAr ? "رقم الهاتف" : "Phone Number", "phone", "+20 2 1234 5678")}
+        {field(isAr ? "نص فرعي (EN)" : "Sub-text (EN)", "phoneSubEn", "Available Sun–Thu")}
+        {field(isAr ? "نص فرعي (AR)" : "Sub-text (AR)", "phoneSubAr", "متاح من الأحد إلى الخميس")}
+      </div>
+
+      {/* Email */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-1">
+          <Mail className="w-4 h-4 text-teal-600" />
+          {isAr ? "البريد الإلكتروني" : "Email"}
+        </div>
+        {field(isAr ? "البريد الإلكتروني" : "Email Address", "email", "support@egydoctors.com")}
+      </div>
+
+      {/* Address */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-1">
+          <MapPin className="w-4 h-4 text-teal-600" />
+          {isAr ? "العنوان" : "Address"}
+        </div>
+        {field(isAr ? "العنوان (EN)" : "Address (EN)", "address", "15 Teseen St, New Cairo, Cairo")}
+        {field(isAr ? "العنوان (AR)" : "Address (AR)", "addressAr", "١٥ شارع التسعين، التجمع الخامس، القاهرة")}
+      </div>
+
+      {/* Working Hours */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-1">
+          <Clock className="w-4 h-4 text-teal-600" />
+          {isAr ? "ساعات العمل" : "Working Hours"}
+        </div>
+        {field(isAr ? "ساعات العمل (EN)" : "Hours (EN)", "hoursEn", "9:00 AM – 6:00 PM")}
+        {field(isAr ? "ساعات العمل (AR)" : "Hours (AR)", "hoursAr", "٩:٠٠ ص – ٦:٠٠ م")}
+        {field(isAr ? "أيام العمل (EN)" : "Days (EN)", "daysEn", "Sunday – Thursday")}
+        {field(isAr ? "أيام العمل (AR)" : "Days (AR)", "daysAr", "الأحد – الخميس")}
+      </div>
+
+      {/* WhatsApp */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-1">
+          <Phone className="w-4 h-4 text-green-600" />
+          WhatsApp
+        </div>
+        {field(isAr ? "رقم واتساب (بدون + أو 00)" : "WhatsApp Number (digits only, e.g. 201234567890)", "whatsapp", "201234567890")}
+        <p className="text-xs text-gray-400">{isAr ? "مثال: 201234567890 — بدون + أو مسافات" : "Example: 201234567890 — no + or spaces"}</p>
       </div>
     </div>
   );

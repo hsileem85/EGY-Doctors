@@ -155,6 +155,28 @@ export function getMe(): Promise<AuthUser> {
   return request("/auth/me");
 }
 
+export interface ContactSettings {
+  phone: string;
+  phoneSubEn: string;
+  phoneSubAr: string;
+  email: string;
+  address: string;
+  addressAr: string;
+  hoursEn: string;
+  hoursAr: string;
+  daysEn: string;
+  daysAr: string;
+  whatsapp: string;
+}
+
+export function getContactSettings(): Promise<ContactSettings> {
+  return request("/settings/contact");
+}
+
+export function updateContactSettings(data: ContactSettings): Promise<{ message: string }> {
+  return request("/admin/settings/contact", { method: "PUT", body: JSON.stringify(data) });
+}
+
 export function sendContactMessage(data: {
   name: string;
   email: string;

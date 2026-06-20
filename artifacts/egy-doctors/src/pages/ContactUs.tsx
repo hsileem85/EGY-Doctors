@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { sendContactMessage } from "@/lib/api";
+import { sendContactMessage, getContactSettings, type ContactSettings } from "@/lib/api";
 import {
   Mail,
   Phone,
@@ -18,9 +18,28 @@ import { Label } from "@/components/ui/label";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 
+const DEFAULTS: ContactSettings = {
+  phone: "+20 2 1234 5678",
+  phoneSubEn: "Available Sun–Thu",
+  phoneSubAr: "متاح من الأحد إلى الخميس",
+  email: "support@egydoctors.com",
+  address: "15 Teseen St, New Cairo, Cairo",
+  addressAr: "١٥ شارع التسعين، التجمع الخامس، القاهرة",
+  hoursEn: "9:00 AM – 6:00 PM",
+  hoursAr: "٩:٠٠ ص – ٦:٠٠ م",
+  daysEn: "Sunday – Thursday",
+  daysAr: "الأحد – الخميس",
+  whatsapp: "201234567890",
+};
+
 export default function ContactUs() {
   const { dir } = useLanguage();
   const isRTL = dir === "rtl";
+
+  const [settings, setSettings] = useState<ContactSettings>(DEFAULTS);
+  useEffect(() => {
+    getContactSettings().then(setSettings).catch(() => {});
+  }, []);
 
   const [formState, setFormState] = useState<"idle" | "submitting" | "sent">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -53,28 +72,26 @@ export default function ContactUs() {
     {
       icon: <Phone className="h-5 w-5" />,
       label: isRTL ? "الهاتف" : "Phone",
-      value: "+20 2 1234 5678",
-      sub: isRTL ? "متاح من الأحد إلى الخميس" : "Available Sun–Thu",
+      value: settings.phone,
+      sub: isRTL ? settings.phoneSubAr : settings.phoneSubEn,
     },
     {
       icon: <Mail className="h-5 w-5" />,
       label: isRTL ? "البريد الإلكتروني" : "Email",
-      value: "support@egydoctors.com",
+      value: settings.email,
       sub: isRTL ? "نرد خلال 24 ساعة" : "We reply within 24 hours",
     },
     {
       icon: <MapPin className="h-5 w-5" />,
       label: isRTL ? "العنوان" : "Address",
-      value: isRTL
-        ? "١٥ شارع التسعين، التجمع الخامس، القاهرة"
-        : "15 Teseen St, New Cairo, Cairo",
+      value: isRTL ? settings.addressAr : settings.address,
       sub: isRTL ? "مصر" : "Egypt",
     },
     {
       icon: <Clock className="h-5 w-5" />,
       label: isRTL ? "ساعات العمل" : "Working Hours",
-      value: isRTL ? "٩:٠٠ ص – ٦:٠٠ م" : "9:00 AM – 6:00 PM",
-      sub: isRTL ? "الأحد – الخميس" : "Sunday – Thursday",
+      value: isRTL ? settings.hoursAr : settings.hoursEn,
+      sub: isRTL ? settings.daysAr : settings.daysEn,
     },
   ];
 
@@ -123,7 +140,7 @@ export default function ContactUs() {
 
             {/* WhatsApp shortcut */}
             <a
-              href="https://wa.me/201234567890"
+              href={`https://wa.me/${settings.whatsapp}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#25D366] text-white rounded-xl p-5 flex items-center gap-3 hover:bg-[#128C7E] transition-colors"
