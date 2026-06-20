@@ -318,8 +318,8 @@ export default function AuthPage() {
                     </div>
                     <p className="text-sm text-gray-300 leading-relaxed">
                       {isRTL
-                        ? <>تم إرسال رمز التحقق إلى <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. يرجى التحقق من بريدك الإلكتروني.</>
-                        : <>Reset code sent to <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. Check your inbox (and spam folder).</>
+                        ? <>تم إرسال رمز التحقق إلى <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. تحقق من صندوق الوارد أو مجلد الرسائل غير المرغوبة (Spam / Junk).</>
+                        : <>Reset code sent to <span className="text-[#D4A853] font-semibold">{maskedEmail}</span>. Check your inbox — if you don't see it, look in your <span className="text-[#D4A853]">Spam or Junk</span> folder.</>
                       }
                     </p>
                   </div>
