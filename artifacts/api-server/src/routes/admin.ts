@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, max, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 function phoneVariants(phone: string): string[] {
@@ -181,6 +181,35 @@ router.patch("/admin/doctors/:id/reject", async (req, res): Promise<void> => {
   }
 
   res.json(stringifyRow(doctor));
+});
+
+/* ─── GET /admin/doctors/:id/clinics ─── */
+router.get("/admin/doctors/:id/clinics", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: clinicsTable.id,
+      name: clinicsTable.name,
+      address: clinicsTable.address,
+      phone: clinicsTable.phone,
+      fee: clinicsTable.fee,
+      areaName: areasTable.name,
+      cityName: citiesTable.name,
+      lat: clinicsTable.lat,
+      lng: clinicsTable.lng,
+    })
+    .from(clinicsTable)
+    .leftJoin(areasTable, eq(clinicsTable.areaId, areasTable.id))
+    .leftJoin(citiesTable, eq(areasTable.cityId, citiesTable.id))
+    .where(eq(clinicsTable.doctorId, id));
+
+  res.json(rows);
 });
 
 /* ─── PATCH /admin/doctors/:id/toggle-active ─── */

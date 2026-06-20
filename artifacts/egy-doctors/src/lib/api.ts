@@ -177,6 +177,22 @@ export function toggleDoctorActive(id: number): Promise<{ isActive: boolean }> {
   return request(`/admin/doctors/${id}/toggle-active`, { method: "PATCH" });
 }
 
+export interface AdminClinic {
+  id: number;
+  name: string | null;
+  address: string | null;
+  phone: string | null;
+  fee: number | null;
+  areaName: string | null;
+  cityName: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+export function getAdminDoctorClinics(doctorId: number): Promise<AdminClinic[]> {
+  return request(`/admin/doctors/${doctorId}/clinics`);
+}
+
 export function getContactSettings(): Promise<ContactSettings> {
   return request("/settings/contact");
 }

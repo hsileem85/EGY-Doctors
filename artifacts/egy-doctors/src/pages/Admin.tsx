@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useSearch, useLocation } from "wouter";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import {
   useListDoctors,
   useApproveDoctor,
@@ -73,7 +73,7 @@ import {
   Globe,
   Save,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -689,6 +689,13 @@ function DoctorDetailModal({ doctor, lang, onClose }: {
   onClose: () => void;
 }) {
   const isAr = lang === "ar";
+  const d = doctor as unknown as Record<string, unknown>;
+
+  const { data: clinics = [], isLoading: clinicsLoading } = useQuery<AdminClinic[]>({
+    queryKey: ["adminDoctorClinics", doctor.id],
+    queryFn: () => getAdminDoctorClinics(doctor.id),
+  });
+
   const row = (label: string, value: string | number | null | undefined) => (
     value != null && value !== "" ? (
       <div className="flex gap-2 py-2 border-b border-gray-100 last:border-0">
@@ -697,6 +704,7 @@ function DoctorDetailModal({ doctor, lang, onClose }: {
       </div>
     ) : null
   );
+
   return (
     <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
       <DialogHeader>
@@ -708,20 +716,62 @@ function DoctorDetailModal({ doctor, lang, onClose }: {
         </DialogTitle>
       </DialogHeader>
       <div className="space-y-1 pt-2">
-        {row(isAr ? "التخصص" : "Specialty", (doctor as unknown as Record<string, string>).specialtyName)}
-        {row(isAr ? "المدينة" : "City", (doctor as unknown as Record<string, string>).cityName)}
-        {row(isAr ? "المنطقة" : "Area", (doctor as unknown as Record<string, string>).areaName)}
-        {row(isAr ? "البريد الإلكتروني" : "Email", (doctor as unknown as Record<string, string>).email)}
-        {row(isAr ? "رقم الموبايل" : "Mobile", (doctor as unknown as Record<string, string>).phone)}
-        {row(isAr ? "رقم الترخيص" : "License Number", doctor.license)}
-        {row(isAr ? "رقم نقابة الأطباء" : "Medical Syndicate No.", (doctor as unknown as Record<string, string>).syndicateNumber)}
+        {row(isAr ? "التخصص" : "Specialty", d.specialtyName as string)}
+        {row(isAr ? "المدينة" : "City", d.cityName as string)}
+        {row(isAr ? "المنطقة" : "Area", d.areaName as string)}
+        {row(isAr ? "البريد الإلكتروني" : "Email", d.email as string)}
+        {row(isAr ? "رقم الموبايل" : "Mobile", d.phone as string)}
+        {row(isAr ? "رقم عضوية الأطباء" : "Doctor Membership No.", d.syndicateNumber as string)}
         {row(isAr ? "سنوات الخبرة" : "Experience (years)", doctor.experience)}
         {row(isAr ? "رسوم الكشف" : "Consultation Fee (EGP)", doctor.fee)}
-        {row(isAr ? "عنوان العيادة" : "Clinic Address", doctor.clinicAddress)}
         {row(isAr ? "النبذة التعريفية" : "Bio", doctor.bio)}
         {row(isAr ? "حالة الحساب" : "Account Status", doctor.accountStatus)}
-        {row(isAr ? "الحالة النشطة" : "Active", (doctor as unknown as Record<string, unknown>).isActive === false ? (isAr ? "معطل" : "Deactivated") : (isAr ? "نشط" : "Active"))}
+        {row(isAr ? "الحالة النشطة" : "Active Status", d.isActive === false ? (isAr ? "معطل" : "Deactivated") : (isAr ? "نشط" : "Active"))}
         {row(isAr ? "تاريخ التسجيل" : "Registered", new Date(doctor.createdAt).toLocaleDateString())}
+      </div>
+
+      {/* Clinics Section */}
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">
+          {isAr ? "العيادات" : "Clinics"}
+        </h4>
+        {clinicsLoading ? (
+          <p className="text-xs text-gray-400">{isAr ? "جاري التحميل..." : "Loading..."}</p>
+        ) : clinics.length === 0 ? (
+          <p className="text-xs text-gray-400">{isAr ? "لا توجد عيادات مسجلة" : "No clinics registered"}</p>
+        ) : (
+          <div className="space-y-3">
+            {clinics.map((clinic, i) => (
+              <div key={clinic.id} className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+                <p className="font-medium text-gray-900 text-sm">
+                  {clinic.name ?? `${isAr ? "عيادة" : "Clinic"} ${i + 1}`}
+                </p>
+                {clinic.address && (
+                  <p className="text-gray-600">📍 {clinic.address}</p>
+                )}
+                {(clinic.cityName || clinic.areaName) && (
+                  <p className="text-gray-500">{[clinic.cityName, clinic.areaName].filter(Boolean).join(" › ")}</p>
+                )}
+                {clinic.phone && (
+                  <p className="text-gray-600">📞 {clinic.phone}</p>
+                )}
+                {clinic.fee != null && (
+                  <p className="text-gray-600">{isAr ? "الرسوم:" : "Fee:"} {clinic.fee} EGP</p>
+                )}
+                {clinic.lat && clinic.lng && (
+                  <a
+                    href={`https://www.google.com/maps?q=${clinic.lat},${clinic.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    {isAr ? "عرض على الخريطة" : "View on map"}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </DialogContent>
   );
@@ -820,7 +870,7 @@ function DoctorsSection({ lang }: { lang: string }) {
                     <TableHead>{isAr ? "الحالة" : "Status"}</TableHead>
                     <TableHead>{isAr ? "التخصص" : "Specialty"}</TableHead>
                     <TableHead>{isAr ? "المدينة" : "City"}</TableHead>
-                    <TableHead>{isAr ? "الترخيص" : "License"}</TableHead>
+                    <TableHead>{isAr ? "رقم العضوية" : "Membership No."}</TableHead>
                     <TableHead>{isAr ? "الإجراءات" : "Actions"}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -849,7 +899,7 @@ function DoctorsSection({ lang }: { lang: string }) {
                         {(doctor as unknown as Record<string, string>).cityName ?? "-"}
                       </TableCell>
                       <TableCell className="text-gray-500 text-xs font-mono">
-                        {doctor.license ?? "-"}
+                        {(doctor as unknown as Record<string, string>).syndicateNumber ?? "-"}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
