@@ -155,6 +155,16 @@ export function getMe(): Promise<AuthUser> {
   return request("/auth/me");
 }
 
+export function sendContactMessage(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+}): Promise<{ message: string }> {
+  return request("/contact", { method: "POST", body: JSON.stringify(data) });
+}
+
 export function forgotPassword(phone: string): Promise<{ message: string; maskedEmail?: string; emailSent?: boolean; resetToken?: string }> {
   return request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ phone }) });
 }

@@ -2,7 +2,7 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const connectors = new ReplitConnectors();
-const FROM = "EGY Doctors <onboarding@resend.dev>";
+const FROM = "EGY Doctors <noreply@egydoctors.com>";
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const response = await connectors.proxy("resend", "/emails", {
@@ -13,6 +13,55 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
     const body = await response.text();
     throw new Error(`Resend error ${response.status}: ${body}`);
   }
+}
+
+export async function sendContactEmail(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+}): Promise<void> {
+  const { name, email, phone, subject, message } = data;
+  const subjectLine = subject ? `[Contact] ${subject}` : "[Contact] New message from EGY Doctors";
+  await sendEmail(
+    "support@egydoctors.com",
+    subjectLine,
+    `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
+      <div style="text-align:center;margin-bottom:24px">
+        <h1 style="color:#0F172A;font-size:24px;margin:0">EGY<span style="color:#D4A853"> Doctors</span></h1>
+      </div>
+      <h2 style="color:#0F172A;font-size:18px;margin-bottom:4px">New Contact Form Message</h2>
+      <p style="color:#64748B;font-size:13px;margin-bottom:24px">Submitted via egydoctors.com</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr>
+          <td style="padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;font-weight:600;color:#374151;width:120px">Name</td>
+          <td style="padding:10px 12px;border:1px solid #E2E8F0;color:#1E293B">${name}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;font-weight:600;color:#374151">Email</td>
+          <td style="padding:10px 12px;border:1px solid #E2E8F0;color:#1E293B"><a href="mailto:${email}" style="color:#D4A853">${email}</a></td>
+        </tr>
+        ${phone ? `<tr>
+          <td style="padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;font-weight:600;color:#374151">Phone</td>
+          <td style="padding:10px 12px;border:1px solid #E2E8F0;color:#1E293B">${phone}</td>
+        </tr>` : ""}
+        ${subject ? `<tr>
+          <td style="padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;font-weight:600;color:#374151">Subject</td>
+          <td style="padding:10px 12px;border:1px solid #E2E8F0;color:#1E293B">${subject}</td>
+        </tr>` : ""}
+      </table>
+      <div style="margin-top:20px;padding:16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px">
+        <p style="font-weight:600;color:#374151;margin:0 0 8px">Message</p>
+        <p style="color:#1E293B;white-space:pre-wrap;margin:0;line-height:1.6">${message}</p>
+      </div>
+      <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px">
+        EGY Doctors — Egypt's trusted medical directory
+      </p>
+    </div>
+    `
+  );
 }
 
 export async function sendDoctorPendingEmail(to: string, doctorName: string): Promise<void> {

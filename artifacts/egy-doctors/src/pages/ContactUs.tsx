@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { sendContactMessage } from "@/lib/api";
 import {
   Mail,
   Phone,
@@ -22,24 +23,30 @@ export default function ContactUs() {
   const isRTL = dir === "rtl";
 
   const [formState, setFormState] = useState<"idle" | "submitting" | "sent">("idle");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !message) return;
+    setSubmitError(null);
     setFormState("submitting");
-    setTimeout(() => {
+    try {
+      await sendContactMessage({ name, email, phone: phone || undefined, subject: subject || undefined, message });
       setFormState("sent");
       setName("");
       setEmail("");
       setPhone("");
       setSubject("");
       setMessage("");
-    }, 1500);
+    } catch {
+      setSubmitError(isRTL ? "تعذر إرسال الرسالة. يرجى المحاولة مرة أخرى." : "Failed to send your message. Please try again.");
+      setFormState("idle");
+    }
   };
 
   const contactInfo = [
@@ -236,6 +243,10 @@ export default function ContactUs() {
                       className="resize-none"
                     />
                   </div>
+
+                  {submitError && (
+                    <p className="text-red-500 text-sm">{submitError}</p>
+                  )}
 
                   <Button
                     type="submit"
