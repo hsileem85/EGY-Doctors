@@ -791,6 +791,7 @@ function DoctorsSection({ lang }: { lang: string }) {
   const approved = doctors.filter((d) => d.accountStatus === "approved");
   const rejected = doctors.filter((d) => d.accountStatus === "rejected");
   const inactive = doctors.filter((d) => (d as unknown as Record<string, unknown>).isActive === false);
+  const active = doctors.filter((d) => d.accountStatus === "approved" && (d as unknown as Record<string, unknown>).isActive !== false);
 
   const toggleActive = useMutation({
     mutationFn: (id: number) => toggleDoctorActive(id),
@@ -835,12 +836,13 @@ function DoctorsSection({ lang }: { lang: string }) {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-7 gap-3">
         {[
           { label: "Total", labelAr: "الإجمالي", value: doctors.length },
           { label: "Incomplete", labelAr: "غير مكتمل", value: incomplete.length, color: "text-gray-500" },
           { label: "Pending", labelAr: "معلق", value: pending.length, color: "text-yellow-600" },
           { label: "Approved", labelAr: "معتمد", value: approved.length, color: "text-green-600" },
+          { label: "Active", labelAr: "نشط", value: active.length, color: "text-emerald-600" },
           { label: "Rejected", labelAr: "مرفوض", value: rejected.length, color: "text-red-600" },
           { label: "Inactive", labelAr: "معطل", value: inactive.length, color: "text-orange-500" },
         ].map((stat) => (
