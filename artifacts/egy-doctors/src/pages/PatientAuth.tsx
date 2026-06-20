@@ -93,7 +93,7 @@ export default function PatientAuth() {
             </div>
             <div>
               <span className="text-2xl font-bold text-white tracking-tight font-brand">EGY Doctors</span>
-              <p className="text-xs text-[#D4A853] tracking-wider">{dir === "rtl" ? "إي جي دكتورز" : "EGY Doctors"}</p>
+              <p className="text-xs text-[#D4A853] tracking-wider">{dir === "rtl" ? "إيجي دكتورز" : "EGY Doctors"}</p>
             </div>
           </Link>
 

@@ -10,14 +10,14 @@ export function Footer() {
       <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="text-center md:text-start">
           {lang === "ar" ? (
-            <p className="text-lg font-bold text-white font-brand tracking-tight">إي جي <span className="text-[#D4A853]">دكتورز</span></p>
+            <p className="text-lg font-bold text-white font-brand tracking-tight">إيجي <span className="text-[#D4A853]">دكتورز</span></p>
           ) : (
             <p className="text-lg font-bold text-white font-brand tracking-tight">
               EG<span className="text-[#D4A853]">Y Doctors</span>
             </p>
           )}
           <p className="text-xs text-gray-500 mt-1">
-            &copy; {new Date().getFullYear()} {lang === "ar" ? "إي جي دكتورز" : "EGY Doctors"}. {t.footer.rights}
+            &copy; {new Date().getFullYear()} {lang === "ar" ? "إيجي دكتورز" : "EGY Doctors"}. {t.footer.rights}
           </p>
         </div>
         <div className="flex gap-6 text-sm text-gray-400">
