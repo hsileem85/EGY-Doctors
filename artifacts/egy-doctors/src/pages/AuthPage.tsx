@@ -48,6 +48,7 @@ export default function AuthPage() {
   const [forgotEmailSent, setForgotEmailSent] = useState(false);
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
 
@@ -350,14 +351,24 @@ export default function AuthPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-300">{isRTL ? "كلمة المرور الجديدة" : "New Password"}</Label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    className="bg-[#0F172A]/60 border-[#334155] text-white focus:border-[#D4A853]"
-                    required
-                    minLength={8}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="bg-[#0F172A]/60 border-[#334155] text-white focus:border-[#D4A853] pr-10"
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(v => !v)}
+                      className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-200"
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 {forgotError && <p className="text-red-400 text-sm">{forgotError}</p>}
                 <Button type="submit" className="w-full bg-[#D4A853] text-[#0F172A] font-semibold" disabled={forgotLoading}>
