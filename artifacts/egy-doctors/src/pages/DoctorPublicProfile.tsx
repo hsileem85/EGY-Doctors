@@ -288,103 +288,105 @@ export default function DoctorPublicProfile() {
                     </p>
                   )}
 
-                  {/* Write a review form */}
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Send className="h-4 w-4 text-[#D4A853]" />
-                      {isRTL ? "اكتب تقييماً" : "Write a Review"}
-                    </h3>
+                  {/* Write a review form — patients only */}
+                  {user?.role === "patient" && (
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Send className="h-4 w-4 text-[#D4A853]" />
+                        {isRTL ? "اكتب تقييماً" : "Write a Review"}
+                      </h3>
 
-                    {reviewStatus === "success" ? (
-                      <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
-                        <p className="text-green-700 font-semibold text-sm">
-                          {isRTL ? "شكراً! تم إرسال تقييمك بنجاح." : "Thank you! Your review has been submitted."}
-                        </p>
-                        <button
-                          onClick={() => setReviewStatus("idle")}
-                          className="mt-2 text-xs text-green-600 hover:text-green-800 underline"
-                        >
-                          {isRTL ? "إضافة تقييم آخر" : "Add another review"}
-                        </button>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleSubmitReview} className="space-y-4">
-                        {/* Name */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            {isRTL ? "الاسم" : "Your Name"} <span className="text-red-400">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={reviewName}
-                            onChange={e => setReviewName(e.target.value)}
-                            placeholder={isRTL ? "اسمك" : "Enter your name"}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853]"
-                          />
+                      {reviewStatus === "success" ? (
+                        <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
+                          <p className="text-green-700 font-semibold text-sm">
+                            {isRTL ? "شكراً! تم إرسال تقييمك بنجاح." : "Thank you! Your review has been submitted."}
+                          </p>
+                          <button
+                            onClick={() => setReviewStatus("idle")}
+                            className="mt-2 text-xs text-green-600 hover:text-green-800 underline"
+                          >
+                            {isRTL ? "إضافة تقييم آخر" : "Add another review"}
+                          </button>
                         </div>
-
-                        {/* Star rating */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-2">
-                            {isRTL ? "تقييمك" : "Your Rating"} <span className="text-red-400">*</span>
-                          </label>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() => setReviewRating(star)}
-                                onMouseEnter={() => setReviewHover(star)}
-                                onMouseLeave={() => setReviewHover(0)}
-                                className="focus:outline-none"
-                              >
-                                <Star
-                                  className={`h-7 w-7 transition-colors ${
-                                    star <= (reviewHover || reviewRating)
-                                      ? "text-amber-400 fill-current"
-                                      : "text-gray-300"
-                                  }`}
-                                />
-                              </button>
-                            ))}
-                            {reviewRating > 0 && (
-                              <span className="ml-2 text-xs text-gray-500">
-                                {["", isRTL ? "سيئ" : "Poor", isRTL ? "مقبول" : "Fair", isRTL ? "جيد" : "Good", isRTL ? "جيد جداً" : "Very Good", isRTL ? "ممتاز" : "Excellent"][reviewRating]}
-                              </span>
-                            )}
+                      ) : (
+                        <form onSubmit={handleSubmitReview} className="space-y-4">
+                          {/* Name */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              {isRTL ? "الاسم" : "Your Name"} <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={reviewName}
+                              onChange={e => setReviewName(e.target.value)}
+                              placeholder={isRTL ? "اسمك" : "Enter your name"}
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853]"
+                            />
                           </div>
-                        </div>
 
-                        {/* Comment */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            {isRTL ? "تعليقك (اختياري)" : "Your Comment (optional)"}
-                          </label>
-                          <textarea
-                            value={reviewText}
-                            onChange={e => setReviewText(e.target.value)}
-                            rows={3}
-                            placeholder={isRTL ? "شارك تجربتك مع هذا الطبيب..." : "Share your experience with this doctor..."}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853] resize-none"
-                          />
-                        </div>
+                          {/* Star rating */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-2">
+                              {isRTL ? "تقييمك" : "Your Rating"} <span className="text-red-400">*</span>
+                            </label>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setReviewRating(star)}
+                                  onMouseEnter={() => setReviewHover(star)}
+                                  onMouseLeave={() => setReviewHover(0)}
+                                  className="focus:outline-none"
+                                >
+                                  <Star
+                                    className={`h-7 w-7 transition-colors ${
+                                      star <= (reviewHover || reviewRating)
+                                        ? "text-amber-400 fill-current"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                </button>
+                              ))}
+                              {reviewRating > 0 && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  {["", isRTL ? "سيئ" : "Poor", isRTL ? "مقبول" : "Fair", isRTL ? "جيد" : "Good", isRTL ? "جيد جداً" : "Very Good", isRTL ? "ممتاز" : "Excellent"][reviewRating]}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                        {reviewError && (
-                          <p className="text-red-500 text-xs">{reviewError}</p>
-                        )}
+                          {/* Comment */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              {isRTL ? "تعليقك (اختياري)" : "Your Comment (optional)"}
+                            </label>
+                            <textarea
+                              value={reviewText}
+                              onChange={e => setReviewText(e.target.value)}
+                              rows={3}
+                              placeholder={isRTL ? "شارك تجربتك مع هذا الطبيب..." : "Share your experience with this doctor..."}
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853] resize-none"
+                            />
+                          </div>
 
-                        <Button
-                          type="submit"
-                          disabled={reviewStatus === "submitting"}
-                          className="bg-[#0F172A] hover:bg-[#1e293b] text-white font-semibold px-6"
-                        >
-                          {reviewStatus === "submitting"
-                            ? (isRTL ? "جارٍ الإرسال..." : "Submitting...")
-                            : (isRTL ? "إرسال التقييم" : "Submit Review")}
-                        </Button>
-                      </form>
-                    )}
-                  </div>
+                          {reviewError && (
+                            <p className="text-red-500 text-xs">{reviewError}</p>
+                          )}
+
+                          <Button
+                            type="submit"
+                            disabled={reviewStatus === "submitting"}
+                            className="bg-[#0F172A] hover:bg-[#1e293b] text-white font-semibold px-6"
+                          >
+                            {reviewStatus === "submitting"
+                              ? (isRTL ? "جارٍ الإرسال..." : "Submitting...")
+                              : (isRTL ? "إرسال التقييم" : "Submit Review")}
+                          </Button>
+                        </form>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

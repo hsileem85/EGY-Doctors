@@ -275,14 +275,19 @@ router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
 
   const { patientName, rating, text } = parsed.data;
 
-  // Optionally resolve patientUserId from JWT (not required)
+  // Resolve caller identity from JWT when present
   let patientUserId: number | null = null;
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) {
     try {
-      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
+      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number; role: string };
+      // Non-patient roles (doctor, medical_center, admin, assistant) must not submit reviews
+      if (payload.role !== "patient") {
+        res.status(403).json({ error: "Doctors are not allowed to submit or edit reviews." });
+        return;
+      }
       patientUserId = payload.sub;
-    } catch { /* anonymous review */ }
+    } catch { /* anonymous review — allow */ }
   }
 
   await db.insert(reviewsTable).values({ doctorId: id, patientName, rating, text, patientUserId });
