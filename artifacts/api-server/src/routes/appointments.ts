@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable } from "@workspace/db";
-import { sendAppointmentConfirmedEmail } from "../lib/email";
+import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -178,8 +178,9 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     return;
   }
 
-  // ── Send confirmation email when status changes to confirmed ──
-  if (parsed.data.status === "confirmed" && row.patientUserId) {
+  // ── Send email on confirmed or cancelled ──
+  const newStatus = parsed.data.status;
+  if ((newStatus === "confirmed" || newStatus === "cancelled") && row.patientUserId) {
     const [patient] = await db.select({ email: usersTable.email, name: usersTable.name })
       .from(usersTable).where(eq(usersTable.id, row.patientUserId)).limit(1);
 
@@ -197,14 +198,20 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
         clinicName = clinic?.nameEn ?? undefined;
       }
 
-      await sendAppointmentConfirmedEmail({
+      const emailPayload = {
         to: patient.email,
         patientName: patient.name ?? row.patientName,
         doctorName: doctor?.name ?? "Doctor",
         date: String(row.appointmentDate),
         time: row.appointmentTime,
         clinicName,
-      });
+      };
+
+      if (newStatus === "confirmed") {
+        await sendAppointmentConfirmedEmail(emailPayload);
+      } else {
+        await sendAppointmentCancelledEmail(emailPayload);
+      }
     }
   }
 

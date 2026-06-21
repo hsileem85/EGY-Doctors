@@ -183,6 +183,67 @@ export async function sendAppointmentConfirmedEmail(data: {
   }
 }
 
+export async function sendAppointmentCancelledEmail(data: {
+  to: string;
+  patientName: string;
+  doctorName: string;
+  date: string;
+  time: string;
+  clinicName?: string;
+}): Promise<void> {
+  const { to, patientName, doctorName, date, time, clinicName } = data;
+  try {
+    await sendEmail(
+      to,
+      "❌ Your appointment request was not confirmed — EGY Doctors",
+      `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
+        <div style="text-align:center;margin-bottom:24px">
+          <h1 style="color:#0F172A;font-size:24px;margin:0">EGY<span style="color:#D4A853"> Doctors</span></h1>
+        </div>
+        <h2 style="color:#0F172A;font-size:20px">Hello, ${patientName}!</h2>
+        <p style="color:#475569;line-height:1.6">
+          We're sorry — your appointment request with <strong>Dr. ${doctorName}</strong> could not be confirmed at this time.
+        </p>
+        <div style="background:#FEF2F2;border:1px solid #F87171;border-radius:8px;padding:20px;margin:24px 0">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <tr>
+              <td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Doctor</td>
+              <td style="padding:6px 0;color:#1E293B">Dr. ${doctorName}</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:#374151;font-weight:600">Date</td>
+              <td style="padding:6px 0;color:#1E293B">${date}</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:#374151;font-weight:600">Time</td>
+              <td style="padding:6px 0;color:#1E293B">${time}</td>
+            </tr>
+            ${clinicName ? `<tr>
+              <td style="padding:6px 0;color:#374151;font-weight:600">Clinic</td>
+              <td style="padding:6px 0;color:#1E293B">${clinicName}</td>
+            </tr>` : ""}
+          </table>
+        </div>
+        <p style="color:#475569;font-size:14px;line-height:1.6">
+          You're welcome to search for another available doctor or try booking a different time slot.
+        </p>
+        <div style="text-align:center;margin:32px 0">
+          <a href="https://egydoctors.com" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
+            Find Another Doctor
+          </a>
+        </div>
+        <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px">
+          EGY Doctors — Egypt's trusted medical directory
+        </p>
+      </div>
+      `
+    );
+  } catch {
+    // Email failures should not block the cancellation response
+  }
+}
+
 export async function sendDoctorApprovedEmail(to: string, doctorName: string): Promise<void> {
   try {
     await sendEmail(
