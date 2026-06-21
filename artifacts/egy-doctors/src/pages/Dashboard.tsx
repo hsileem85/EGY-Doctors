@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,10 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
+import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { getAppointments, type ApiAppointment, submitDoctorForReview } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getAppointments, type ApiAppointment, submitDoctorForReview,
+  getAssistants, createAssistant, toggleAssistant, deleteAssistant,
+  getDoctorPatients, getMyDoctorProfile, type ApiAssistant, type ApiPatientRecord,
+} from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+
+type Tab = "appointments" | "patients" | "assistants";
 
 function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirmed: string } }) {
   const map: Record<ApiAppointment["status"], string> = {
@@ -60,14 +67,12 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
           <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <UserCheck className="w-10 h-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {isRTL ? "تم إرسال الطلب!" : "Application Submitted!"}
-          </h1>
-          <p className="text-gray-500 mb-8">
-            {isRTL
-              ? "سيتم مراجعة ملفك الشخصي من قِبل فريقنا وستتلقى إشعاراً بالبريد الإلكتروني عند الموافقة."
-              : "Your profile will be reviewed by our team and you'll be notified by email once approved."}
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{isRTL ? "تم إرسال طلبك!" : "Application Submitted!"}</h1>
+          <p className="text-gray-500 mb-8">{isRTL ? "سيتم مراجعة طلبك وإخطارك بالبريد الإلكتروني." : "Your application is under review. You'll be notified by email."}</p>
+          <Button variant="outline" className="gap-2 text-gray-600" onClick={signOut}>
+            <LogOut className="w-4 h-4" />
+            {isRTL ? "تسجيل الخروج" : "Sign Out"}
+          </Button>
         </div>
       </div>
     );
@@ -75,58 +80,25 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md text-center">
+      <div className="w-full max-w-lg text-center">
         <div className="w-20 h-20 rounded-full bg-[#D4A853]/10 flex items-center justify-center mx-auto mb-6">
           <UserCheck className="w-10 h-10 text-[#D4A853]" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {isRTL ? `مرحباً، ${doctorName}` : `Welcome, ${doctorName}`}
-        </h1>
-        <p className="text-gray-500 mb-8 leading-relaxed">
-          {isRTL
-            ? "لكي تظهر على المنصة وتستقبل الحجوزات، أكمل إعداد ملفك الشخصي أولاً ثم أرسل طلبك للمراجعة."
-            : "To appear on the platform and receive bookings, complete your profile setup first, then submit your application for review."}
-        </p>
-
-        <div className="bg-[#FEF9F0] border border-[#D4A853]/30 rounded-xl p-4 mb-6 text-sm text-start">
-          <p className="font-medium text-[#92400E] mb-2">
-            {isRTL ? "خطوات الظهور على المنصة:" : "Steps to appear on the platform:"}
-          </p>
-          <ul className="space-y-1.5 text-[#78350F]">
-            <li className="flex items-start gap-2">✅ <span>{isRTL ? "تم إنشاء حسابك بنجاح" : "Account created"}</span></li>
-            <li className="flex items-start gap-2">📋 <span>{isRTL ? "أكمل ملفك الشخصي (التخصص، السيرة، العيادات)" : "Complete your profile (specialty, bio, clinics)"}</span></li>
-            <li className="flex items-start gap-2">📤 <span>{isRTL ? "أرسل طلبك للمراجعة" : "Submit for admin review"}</span></li>
-            <li className="flex items-start gap-2">✨ <span>{isRTL ? "بعد الموافقة، ستظهر في نتائج البحث" : "After approval, you'll appear in search results"}</span></li>
-          </ul>
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-600 mb-4">{error}</p>
-        )}
-
-        <div className="flex flex-col gap-3">
-          <Link href="/profile-setup">
-            <Button size="lg" className="w-full gap-2" data-testid="button-complete-profile">
-              <UserCheck className="w-4 h-4" />
-              {isRTL ? "إكمال إعداد الملف الشخصي" : "Complete Profile Setup"}
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{isRTL ? `مرحباً ${doctorName}!` : `Welcome, ${doctorName}!`}</h1>
+        <p className="text-gray-500 mb-2">{isRTL ? "أكمل ملفك الشخصي ثم أرسل طلبك للمراجعة." : "Complete your profile then submit for review to start accepting appointments."}</p>
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+          <Link href="/edit-profile">
+            <Button variant="outline" className="gap-2" data-testid="button-go-to-profile-setup">
+              {isRTL ? "إكمال الملف الشخصي" : "Complete Profile"}
             </Button>
           </Link>
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full gap-2 border-[#D4A853] text-[#D4A853] hover:bg-[#D4A853]/10"
-            onClick={handleSubmit}
-            disabled={submitting}
-            data-testid="button-submit-for-review"
-          >
-            <Clock className="w-4 h-4" />
-            {submitting
-              ? (isRTL ? "جاري الإرسال..." : "Submitting...")
-              : (isRTL ? "إرسال الطلب للمراجعة" : "Submit for Review")}
+          <Button className="gap-2 bg-[#D4A853] text-[#0F172A]" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : (isRTL ? "إرسال للمراجعة" : "Submit for Review")}
           </Button>
           <Button variant="ghost" className="gap-2 text-gray-500" onClick={signOut}>
             <LogOut className="w-4 h-4" />
-            {isRTL ? "تسجيل الخروج" : "Sign Out"}
+            {isRTL ? "خروج" : "Sign Out"}
           </Button>
         </div>
       </div>
@@ -151,42 +123,15 @@ function PendingScreen({ status, doctorName, signOut, isRTL }: {
           }
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {isRejected
-            ? (isRTL ? "تم رفض طلبك" : "Application Not Approved")
-            : (isRTL ? "حسابك قيد المراجعة" : "Your Account is Under Review")
-          }
+          {isRejected ? (isRTL ? "تم رفض طلبك" : "Application Not Approved") : (isRTL ? "حسابك قيد المراجعة" : "Your Account is Under Review")}
         </h1>
-        <p className="text-gray-500 mb-2">
-          {isRTL ? `مرحباً، ${doctorName}` : `Hello, ${doctorName}`}
-        </p>
+        <p className="text-gray-500 mb-2">{isRTL ? `مرحباً، ${doctorName}` : `Hello, ${doctorName}`}</p>
         <p className="text-gray-500 mb-8 leading-relaxed">
           {isRejected
-            ? (isRTL
-                ? "نأسف، لم يتم قبول طلب تسجيلك في الوقت الحالي. يرجى التواصل مع الدعم للمزيد من المعلومات."
-                : "We're sorry, your registration was not approved at this time. Please contact support for more information.")
-            : (isRTL
-                ? "شكراً لتسجيلك في إيجي دكتورز. يراجع فريقنا طلبك حالياً وسيتم إخطارك بالبريد الإلكتروني عند القبول."
-                : "Thank you for registering with EGY Doctors. Our team is reviewing your application and you'll be notified by email once approved.")
-          }
+            ? (isRTL ? "نأسف، لم يتم قبول طلب تسجيلك. يرجى التواصل مع الدعم." : "We're sorry, your registration was not approved. Please contact support.")
+            : (isRTL ? "شكراً لتسجيلك. يراجع فريقنا طلبك وسيتم إخطارك بالبريد الإلكتروني عند القبول." : "Thank you for registering. Our team is reviewing your application and you'll be notified by email once approved.")}
         </p>
-        {!isRejected && (
-          <div className="bg-[#FEF9F0] border border-[#D4A853]/30 rounded-xl p-4 mb-8 text-sm text-left">
-            <p className="font-medium text-[#92400E] mb-2">
-              {isRTL ? "ما الذي يحدث الآن؟" : "What happens next?"}
-            </p>
-            <ul className="space-y-1 text-[#78350F]">
-              <li>✅ {isRTL ? "تم إرسال طلبك للمراجعة" : "Your application has been submitted"}</li>
-              <li>⏳ {isRTL ? "يراجع فريقنا بياناتك" : "Our team is reviewing your details"}</li>
-              <li>📧 {isRTL ? "ستصلك رسالة بريدية عند الموافقة" : "You'll get an email when approved"}</li>
-            </ul>
-          </div>
-        )}
-        <Button
-          variant="outline"
-          className="gap-2 text-gray-600"
-          onClick={signOut}
-          data-testid="button-pending-signout"
-        >
+        <Button variant="outline" className="gap-2 text-gray-600" onClick={signOut} data-testid="button-pending-signout">
           <LogOut className="w-4 h-4" />
           {isRTL ? "تسجيل الخروج" : "Sign Out"}
         </Button>
@@ -195,10 +140,252 @@ function PendingScreen({ status, doctorName, signOut, isRTL }: {
   );
 }
 
+/* ── Assistants Tab ── */
+function AssistantsTab({ isRTL, doctorId }: { isRTL: boolean; doctorId: number }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ name: "", phone: "", email: "", password: "", clinicId: "" });
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { data: assistants = [], isLoading } = useQuery({
+    queryKey: ["assistants", doctorId],
+    queryFn: getAssistants,
+  });
+
+  const { data: profile } = useQuery({
+    queryKey: ["doctor-profile"],
+    queryFn: getMyDoctorProfile,
+  });
+
+  const clinics = profile?.clinics ?? [];
+
+  const createMut = useMutation({
+    mutationFn: createAssistant,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["assistants"] }); setShowForm(false); setForm({ name: "", phone: "", email: "", password: "", clinicId: "" }); setFormError(null); },
+    onError: (e: Error) => setFormError(e.message),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: toggleAssistant,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["assistants"] }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: deleteAssistant,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["assistants"] }),
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">{isRTL ? "إدارة المساعدين" : "Manage Assistants"}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{isRTL ? "أنشئ حسابات مساعدين مرتبطة بعيادات محددة" : "Create assistant accounts linked to specific clinics"}</p>
+        </div>
+        <Button onClick={() => setShowForm(v => !v)} className="gap-2 bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90">
+          <Plus className="h-4 w-4" />
+          {isRTL ? "إضافة مساعد" : "Add Assistant"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="mb-6 border-[#D4A853]/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{isRTL ? "حساب مساعد جديد" : "New Assistant Account"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>{isRTL ? "الاسم" : "Name"}</Label>
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={isRTL ? "اسم المساعد" : "Assistant name"} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isRTL ? "رقم الجوال" : "Mobile"}</Label>
+                <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+201001234567" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isRTL ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}</Label>
+                <Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isRTL ? "كلمة المرور" : "Password"}</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    className="pr-10"
+                  />
+                  <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>{isRTL ? "العيادة المخصصة" : "Assigned Clinic"}</Label>
+                <select
+                  value={form.clinicId}
+                  onChange={e => setForm(f => ({ ...f, clinicId: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/30"
+                >
+                  <option value="">{isRTL ? "اختر عيادة..." : "Select a clinic..."}</option>
+                  {clinics.map(c => (
+                    <option key={c.id} value={c.id}>{c.name || `Clinic #${c.id}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {formError && <p className="text-red-500 text-sm mt-3">{formError}</p>}
+            <div className="flex gap-2 mt-4">
+              <Button
+                onClick={() => createMut.mutate({ name: form.name, phone: form.phone, email: form.email || undefined, password: form.password, clinicId: Number(form.clinicId) })}
+                disabled={createMut.isPending || !form.name || !form.phone || !form.password || !form.clinicId}
+                className="bg-[#D4A853] text-[#0F172A]"
+              >
+                {createMut.isPending ? (isRTL ? "جاري الإنشاء..." : "Creating...") : (isRTL ? "إنشاء الحساب" : "Create Account")}
+              </Button>
+              <Button variant="outline" onClick={() => { setShowForm(false); setFormError(null); }}>{isRTL ? "إلغاء" : "Cancel"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{isRTL ? "الاسم" : "Name"}</TableHead>
+                <TableHead>{isRTL ? "الجوال" : "Mobile"}</TableHead>
+                <TableHead>{isRTL ? "العيادة" : "Clinic"}</TableHead>
+                <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "إجراءات" : "Actions"}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
+              ) : assistants.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-10 text-gray-500">{isRTL ? "لا يوجد مساعدون حتى الآن" : "No assistants yet"}</TableCell></TableRow>
+              ) : (
+                assistants.map((a: ApiAssistant) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-medium">{a.name}</TableCell>
+                    <TableCell className="text-gray-600">{a.phone}</TableCell>
+                    <TableCell className="text-gray-600">{a.clinicNameEn || a.clinicName || `#${a.assistantClinicId}`}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={a.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"}>
+                        {a.isActive ? (isRTL ? "نشط" : "Active") : (isRTL ? "معطل" : "Inactive")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => toggleMut.mutate(a.id)}
+                          className="p-1.5 rounded text-gray-500 hover:text-[#D4A853] hover:bg-[#D4A853]/10 transition-colors"
+                          title={a.isActive ? (isRTL ? "تعطيل" : "Deactivate") : (isRTL ? "تفعيل" : "Activate")}
+                        >
+                          {a.isActive ? <ToggleRight className="w-4 h-4 text-green-600" /> : <ToggleLeft className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => { if (confirm(isRTL ? "هل تريد حذف هذا المساعد؟" : "Delete this assistant?")) deleteMut.mutate(a.id); }}
+                          className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title={isRTL ? "حذف" : "Delete"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ── Patients Tab ── */
+function PatientsTab({ isRTL }: { isRTL: boolean }) {
+  const [search, setSearch] = useState("");
+  const { data: patients = [], isLoading } = useQuery({
+    queryKey: ["doctor-patients"],
+    queryFn: getDoctorPatients,
+  });
+
+  const filtered = patients.filter((p: ApiPatientRecord) =>
+    p.patientName.toLowerCase().includes(search.toLowerCase()) ||
+    p.patientPhone.includes(search)
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">{isRTL ? "سجل المرضى" : "Patient Directory"}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{isRTL ? "جميع المرضى الذين زاروا عيادتك" : "All patients who have visited your clinics"}</p>
+        </div>
+      </div>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-gray-50/50 pb-4">
+          <div className="relative max-w-xs">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder={isRTL ? "بحث باسم أو رقم..." : "Search by name or phone..."}
+              className="ps-9 bg-white"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{isRTL ? "اسم المريض" : "Patient Name"}</TableHead>
+                <TableHead>{isRTL ? "الجوال" : "Mobile"}</TableHead>
+                <TableHead>{isRTL ? "آخر زيارة" : "Last Visit"}</TableHead>
+                <TableHead>{isRTL ? "عدد الزيارات" : "Total Visits"}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={4} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-500">{isRTL ? "لا يوجد مرضى حتى الآن" : "No patients yet"}</TableCell></TableRow>
+              ) : (
+                filtered.map((p: ApiPatientRecord, i: number) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{p.patientName}</TableCell>
+                    <TableCell>
+                      <a href={`tel:${p.patientPhone}`} className="flex items-center gap-1 text-gray-600 hover:text-[#D4A853] transition-colors">
+                        <Phone className="w-3.5 h-3.5" />
+                        {p.patientPhone}
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-gray-600">{p.lastVisit}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{p.totalVisits}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { t, dir } = useLanguage();
   const { user, signOut, refreshUser } = useAuth();
   const isRTL = dir === "rtl";
+  const [activeTab, setActiveTab] = useState<Tab>("appointments");
 
   const accountStatus = user?.accountStatus ?? "approved";
 
@@ -211,26 +398,18 @@ export default function Dashboard() {
   const doctorName = user?.name ?? "Doctor";
 
   if (user?.role === "doctor" && accountStatus === "incomplete") {
-    return (
-      <IncompleteScreen
-        doctorName={doctorName}
-        signOut={signOut}
-        isRTL={isRTL}
-        refreshUser={refreshUser}
-      />
-    );
+    return <IncompleteScreen doctorName={doctorName} signOut={signOut} isRTL={isRTL} refreshUser={refreshUser} />;
   }
 
   if (user?.role === "doctor" && (accountStatus === "pending" || accountStatus === "rejected")) {
-    return (
-      <PendingScreen
-        status={accountStatus}
-        doctorName={doctorName}
-        signOut={signOut}
-        isRTL={isRTL}
-      />
-    );
+    return <PendingScreen status={accountStatus} doctorName={doctorName} signOut={signOut} isRTL={isRTL} />;
   }
+
+  const navItems: { tab: Tab; icon: React.ReactNode; label: string }[] = [
+    { tab: "appointments", icon: <CalendarDays className="h-4 w-4" />, label: isRTL ? "المواعيد" : t.dashboard.appointments },
+    { tab: "patients", icon: <Users className="h-4 w-4" />, label: isRTL ? "سجل المرضى" : "My Patients" },
+    { tab: "assistants", icon: <UserCog className="h-4 w-4" />, label: isRTL ? "المساعدون" : "Assistants" },
+  ];
 
   return (
     <Layout>
@@ -249,14 +428,20 @@ export default function Dashboard() {
             </div>
 
             <nav className="space-y-1">
-              <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-medium text-sm">
-                <CalendarDays className="h-4 w-4" />
-                {t.dashboard.appointments}
-              </a>
-              <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors">
-                <Users className="h-4 w-4" />
-                {t.dashboard.patients}
-              </a>
+              {navItems.map(item => (
+                <button
+                  key={item.tab}
+                  onClick={() => setActiveTab(item.tab)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors text-left ${
+                    activeTab === item.tab
+                      ? "bg-primary/10 text-primary"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
 
               <Link href="/dashboard/publish">
                 <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
@@ -285,172 +470,144 @@ export default function Dashboard() {
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8">
           <div className="max-w-5xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{t.dashboard.title}</h1>
-                <p className="text-gray-500">
-                  {isRTL ? `مرحباً بك، ${doctorName}. هنا نظرة عامة على عيادتك.` : `Welcome back, ${doctorName}. Here's your clinic overview.`}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-gray-500 md:hidden"
-                onClick={signOut}
-              >
-                <LogOut className="h-4 w-4" />
-                {isRTL ? "خروج" : "Sign Out"}
-              </Button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    {t.dashboard.upcomingAppointments}
-                  </CardTitle>
-                  <CalendarDays className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">{appointments.length}</div>
-                  <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.sinceYesterday}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    {t.dashboard.profileViews}
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">—</div>
-                  <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthViews}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    {t.dashboard.totalEarnings}
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">
-                    — <span className="text-lg font-normal text-gray-500">{t.dashboard.egp}</span>
+            {/* ── Appointments Tab ── */}
+            {activeTab === "appointments" && (
+              <>
+                <div className="mb-8 flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">{t.dashboard.title}</h1>
+                    <p className="text-gray-500">{isRTL ? `مرحباً بك، ${doctorName}.` : `Welcome back, ${doctorName}.`}</p>
                   </div>
-                  <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthEarnings}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="border-0 shadow-sm shadow-gray-200/50 mb-8">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b bg-gray-50/50 rounded-t-xl pb-4">
-                <div>
-                  <CardTitle className="text-lg">{t.dashboard.appointments}</CardTitle>
-                  <p className="text-sm text-gray-500 font-normal">{t.dashboard.manageSchedule}</p>
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder={t.dashboard.searchPatients}
-                    className="ps-9 bg-white"
-                    data-testid="input-search-patients"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-white hover:bg-white">
-                      <TableHead className="font-semibold text-gray-600">{t.dashboard.patientName}</TableHead>
-                      <TableHead className="font-semibold text-gray-600">{t.dashboard.phone}</TableHead>
-                      <TableHead className="font-semibold text-gray-600">{t.dashboard.date}</TableHead>
-                      <TableHead className="font-semibold text-gray-600">{t.dashboard.time}</TableHead>
-                      <TableHead className="font-semibold text-gray-600">{t.dashboard.status}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-gray-400">
-                          {isRTL ? "جار التحميل..." : "Loading..."}
-                        </TableCell>
-                      </TableRow>
-                    ) : appointments.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                          {t.dashboard.noAppointments}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      appointments.map((apt) => (
-                        <TableRow key={apt.id}>
-                          <TableCell className="font-medium text-gray-900">{apt.patientName}</TableCell>
-                          <TableCell className="text-gray-600">{apt.patientPhone}</TableCell>
-                          <TableCell className="text-gray-600">{apt.appointmentDate}</TableCell>
-                          <TableCell className="text-gray-600">{apt.appointmentTime}</TableCell>
-                          <TableCell>{statusBadge(apt.status, t)}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Recent Publications */}
-            <Card className="border-0 shadow-sm shadow-gray-200/50">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-gray-50/50 rounded-t-xl pb-4">
-                <CardTitle className="text-lg">{t.dashboard.recentPublications}</CardTitle>
-                <Link href="/dashboard/publish">
-                  <Button size="sm" className="gap-1">
-                    <Plus className="w-4 h-4" />
-                    {t.dashboard.newPublication}
+                  <Button variant="outline" size="sm" className="gap-2 text-gray-500 md:hidden" onClick={signOut}>
+                    <LogOut className="h-4 w-4" />
+                    {isRTL ? "خروج" : "Sign Out"}
                   </Button>
-                </Link>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  <div className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">Understanding Heart Disease Risks</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[10px] h-5">Article</Badge>
-                        <span className="text-xs text-gray-500">Today</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
-                      <Video className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">Healthy Diet for Blood Pressure</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[10px] h-5">Video</Badge>
-                        <span className="text-xs text-gray-500">Yesterday</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600">
-                      <MessageSquare className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">Drink 8 glasses of water daily</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[10px] h-5">Advice</Badge>
-                        <span className="text-xs text-gray-500">Oct 28</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-500">{t.dashboard.upcomingAppointments}</CardTitle>
+                      <CalendarDays className="h-4 w-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-gray-900">{appointments.length}</div>
+                      <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.sinceYesterday}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-500">{t.dashboard.profileViews}</CardTitle>
+                      <Users className="h-4 w-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-gray-900">—</div>
+                      <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthViews}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-500">{t.dashboard.totalEarnings}</CardTitle>
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-gray-900">— <span className="text-lg font-normal text-gray-500">{t.dashboard.egp}</span></div>
+                      <p className="text-xs text-[#D4A853] mt-1 font-medium">{t.dashboard.vsLastMonthEarnings}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border-0 shadow-sm shadow-gray-200/50 mb-8">
+                  <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b bg-gray-50/50 rounded-t-xl pb-4">
+                    <div>
+                      <CardTitle className="text-lg">{t.dashboard.appointments}</CardTitle>
+                      <p className="text-sm text-gray-500 font-normal">{t.dashboard.manageSchedule}</p>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input placeholder={t.dashboard.searchPatients} className="ps-9 bg-white" data-testid="input-search-patients" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-white hover:bg-white">
+                          <TableHead className="font-semibold text-gray-600">{t.dashboard.patientName}</TableHead>
+                          <TableHead className="font-semibold text-gray-600">{t.dashboard.phone}</TableHead>
+                          <TableHead className="font-semibold text-gray-600">{t.dashboard.date}</TableHead>
+                          <TableHead className="font-semibold text-gray-600">{t.dashboard.time}</TableHead>
+                          <TableHead className="font-semibold text-gray-600">{t.dashboard.status}</TableHead>
+                          <TableHead className="font-semibold text-gray-600">{isRTL ? "متابعة" : "Follow-up"}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoading ? (
+                          <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
+                        ) : appointments.length === 0 ? (
+                          <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">{t.dashboard.noAppointments}</TableCell></TableRow>
+                        ) : (
+                          appointments.map((apt) => (
+                            <TableRow key={apt.id}>
+                              <TableCell className="font-medium text-gray-900">{apt.patientName}</TableCell>
+                              <TableCell className="text-gray-600">{apt.patientPhone}</TableCell>
+                              <TableCell className="text-gray-600">{apt.appointmentDate}</TableCell>
+                              <TableCell className="text-gray-600">{apt.appointmentTime}</TableCell>
+                              <TableCell>{statusBadge(apt.status, t)}</TableCell>
+                              <TableCell>
+                                {(apt as ApiAppointment & { isFollowUp?: boolean }).isFollowUp && (
+                                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                                    {isRTL ? "استشارة" : "Follow-up"}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-sm shadow-gray-200/50">
+                  <CardHeader className="flex flex-row items-center justify-between border-b bg-gray-50/50 rounded-t-xl pb-4">
+                    <CardTitle className="text-lg">{t.dashboard.recentPublications}</CardTitle>
+                    <Link href="/dashboard/publish">
+                      <Button size="sm" className="gap-1"><Plus className="w-4 h-4" />{t.dashboard.newPublication}</Button>
+                    </Link>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y">
+                      {[
+                        { icon: <FileText className="w-5 h-5" />, color: "bg-blue-50 text-blue-600", title: "Understanding Heart Disease Risks", type: "Article", date: "Today" },
+                        { icon: <Video className="w-5 h-5" />, color: "bg-red-50 text-red-600", title: "Healthy Diet for Blood Pressure", type: "Video", date: "Yesterday" },
+                        { icon: <MessageSquare className="w-5 h-5" />, color: "bg-yellow-50 text-yellow-600", title: "Drink 8 glasses of water daily", type: "Advice", date: "Oct 28" },
+                      ].map((item, i) => (
+                        <div key={i} className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.color}`}>{item.icon}</div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{item.title}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-[10px] h-5">{item.type}</Badge>
+                              <span className="text-xs text-gray-500">{item.date}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* ── Patients Tab ── */}
+            {activeTab === "patients" && <PatientsTab isRTL={isRTL} />}
+
+            {/* ── Assistants Tab ── */}
+            {activeTab === "assistants" && user?.doctorId && (
+              <AssistantsTab isRTL={isRTL} doctorId={user.doctorId} />
+            )}
+
           </div>
         </main>
       </div>

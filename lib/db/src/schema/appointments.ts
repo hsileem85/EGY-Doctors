@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, varchar, date, timestamp, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, varchar, date, timestamp, text, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 export const appointmentStatusEnum = ["pending", "confirmed", "cancelled", "completed"] as const;
@@ -14,6 +14,8 @@ export const appointmentsTable = pgTable("appointments", {
   appointmentTime: varchar("appointment_time", { length: 20 }).notNull(),
   status: text("status", { enum: appointmentStatusEnum }).notNull().default("pending"),
   notes: text("notes"),
+  isFollowUp: boolean("is_follow_up").notNull().default(false),
+  feeCharged: integer("fee_charged"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

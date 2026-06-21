@@ -11,6 +11,7 @@ export const clinicsTable = pgTable("clinics", {
   mapUrl: text("map_url"),
   phone: varchar("phone", { length: 50 }),
   fee: integer("fee"),
+  followUpDays: integer("follow_up_days").default(15),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

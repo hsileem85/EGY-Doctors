@@ -6,10 +6,12 @@ export interface AuthUser {
   nameAr?: string | null;
   phone: string;
   email?: string | null;
-  role: "patient" | "doctor" | "medical_center" | "admin";
+  role: "patient" | "doctor" | "medical_center" | "admin" | "assistant";
   doctorId?: number | null;
   accountStatus?: string | null;
   image?: string | null;
+  assistantClinicId?: number | null;
+  assistantDoctorId?: number | null;
 }
 
 export interface ApiClinic {
@@ -350,13 +352,65 @@ export async function adminResetUserPassword(phone: string, newPassword: string)
 
 export function getAppointments(params?: {
   doctorId?: number;
+  clinicId?: number;
   patientUserId?: number;
   patientPhone?: string;
 }): Promise<ApiAppointment[]> {
   const qs = new URLSearchParams();
   if (params?.doctorId) qs.set("doctorId", String(params.doctorId));
+  if (params?.clinicId) qs.set("clinicId", String(params.clinicId));
   if (params?.patientUserId) qs.set("patientUserId", String(params.patientUserId));
   if (params?.patientPhone) qs.set("patientPhone", params.patientPhone);
   const query = qs.toString();
   return request(`/appointments${query ? `?${query}` : ""}`);
+}
+
+/* ── Assistants ── */
+
+export interface ApiAssistant {
+  id: number;
+  name: string;
+  phone: string;
+  email: string | null;
+  isActive: boolean;
+  assistantClinicId: number | null;
+  clinicNameEn: string | null;
+  clinicName: string | null;
+  createdAt: string;
+}
+
+export function getAssistants(): Promise<ApiAssistant[]> {
+  return request("/doctors/assistants");
+}
+
+export function createAssistant(data: {
+  name: string;
+  phone: string;
+  email?: string;
+  password: string;
+  clinicId: number;
+}): Promise<ApiAssistant> {
+  return request("/doctors/assistants", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function toggleAssistant(id: number): Promise<{ isActive: boolean }> {
+  return request(`/doctors/assistants/${id}/toggle`, { method: "PATCH" });
+}
+
+export function deleteAssistant(id: number): Promise<void> {
+  return request(`/doctors/assistants/${id}`, { method: "DELETE" });
+}
+
+/* ── Patient Directory ── */
+
+export interface ApiPatientRecord {
+  patientName: string;
+  patientPhone: string;
+  patientUserId: number | null;
+  lastVisit: string;
+  totalVisits: number;
+}
+
+export function getDoctorPatients(): Promise<ApiPatientRecord[]> {
+  return request("/doctors/patients");
 }

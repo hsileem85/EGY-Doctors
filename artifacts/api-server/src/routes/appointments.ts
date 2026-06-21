@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
-import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable } from "@workspace/db";
+import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -32,15 +32,52 @@ router.post("/appointments", async (req, res): Promise<void> => {
     return;
   }
 
+  const d = parsed.data;
+
+  // ── Follow-up detection ──
+  let isFollowUp = false;
+  let feeCharged: number | null = null;
+
+  if (d.clinicId) {
+    const [clinic] = await db.select({ fee: clinicsTable.fee, followUpDays: clinicsTable.followUpDays })
+      .from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
+
+    if (clinic) {
+      feeCharged = clinic.fee ?? null;
+
+      const followUpDays = clinic.followUpDays ?? 15;
+      const cutoff = new Date(d.appointmentDate);
+      cutoff.setDate(cutoff.getDate() - followUpDays);
+      const cutoffStr = cutoff.toISOString().split("T")[0];
+
+      const [lastVisit] = await db.select({ appointmentDate: appointmentsTable.appointmentDate })
+        .from(appointmentsTable)
+        .where(and(
+          eq(appointmentsTable.doctorId, d.doctorId),
+          eq(appointmentsTable.patientPhone, d.patientPhone),
+          eq(appointmentsTable.status, "completed"),
+        ))
+        .orderBy(desc(appointmentsTable.appointmentDate))
+        .limit(1);
+
+      if (lastVisit && String(lastVisit.appointmentDate) >= cutoffStr) {
+        isFollowUp = true;
+        feeCharged = 0;
+      }
+    }
+  }
+
   const [appointment] = await db.insert(appointmentsTable).values({
-    doctorId: parsed.data.doctorId,
-    clinicId: parsed.data.clinicId ?? null,
-    patientUserId: parsed.data.patientUserId ?? null,
-    patientName: parsed.data.patientName,
-    patientPhone: parsed.data.patientPhone,
-    appointmentDate: parsed.data.appointmentDate,
-    appointmentTime: parsed.data.appointmentTime,
-    notes: parsed.data.notes ?? null,
+    doctorId: d.doctorId,
+    clinicId: d.clinicId ?? null,
+    patientUserId: d.patientUserId ?? null,
+    patientName: d.patientName,
+    patientPhone: d.patientPhone,
+    appointmentDate: d.appointmentDate,
+    appointmentTime: d.appointmentTime,
+    notes: d.notes ?? null,
+    isFollowUp,
+    feeCharged,
   }).returning();
 
   res.status(201).json(serializeRow(appointment));
@@ -50,15 +87,17 @@ router.post("/appointments", async (req, res): Promise<void> => {
 router.get("/appointments", async (req, res): Promise<void> => {
   const Schema = z.object({
     doctorId: z.coerce.number().optional(),
+    clinicId: z.coerce.number().optional(),
     patientUserId: z.coerce.number().optional(),
     patientPhone: z.string().optional(),
   });
 
   const params = Schema.safeParse(req.query);
-  const { doctorId, patientUserId, patientPhone } = params.success ? params.data : {};
+  const { doctorId, clinicId, patientUserId, patientPhone } = params.success ? params.data : {};
 
   const conditions = [];
   if (doctorId) conditions.push(eq(appointmentsTable.doctorId, doctorId));
+  if (clinicId) conditions.push(eq(appointmentsTable.clinicId, clinicId));
   if (patientUserId) conditions.push(eq(appointmentsTable.patientUserId, patientUserId));
   if (patientPhone) conditions.push(eq(appointmentsTable.patientPhone, patientPhone));
 
@@ -74,6 +113,8 @@ router.get("/appointments", async (req, res): Promise<void> => {
       appointmentTime: appointmentsTable.appointmentTime,
       status: appointmentsTable.status,
       notes: appointmentsTable.notes,
+      isFollowUp: appointmentsTable.isFollowUp,
+      feeCharged: appointmentsTable.feeCharged,
       createdAt: appointmentsTable.createdAt,
       updatedAt: appointmentsTable.updatedAt,
       doctorName: usersTable.name,

@@ -20,12 +20,30 @@ function mapsUrl(clinic: ApiDoctor["clinics"][number]): string {
   return `https://www.google.com/maps/search/?api=1&query=${q}`;
 }
 
+function getPricingInfo(doctor: ApiDoctor, isRTL: boolean): { label: string; multipleClinicPrices: boolean } {
+  const fees = doctor.clinics.map(c => c.fee).filter((f): f is number => f != null && f > 0);
+  if (fees.length === 0) {
+    const fallback = doctor.fee ?? 0;
+    return { label: fallback > 0 ? `${fallback} EGP` : "", multipleClinicPrices: false };
+  }
+  const min = Math.min(...fees);
+  const max = Math.max(...fees);
+  if (min === max) {
+    return { label: `${min} EGP`, multipleClinicPrices: false };
+  }
+  return {
+    label: isRTL ? `يبدأ من ${min} جنيه` : `From ${min} EGP`,
+    multipleClinicPrices: true,
+  };
+}
+
 export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
   const [shownPhones, setShownPhones] = useState<Set<number>>(new Set());
 
   const specialty = t.specialties[doctor.specialty] ?? doctor.specialty;
+  const pricing = getPricingInfo(doctor, isRTL);
 
   function togglePhone(i: number) {
     setShownPhones(prev => {
@@ -51,12 +69,18 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                 {doctor.name}
               </h3>
             </Link>
-            <Badge
-              variant="secondary"
-              className="bg-primary/5 text-primary hover:bg-primary/10 border-0 text-xs px-2 py-0.5 shrink-0 font-semibold"
-            >
-              {doctor.fee} {t.dashboard.egp}
-            </Badge>
+            {pricing.label && (
+              <Badge
+                variant="secondary"
+                className={`text-xs px-2 py-0.5 shrink-0 font-semibold border-0 ${
+                  pricing.multipleClinicPrices
+                    ? "bg-amber-50 text-amber-700"
+                    : "bg-primary/5 text-primary hover:bg-primary/10"
+                }`}
+              >
+                {pricing.label}
+              </Badge>
+            )}
           </div>
           <p className="text-primary text-sm flex items-center gap-1 mt-0.5">
             <Stethoscope className="h-3.5 w-3.5" />
@@ -71,7 +95,6 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                 const hasPhone = Boolean(clinic.phone);
                 return (
                   <div key={i} className="flex items-center gap-0.5">
-                    {/* Location pill → opens Google Maps */}
                     <a
                       href={mapsUrl(clinic)}
                       target="_blank"
@@ -83,7 +106,6 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
                       {clinic.location || doctor.location}
                     </a>
 
-                    {/* Phone icon → toggles number display */}
                     {hasPhone && (
                       <button
                         type="button"
@@ -141,17 +163,29 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
       <div className="mt-auto pt-3 border-t border-gray-100">
         {showSlots ? (
           <div className="flex items-center justify-end gap-2">
-            <Link href={`/doctor/${doctor.id}`} className="flex-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-9 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
-                data-testid={`link-doctor-book-${doctor.id}`}
-              >
-                <Calendar className="h-4 w-4 mr-1.5" />
-                {isRTL ? "الحجز" : "Book"}
-              </Button>
-            </Link>
+            {pricing.multipleClinicPrices ? (
+              <Link href={`/profile/${doctor.id}`} className="flex-1">
+                <Button
+                  size="sm"
+                  className="w-full h-9 bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90"
+                  data-testid={`link-doctor-book-${doctor.id}`}
+                >
+                  {isRTL ? "عرض الملف" : "View Profile"}
+                </Button>
+              </Link>
+            ) : (
+              <Link href={`/doctor/${doctor.id}`} className="flex-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-9 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
+                  data-testid={`link-doctor-book-${doctor.id}`}
+                >
+                  <Calendar className="h-4 w-4 mr-1.5" />
+                  {isRTL ? "الحجز" : "Book"}
+                </Button>
+              </Link>
+            )}
             <Link href={`/profile/${doctor.id}`} className="flex-1">
               <Button
                 variant="outline"

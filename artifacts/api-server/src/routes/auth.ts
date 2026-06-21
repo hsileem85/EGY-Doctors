@@ -164,6 +164,11 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
     return;
   }
 
+  if (user.isActive === false) {
+    res.status(403).json({ error: "Account is inactive. Contact your doctor." });
+    return;
+  }
+
   let doctorId: number | null = null;
   let accountStatus: string | null = null;
   if (user.role === "doctor") {
@@ -188,6 +193,8 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
       role: user.role,
       doctorId,
       accountStatus,
+      assistantClinicId: user.assistantClinicId ?? null,
+      assistantDoctorId: user.assistantDoctorId ?? null,
     },
   });
 });
@@ -238,6 +245,8 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     doctorId,
     accountStatus,
     image,
+    assistantClinicId: user.assistantClinicId ?? null,
+    assistantDoctorId: user.assistantDoctorId ?? null,
   });
 });
 

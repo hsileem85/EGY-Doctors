@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
-  clinicsTable, reviewsTable, usersTable, adminNotificationsTable,
+  clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -599,6 +599,167 @@ router.post("/doctors/profile/submit-for-review", async (req, res): Promise<void
 
   req.log.info({ doctorId: row.id }, "Doctor submitted profile for review");
   res.json({ message: "Your profile has been submitted for review. You will be notified by email once approved." });
+});
+
+/* ─── Helper: verify JWT and return doctor row ─── */
+async function requireDoctor(authHeader: string | undefined): Promise<
+  { doctorRow: { id: number }; userId: number } | { error: string; status: number }
+> {
+  if (!authHeader?.startsWith("Bearer ")) return { error: "Unauthorized", status: 401 };
+  let payload: { sub: number };
+  try {
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
+  } catch {
+    return { error: "Invalid token", status: 401 };
+  }
+  const [doc] = await db.select({ id: doctorsTable.id }).from(doctorsTable)
+    .where(eq(doctorsTable.userId, payload.sub)).limit(1);
+  if (!doc) return { error: "Doctor not found", status: 403 };
+  return { doctorRow: doc, userId: payload.sub };
+}
+
+/* ─── GET /doctors/assistants ─── */
+router.get("/doctors/assistants", async (req, res): Promise<void> => {
+  const result = await requireDoctor(req.headers.authorization);
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  const { doctorRow } = result;
+
+  const assistants = await db.select({
+    id: usersTable.id,
+    name: usersTable.name,
+    phone: usersTable.phone,
+    email: usersTable.email,
+    isActive: usersTable.isActive,
+    assistantClinicId: usersTable.assistantClinicId,
+    clinicNameEn: clinicsTable.nameEn,
+    clinicName: clinicsTable.name,
+    createdAt: usersTable.createdAt,
+  }).from(usersTable)
+    .leftJoin(clinicsTable, eq(usersTable.assistantClinicId, clinicsTable.id))
+    .where(and(eq(usersTable.assistantDoctorId, doctorRow.id), eq(usersTable.role, "assistant" as const)));
+
+  res.json(assistants);
+});
+
+/* ─── POST /doctors/assistants ─── */
+router.post("/doctors/assistants", async (req, res): Promise<void> => {
+  const result = await requireDoctor(req.headers.authorization);
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  const { doctorRow } = result;
+
+  const Schema = z.object({
+    name: z.string().min(1, "Name is required"),
+    phone: z.string().min(7, "Valid phone required"),
+    email: z.string().email().optional().nullable(),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    clinicId: z.coerce.number({ required_error: "Clinic is required" }),
+  });
+  const parsed = Schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const [clinic] = await db.select({ id: clinicsTable.id }).from(clinicsTable)
+    .where(and(eq(clinicsTable.id, parsed.data.clinicId), eq(clinicsTable.doctorId, doctorRow.id))).limit(1);
+  if (!clinic) {
+    res.status(400).json({ error: "Clinic not found or does not belong to you" });
+    return;
+  }
+
+  const [existing] = await db.select({ id: usersTable.id }).from(usersTable)
+    .where(eq(usersTable.phone, parsed.data.phone)).limit(1);
+  if (existing) {
+    res.status(409).json({ error: "Mobile number already registered" });
+    return;
+  }
+
+  const { default: bcryptLib } = await import("bcryptjs");
+  const passwordHash = await bcryptLib.hash(parsed.data.password, 10);
+
+  const [user] = await db.insert(usersTable).values({
+    name: parsed.data.name,
+    phone: parsed.data.phone,
+    email: parsed.data.email ?? null,
+    passwordHash,
+    role: "assistant" as const,
+    assistantClinicId: parsed.data.clinicId,
+    assistantDoctorId: doctorRow.id,
+    isActive: true,
+  }).returning();
+
+  res.status(201).json({ id: user.id, name: user.name, phone: user.phone, isActive: user.isActive, assistantClinicId: user.assistantClinicId });
+});
+
+/* ─── PATCH /doctors/assistants/:id/toggle ─── */
+router.patch("/doctors/assistants/:id/toggle", async (req, res): Promise<void> => {
+  const result = await requireDoctor(req.headers.authorization);
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  const { doctorRow } = result;
+
+  const id = parseInt(req.params.id, 10);
+  const [assistant] = await db.select({ id: usersTable.id, isActive: usersTable.isActive, assistantDoctorId: usersTable.assistantDoctorId })
+    .from(usersTable).where(and(eq(usersTable.id, id), eq(usersTable.role, "assistant" as const))).limit(1);
+  if (!assistant || assistant.assistantDoctorId !== doctorRow.id) {
+    res.status(404).json({ error: "Assistant not found" });
+    return;
+  }
+
+  const [updated] = await db.update(usersTable).set({ isActive: !assistant.isActive }).where(eq(usersTable.id, id)).returning({ isActive: usersTable.isActive });
+  res.json({ isActive: updated.isActive });
+});
+
+/* ─── DELETE /doctors/assistants/:id ─── */
+router.delete("/doctors/assistants/:id", async (req, res): Promise<void> => {
+  const result = await requireDoctor(req.headers.authorization);
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  const { doctorRow } = result;
+
+  const id = parseInt(req.params.id, 10);
+  const [assistant] = await db.select({ id: usersTable.id, assistantDoctorId: usersTable.assistantDoctorId })
+    .from(usersTable).where(and(eq(usersTable.id, id), eq(usersTable.role, "assistant" as const))).limit(1);
+  if (!assistant || assistant.assistantDoctorId !== doctorRow.id) {
+    res.status(404).json({ error: "Assistant not found" });
+    return;
+  }
+
+  await db.delete(usersTable).where(eq(usersTable.id, id));
+  res.sendStatus(204);
+});
+
+/* ─── GET /doctors/patients ─── */
+router.get("/doctors/patients", async (req, res): Promise<void> => {
+  const result = await requireDoctor(req.headers.authorization);
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  const { doctorRow } = result;
+
+  const rows = await db.select({
+    patientName: appointmentsTable.patientName,
+    patientPhone: appointmentsTable.patientPhone,
+    patientUserId: appointmentsTable.patientUserId,
+    appointmentDate: appointmentsTable.appointmentDate,
+    status: appointmentsTable.status,
+  }).from(appointmentsTable)
+    .where(eq(appointmentsTable.doctorId, doctorRow.id))
+    .orderBy(appointmentsTable.appointmentDate);
+
+  const patientMap = new Map<string, {
+    patientName: string; patientPhone: string; patientUserId: number | null;
+    lastVisit: string; totalVisits: number;
+  }>();
+
+  for (const row of rows) {
+    const key = row.patientPhone;
+    const existing = patientMap.get(key);
+    if (!existing) {
+      patientMap.set(key, { patientName: row.patientName, patientPhone: row.patientPhone, patientUserId: row.patientUserId, lastVisit: String(row.appointmentDate), totalVisits: 1 });
+    } else {
+      existing.totalVisits++;
+      if (String(row.appointmentDate) > existing.lastVisit) existing.lastVisit = String(row.appointmentDate);
+    }
+  }
+
+  res.json(Array.from(patientMap.values()));
 });
 
 export default router;

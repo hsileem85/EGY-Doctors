@@ -1,7 +1,7 @@
-import { pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, varchar, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
-export const userRoleEnum = ["admin", "patient", "doctor", "medical_center"] as const;
+export const userRoleEnum = ["admin", "patient", "doctor", "medical_center", "assistant"] as const;
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -13,6 +13,9 @@ export const usersTable = pgTable("users", {
   syndicateNumber: varchar("syndicate_number", { length: 100 }),
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: userRoleEnum }).notNull().default("patient"),
+  isActive: boolean("is_active").notNull().default(true),
+  assistantClinicId: integer("assistant_clinic_id"),
+  assistantDoctorId: integer("assistant_doctor_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

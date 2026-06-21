@@ -93,6 +93,7 @@ export default function AuthPage() {
   const getRedirectFromRole = (role: string, isNewSignup: boolean) => {
     if (role === "patient") return "/";
     if (role === "doctor") return "/dashboard";
+    if (role === "assistant") return "/assistant/dashboard";
     if (role === "medical_center") return isNewSignup ? "/medical-center/profile-setup" : "/medical-center/dashboard";
     return "/";
   };

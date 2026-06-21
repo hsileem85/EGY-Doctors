@@ -22,6 +22,7 @@ import MedicalCenterProfile from "@/pages/MedicalCenterProfile";
 import Magazine from "@/pages/Magazine";
 import ContactUs from "@/pages/ContactUs";
 import Admin from "@/pages/Admin";
+import AssistantDashboard from "@/pages/AssistantDashboard";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/magazine" component={Magazine} />
       <Route path="/contact" component={ContactUs} />
       <Route path="/admin" component={Admin} />
+      <Route path="/assistant/dashboard" component={AssistantDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

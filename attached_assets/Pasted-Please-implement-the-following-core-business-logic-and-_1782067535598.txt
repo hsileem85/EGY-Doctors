@@ -1,0 +1,21 @@
+Please implement the following core business logic and update the necessary database models, Doctor Dashboard UI, and Frontend components for the EGY Doctors platform:
+
+### 1. Assistant Accounts Management
+* **Database/Role:** Create an 'Assistant' role. An assistant must be linked to a specific `Clinic ID` (not just the Doctor), meaning if a doctor has 3 clinics, they can create up to 3 separate assistant accounts.
+* **Doctor Dashboard:** Add a "Manage Assistants" tab where the doctor can create an assistant account (Name, Email/Phone, Password, Assigned Clinic) and toggle their status (Active/Inactive).
+* **Assistant Dashboard:** When an assistant logs in, they only see the "Bookings" management page for their specific assigned clinic.
+
+### 2. Dynamic Pricing on Doctor Cards (Main Page)
+* **Logic:** Evaluate the prices across all clinics associated with a doctor.
+* **Equal Prices:** If the doctor has multiple clinics but the price is the exact same, display that price normally on the doctor card (e.g., "400 EGP").
+* **Different Prices:** If the prices vary between clinics, hide the specific number on the main card. Instead, display a badge saying "Multiple Prices" or "Starts at [Lowest Price] EGP", and change the "Book" button to "View Profile" to force the patient to see the specific clinic details.
+
+### 3. Patient Directory (Doctor Dashboard)
+* Add a "My Patients" (سجل المرضى) tab in the Doctor Dashboard.
+* Display a table/list of unique patients who have visited any of the doctor's clinics.
+* Show Patient Name, Contact Info, Last Visit Date, and Total Number of Visits. 
+
+### 4. The "Follow-up" (Esteshara) Logic
+* **Clinic Settings:** In the Doctor's clinic setup, add an input field for "Follow-up Duration" (e.g., default is 15 days, but the doctor can change it to 7, 10, etc.).
+* **Booking System:** When a patient attempts to book an appointment with a doctor they have visited before, check the date of their *last attended visit*. 
+* **Free Follow-up:** If the new requested booking date falls within the allowed "Follow-up Duration" days from the last visit, automatically flag this booking as a "Follow-up" (استشارة) and set the booking fee to 0 (Free).
