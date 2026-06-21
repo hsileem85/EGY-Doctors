@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
 import { db, usersTable, doctorsTable, passwordResetTokensTable, adminNotificationsTable } from "@workspace/db";
@@ -63,10 +63,17 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 
   const d = parsed.data;
 
-  const existing = await db.select({ id: usersTable.id }).from(usersTable)
-    .where(eq(usersTable.phone, d.phone)).limit(1);
+  const conditions = [eq(usersTable.phone, d.phone)];
+  if (d.email) conditions.push(eq(usersTable.email, d.email));
+  const existing = await db.select({ id: usersTable.id, phone: usersTable.phone, email: usersTable.email })
+    .from(usersTable).where(or(...conditions)).limit(1);
   if (existing.length > 0) {
-    res.status(409).json({ error: "Phone number already registered" });
+    const match = existing[0];
+    if (match.phone === d.phone) {
+      res.status(409).json({ error: "Mobile number already registered" });
+    } else {
+      res.status(409).json({ error: "Email address already registered" });
+    }
     return;
   }
 

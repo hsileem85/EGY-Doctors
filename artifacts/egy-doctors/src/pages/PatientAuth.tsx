@@ -187,7 +187,7 @@ export default function PatientAuth() {
 
                     <div className="space-y-2">
                       <Label htmlFor="loginPhone" className="text-gray-300">
-                        {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
+                        {dir === "rtl" ? "رقم الجوال" : "Mobile Number"}
                       </Label>
                       <PhoneInput
                         id="loginPhone"
@@ -283,7 +283,7 @@ export default function PatientAuth() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signupPhone" className="text-gray-300">
-                        {dir === "rtl" ? "رقم الهاتف" : "Phone"}
+                        {dir === "rtl" ? "رقم الجوال" : "Mobile"}
                       </Label>
                       <PhoneInput
                         id="signupPhone"

@@ -214,7 +214,7 @@ export default function DoctorAuth() {
 
                     <div className="space-y-2">
                       <Label htmlFor="loginPhone" className="text-gray-300">
-                        {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
+                        {dir === "rtl" ? "رقم الجوال" : "Mobile Number"}
                       </Label>
                       <PhoneInput
                         id="loginPhone"
@@ -312,7 +312,7 @@ export default function DoctorAuth() {
 
                       <div className="space-y-2">
                         <Label htmlFor="signupPhone" className="text-gray-300">
-                          {dir === "rtl" ? "رقم الهاتف" : "Phone Number"}
+                          {dir === "rtl" ? "رقم الجوال" : "Mobile Number"}
                         </Label>
                         <PhoneInput
                           id="signupPhone"

@@ -148,8 +148,15 @@ export default function AuthPage() {
         setRedirectPath(path);
         setIsSuccess(true);
       }
-    } catch {
-      setError(isRTL ? "حدث خطأ. يرجى المحاولة مجدداً." : "An error occurred. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("Mobile number already registered")) {
+        setError(isRTL ? "رقم الجوال مسجل مسبقاً." : "Mobile number is already registered.");
+      } else if (msg.includes("Email address already registered")) {
+        setError(isRTL ? "البريد الإلكتروني مسجل مسبقاً." : "Email address is already registered.");
+      } else {
+        setError(isRTL ? "حدث خطأ. يرجى المحاولة مجدداً." : "An error occurred. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +241,7 @@ export default function AuthPage() {
     password: isRTL ? "كلمة المرور" : "Password",
     fullName: isRTL ? "الاسم بالإنجليزية" : "English Name",
     centerName: isRTL ? "اسم المركز" : "Center Name",
-    phone: isRTL ? "رقم الهاتف" : "Phone",
+    phone: isRTL ? "رقم الجوال" : "Mobile",
     nationalId: isRTL ? "الرقم القومي (اختياري)" : "National ID (Optional)",
     specialty: isRTL ? "التخصص" : "Specialty",
     location: isRTL ? "الموقع" : "Location",
