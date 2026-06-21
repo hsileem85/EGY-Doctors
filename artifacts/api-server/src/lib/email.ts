@@ -15,6 +15,9 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   }
 }
 
+const FOOTER = `<p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px;text-align:center">EGY Doctors — Egypt's trusted medical directory</p>`;
+const LOGO = `<div style="text-align:center;margin-bottom:28px"><h1 style="color:#0F172A;font-size:24px;margin:0">EGY<span style="color:#D4A853"> Doctors</span></h1></div>`;
+
 export async function sendContactEmail(data: {
   name: string;
   email: string;
@@ -98,7 +101,6 @@ export async function sendDoctorPendingEmail(to: string, doctorName: string): Pr
 }
 
 export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
-  // Do NOT swallow errors here — let them propagate so the caller can tell the user
   await sendEmail(
       to,
       "Your EGY Doctors password reset code",
@@ -127,155 +129,60 @@ export async function sendPasswordResetEmail(to: string, code: string): Promise<
     );
 }
 
-export async function sendAppointmentConfirmedEmail(data: {
+/* ── Appointment notification helpers ── */
+
+type ApptEmailData = {
   to: string;
   patientName: string;
   doctorName: string;
   date: string;
   time: string;
   clinicName?: string;
-}): Promise<void> {
-  const { to, patientName, doctorName, date, time, clinicName } = data;
+  lang?: "en" | "ar";
+};
+
+function apptDetailsTable(clinicRow: string) {
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px">${clinicRow}</table>`;
+}
+
+export async function sendAppointmentConfirmedEmail(data: ApptEmailData): Promise<void> {
+  const { to, patientName, doctorName, date, time, clinicName, lang } = data;
   const clinicRowAr = clinicName ? `<tr><td style="padding:6px 0;color:#374151;font-weight:600">العيادة</td><td style="padding:6px 0;color:#1E293B">${clinicName}</td></tr>` : "";
   const clinicRowEn = clinicName ? `<tr><td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Clinic</td><td style="padding:6px 0;color:#1E293B">${clinicName}</td></tr>` : "";
+  const detailsAr = apptDetailsTable(`<tr><td style="padding:6px 0;color:#374151;font-weight:600">الطبيب</td><td style="padding:6px 0;color:#1E293B">د. ${doctorName}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">التاريخ</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">الوقت</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>${clinicRowAr}`);
+  const detailsEn = apptDetailsTable(`<tr><td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Doctor</td><td style="padding:6px 0;color:#1E293B">Dr. ${doctorName}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">Date</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">Time</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>${clinicRowEn}`);
+
+  const arBlock = `<div dir="rtl" style="text-align:right;margin-bottom:32px"><h2 style="color:#0F172A;font-size:20px">مرحباً، ${patientName}!</h2><p style="color:#475569;line-height:1.8">أخبار رائعة — تم <strong>تأكيد</strong> موعدك مع <strong>د. ${doctorName}</strong>.</p><div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:20px;margin:20px 0">${detailsAr}</div><p style="color:#475569;font-size:14px;line-height:1.8">يُرجى الحضور قبل 10 دقائق من موعدك. للإلغاء أو إعادة الجدولة، تواصل مع العيادة مباشرةً.</p></div>`;
+  const enBlock = `<div dir="ltr" style="text-align:left"><h2 style="color:#0F172A;font-size:20px">Hello, ${patientName}!</h2><p style="color:#475569;line-height:1.6">Great news — your appointment with <strong>Dr. ${doctorName}</strong> has been <strong>confirmed</strong>.</p><div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:20px;margin:20px 0">${detailsEn}</div><p style="color:#475569;font-size:14px;line-height:1.6">Please arrive 10 minutes before your scheduled time. If you need to cancel or reschedule, contact the clinic directly.</p></div>`;
+
+  const content = lang === "ar" ? arBlock : lang === "en" ? enBlock : `${arBlock}<hr style="border:none;border-top:1px solid #E2E8F0;margin:0 0 28px" />${enBlock}`;
+  const subject = lang === "ar" ? "✅ تم تأكيد موعدك — EGY Doctors" : lang === "en" ? "✅ Your appointment has been confirmed — EGY Doctors" : "✅ تم تأكيد موعدك / Your appointment has been confirmed — EGY Doctors";
+
   try {
-    await sendEmail(
-      to,
-      "✅ تم تأكيد موعدك / Your appointment has been confirmed — EGY Doctors",
-      `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
-        <div style="text-align:center;margin-bottom:28px">
-          <h1 style="color:#0F172A;font-size:24px;margin:0">EGY<span style="color:#D4A853"> Doctors</span></h1>
-        </div>
-
-        <!-- Arabic section -->
-        <div dir="rtl" style="text-align:right;margin-bottom:32px">
-          <h2 style="color:#0F172A;font-size:20px">مرحباً، ${patientName}!</h2>
-          <p style="color:#475569;line-height:1.8">
-            أخبار رائعة — تم <strong>تأكيد</strong> موعدك مع <strong>د. ${doctorName}</strong>.
-          </p>
-          <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:20px;margin:20px 0">
-            <table style="width:100%;border-collapse:collapse;font-size:14px">
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">الطبيب</td><td style="padding:6px 0;color:#1E293B">د. ${doctorName}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">التاريخ</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">الوقت</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>
-              ${clinicRowAr}
-            </table>
-          </div>
-          <p style="color:#475569;font-size:14px;line-height:1.8">
-            يُرجى الحضور قبل 10 دقائق من موعدك. للإلغاء أو إعادة الجدولة، تواصل مع العيادة مباشرةً.
-          </p>
-        </div>
-
-        <hr style="border:none;border-top:1px solid #E2E8F0;margin:0 0 28px" />
-
-        <!-- English section -->
-        <div dir="ltr" style="text-align:left">
-          <h2 style="color:#0F172A;font-size:20px">Hello, ${patientName}!</h2>
-          <p style="color:#475569;line-height:1.6">
-            Great news — your appointment with <strong>Dr. ${doctorName}</strong> has been <strong>confirmed</strong>.
-          </p>
-          <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:20px;margin:20px 0">
-            <table style="width:100%;border-collapse:collapse;font-size:14px">
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Doctor</td><td style="padding:6px 0;color:#1E293B">Dr. ${doctorName}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">Date</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">Time</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>
-              ${clinicRowEn}
-            </table>
-          </div>
-          <p style="color:#475569;font-size:14px;line-height:1.6">
-            Please arrive 10 minutes before your scheduled time. If you need to cancel or reschedule, contact the clinic directly.
-          </p>
-        </div>
-
-        <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px;text-align:center">
-          EGY Doctors — Egypt's trusted medical directory
-        </p>
-      </div>
-      `
-    );
+    await sendEmail(to, subject, `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">${LOGO}${content}${FOOTER}</div>`);
   } catch {
     // Email failures should not block confirmation
   }
 }
 
-export async function sendAppointmentCancelledEmail(data: {
-  to: string;
-  patientName: string;
-  doctorName: string;
-  date: string;
-  time: string;
-  clinicName?: string;
-}): Promise<void> {
-  const { to, patientName, doctorName, date, time, clinicName } = data;
+export async function sendAppointmentCancelledEmail(data: ApptEmailData): Promise<void> {
+  const { to, patientName, doctorName, date, time, clinicName, lang } = data;
   const clinicRowAr = clinicName ? `<tr><td style="padding:6px 0;color:#374151;font-weight:600">العيادة</td><td style="padding:6px 0;color:#1E293B">${clinicName}</td></tr>` : "";
   const clinicRowEn = clinicName ? `<tr><td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Clinic</td><td style="padding:6px 0;color:#1E293B">${clinicName}</td></tr>` : "";
+  const detailsAr = apptDetailsTable(`<tr><td style="padding:6px 0;color:#374151;font-weight:600">الطبيب</td><td style="padding:6px 0;color:#1E293B">د. ${doctorName}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">التاريخ</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">الوقت</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>${clinicRowAr}`);
+  const detailsEn = apptDetailsTable(`<tr><td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Doctor</td><td style="padding:6px 0;color:#1E293B">Dr. ${doctorName}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">Date</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr><tr><td style="padding:6px 0;color:#374151;font-weight:600">Time</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>${clinicRowEn}`);
+
+  const ctaAr = `<div style="text-align:center;margin:24px 0"><a href="https://egydoctors.com" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">ابحث عن طبيب آخر</a></div>`;
+  const ctaEn = `<div style="text-align:center;margin:24px 0"><a href="https://egydoctors.com" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">Find Another Doctor</a></div>`;
+
+  const arBlock = `<div dir="rtl" style="text-align:right;margin-bottom:32px"><h2 style="color:#0F172A;font-size:20px">مرحباً، ${patientName}!</h2><p style="color:#475569;line-height:1.8">نأسف لإبلاغك — لم يتمكن <strong>د. ${doctorName}</strong> من تأكيد طلب حجزك في الوقت الحالي.</p><div style="background:#FEF2F2;border:1px solid #F87171;border-radius:8px;padding:20px;margin:20px 0">${detailsAr}</div><p style="color:#475569;font-size:14px;line-height:1.8">يمكنك البحث عن طبيب آخر أو اختيار موعد مختلف.</p>${ctaAr}</div>`;
+  const enBlock = `<div dir="ltr" style="text-align:left"><h2 style="color:#0F172A;font-size:20px">Hello, ${patientName}!</h2><p style="color:#475569;line-height:1.6">We're sorry — your appointment request with <strong>Dr. ${doctorName}</strong> could not be confirmed at this time.</p><div style="background:#FEF2F2;border:1px solid #F87171;border-radius:8px;padding:20px;margin:20px 0">${detailsEn}</div><p style="color:#475569;font-size:14px;line-height:1.6">You're welcome to search for another available doctor or try booking a different time slot.</p>${ctaEn}</div>`;
+
+  const content = lang === "ar" ? arBlock : lang === "en" ? enBlock : `${arBlock}<hr style="border:none;border-top:1px solid #E2E8F0;margin:0 0 28px" />${enBlock}`;
+  const subject = lang === "ar" ? "❌ لم يتم تأكيد طلب حجزك — EGY Doctors" : lang === "en" ? "❌ Your appointment request was not confirmed — EGY Doctors" : "❌ لم يتم تأكيد طلب حجزك / Your appointment request was not confirmed — EGY Doctors";
+
   try {
-    await sendEmail(
-      to,
-      "❌ لم يتم تأكيد طلب حجزك / Your appointment request was not confirmed — EGY Doctors",
-      `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
-        <div style="text-align:center;margin-bottom:28px">
-          <h1 style="color:#0F172A;font-size:24px;margin:0">EGY<span style="color:#D4A853"> Doctors</span></h1>
-        </div>
-
-        <!-- Arabic section -->
-        <div dir="rtl" style="text-align:right;margin-bottom:32px">
-          <h2 style="color:#0F172A;font-size:20px">مرحباً، ${patientName}!</h2>
-          <p style="color:#475569;line-height:1.8">
-            نأسف لإبلاغك — لم يتمكن <strong>د. ${doctorName}</strong> من تأكيد طلب حجزك في الوقت الحالي.
-          </p>
-          <div style="background:#FEF2F2;border:1px solid #F87171;border-radius:8px;padding:20px;margin:20px 0">
-            <table style="width:100%;border-collapse:collapse;font-size:14px">
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">الطبيب</td><td style="padding:6px 0;color:#1E293B">د. ${doctorName}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">التاريخ</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">الوقت</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>
-              ${clinicRowAr}
-            </table>
-          </div>
-          <p style="color:#475569;font-size:14px;line-height:1.8">
-            يمكنك البحث عن طبيب آخر أو اختيار موعد مختلف.
-          </p>
-          <div style="text-align:center;margin:24px 0">
-            <a href="https://egydoctors.com" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
-              ابحث عن طبيب آخر
-            </a>
-          </div>
-        </div>
-
-        <hr style="border:none;border-top:1px solid #E2E8F0;margin:0 0 28px" />
-
-        <!-- English section -->
-        <div dir="ltr" style="text-align:left">
-          <h2 style="color:#0F172A;font-size:20px">Hello, ${patientName}!</h2>
-          <p style="color:#475569;line-height:1.6">
-            We're sorry — your appointment request with <strong>Dr. ${doctorName}</strong> could not be confirmed at this time.
-          </p>
-          <div style="background:#FEF2F2;border:1px solid #F87171;border-radius:8px;padding:20px;margin:20px 0">
-            <table style="width:100%;border-collapse:collapse;font-size:14px">
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600;width:100px">Doctor</td><td style="padding:6px 0;color:#1E293B">Dr. ${doctorName}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">Date</td><td style="padding:6px 0;color:#1E293B">${date}</td></tr>
-              <tr><td style="padding:6px 0;color:#374151;font-weight:600">Time</td><td style="padding:6px 0;color:#1E293B">${time}</td></tr>
-              ${clinicRowEn}
-            </table>
-          </div>
-          <p style="color:#475569;font-size:14px;line-height:1.6">
-            You're welcome to search for another available doctor or try booking a different time slot.
-          </p>
-          <div style="text-align:center;margin:24px 0">
-            <a href="https://egydoctors.com" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
-              Find Another Doctor
-            </a>
-          </div>
-        </div>
-
-        <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px;text-align:center">
-          EGY Doctors — Egypt's trusted medical directory
-        </p>
-      </div>
-      `
-    );
+    await sendEmail(to, subject, `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">${LOGO}${content}${FOOTER}</div>`);
   } catch {
     // Email failures should not block the cancellation response
   }

@@ -134,6 +134,11 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       role: user.role,
       doctorId,
       accountStatus,
+      siteLanguage: user.siteLanguage,
+      notificationLanguage: user.notificationLanguage,
+      notifyViaEmail: user.notifyViaEmail,
+      notifyViaSms: user.notifyViaSms,
+      notifyViaWhatsApp: user.notifyViaWhatsApp,
     },
   });
 });
@@ -195,8 +200,63 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
       accountStatus,
       assistantClinicId: user.assistantClinicId ?? null,
       assistantDoctorId: user.assistantDoctorId ?? null,
+      siteLanguage: user.siteLanguage,
+      notificationLanguage: user.notificationLanguage,
+      notifyViaEmail: user.notifyViaEmail,
+      notifyViaSms: user.notifyViaSms,
+      notifyViaWhatsApp: user.notifyViaWhatsApp,
     },
   });
+});
+
+/* ─── GET /auth/preferences ─── */
+router.get("/auth/preferences", async (req, res): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) { res.status(401).json({ error: "Unauthorized" }); return; }
+  let payload: { sub: number };
+  try { payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number }; }
+  catch { res.status(401).json({ error: "Invalid or expired token" }); return; }
+  const [user] = await db.select({
+    siteLanguage: usersTable.siteLanguage,
+    notificationLanguage: usersTable.notificationLanguage,
+    notifyViaEmail: usersTable.notifyViaEmail,
+    notifyViaSms: usersTable.notifyViaSms,
+    notifyViaWhatsApp: usersTable.notifyViaWhatsApp,
+  }).from(usersTable).where(eq(usersTable.id, payload.sub)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  res.json(user);
+});
+
+/* ─── PATCH /auth/preferences ─── */
+router.patch("/auth/preferences", async (req, res): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) { res.status(401).json({ error: "Unauthorized" }); return; }
+  let payload: { sub: number };
+  try { payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number }; }
+  catch { res.status(401).json({ error: "Invalid or expired token" }); return; }
+
+  const Schema = z.object({
+    siteLanguage: z.enum(["en", "ar"]).optional(),
+    notificationLanguage: z.enum(["en", "ar"]).optional(),
+    notifyViaEmail: z.boolean().optional(),
+    notifyViaSms: z.boolean().optional(),
+    notifyViaWhatsApp: z.boolean().optional(),
+  });
+  const parsed = Schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+
+  const updates = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
+  if (Object.keys(updates).length === 0) { res.status(400).json({ error: "No fields to update" }); return; }
+
+  const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, payload.sub)).returning({
+    siteLanguage: usersTable.siteLanguage,
+    notificationLanguage: usersTable.notificationLanguage,
+    notifyViaEmail: usersTable.notifyViaEmail,
+    notifyViaSms: usersTable.notifyViaSms,
+    notifyViaWhatsApp: usersTable.notifyViaWhatsApp,
+  });
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  res.json(updated);
 });
 
 /* ─── GET /auth/me ─── */
@@ -247,6 +307,11 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     image,
     assistantClinicId: user.assistantClinicId ?? null,
     assistantDoctorId: user.assistantDoctorId ?? null,
+    siteLanguage: user.siteLanguage,
+    notificationLanguage: user.notificationLanguage,
+    notifyViaEmail: user.notifyViaEmail,
+    notifyViaSms: user.notifyViaSms,
+    notifyViaWhatsApp: user.notifyViaWhatsApp,
   });
 });
 

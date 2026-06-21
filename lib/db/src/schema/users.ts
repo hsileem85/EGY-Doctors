@@ -2,6 +2,7 @@ import { pgTable, serial, text, timestamp, varchar, integer, boolean } from "dri
 import { createInsertSchema } from "drizzle-zod";
 
 export const userRoleEnum = ["admin", "patient", "doctor", "medical_center", "assistant"] as const;
+export const langEnum = ["en", "ar"] as const;
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -16,6 +17,12 @@ export const usersTable = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   assistantClinicId: integer("assistant_clinic_id"),
   assistantDoctorId: integer("assistant_doctor_id"),
+  // ── Preferences ──
+  siteLanguage: text("site_language", { enum: langEnum }).notNull().default("en"),
+  notificationLanguage: text("notification_language", { enum: langEnum }).notNull().default("ar"),
+  notifyViaEmail: boolean("notify_via_email").notNull().default(true),
+  notifyViaSms: boolean("notify_via_sms").notNull().default(false),
+  notifyViaWhatsApp: boolean("notify_via_whatsapp").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

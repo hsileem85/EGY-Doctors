@@ -1,5 +1,13 @@
 const API_BASE = "/api";
 
+export interface UserPreferences {
+  siteLanguage: "en" | "ar";
+  notificationLanguage: "en" | "ar";
+  notifyViaEmail: boolean;
+  notifyViaSms: boolean;
+  notifyViaWhatsApp: boolean;
+}
+
 export interface AuthUser {
   id: number;
   name: string;
@@ -12,6 +20,11 @@ export interface AuthUser {
   image?: string | null;
   assistantClinicId?: number | null;
   assistantDoctorId?: number | null;
+  siteLanguage?: "en" | "ar" | null;
+  notificationLanguage?: "en" | "ar" | null;
+  notifyViaEmail?: boolean | null;
+  notifyViaSms?: boolean | null;
+  notifyViaWhatsApp?: boolean | null;
 }
 
 export interface ApiClinic {
@@ -428,4 +441,14 @@ export interface ApiPatientRecord {
 
 export function getDoctorPatients(): Promise<ApiPatientRecord[]> {
   return request("/doctors/patients");
+}
+
+/* ── Preferences ── */
+
+export function getPreferences(): Promise<UserPreferences> {
+  return request("/auth/preferences");
+}
+
+export function updatePreferences(data: Partial<UserPreferences>): Promise<UserPreferences> {
+  return request("/auth/preferences", { method: "PATCH", body: JSON.stringify(data) });
 }

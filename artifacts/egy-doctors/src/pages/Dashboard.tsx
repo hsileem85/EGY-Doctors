@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,11 +14,12 @@ import {
   getAppointments, type ApiAppointment, submitDoctorForReview,
   getAssistants, createAssistant, toggleAssistant, deleteAssistant,
   getDoctorPatients, getMyDoctorProfile, updateAppointmentStatus,
+  getPreferences, updatePreferences, type UserPreferences,
   type ApiAssistant, type ApiPatientRecord,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-type Tab = "appointments" | "patients" | "assistants";
+type Tab = "appointments" | "patients" | "assistants" | "preferences";
 
 function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirmed: string } }) {
   const map: Record<ApiAppointment["status"], string> = {
@@ -384,10 +385,147 @@ function PatientsTab({ isRTL }: { isRTL: boolean }) {
   );
 }
 
+/* ── Preferences Tab ── */
+function PreferencesTab({ isRTL }: { isRTL: boolean }) {
+  const { setLang } = useLanguage();
+  const qc = useQueryClient();
+
+  const { data: prefs, isLoading } = useQuery({
+    queryKey: ["preferences"],
+    queryFn: getPreferences,
+  });
+
+  const [form, setForm] = useState<Partial<UserPreferences>>({});
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (prefs) setForm(prefs);
+  }, [prefs]);
+
+  const mut = useMutation({
+    mutationFn: updatePreferences,
+    onSuccess: (updated) => {
+      qc.setQueryData(["preferences"], updated);
+      if (updated.siteLanguage) setLang(updated.siteLanguage);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
+  const current = { ...prefs, ...form };
+
+  function LangRadio({ field, label, labelAr }: { field: "siteLanguage" | "notificationLanguage"; label: string; labelAr: string }) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-gray-700">{isRTL ? labelAr : label}</Label>
+        <div className="flex gap-3">
+          {(["en", "ar"] as const).map(v => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setForm(f => ({ ...f, [field]: v }))}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                current[field] === v
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              <span className="text-base">{v === "en" ? "🇬🇧" : "🇪🇬"}</span>
+              {v === "en" ? (isRTL ? "الإنجليزية" : "English") : (isRTL ? "العربية" : "Arabic")}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) return <div className="py-12 text-center text-gray-400">{isRTL ? "جاري التحميل..." : "Loading..."}</div>;
+
+  return (
+    <div className="max-w-xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{isRTL ? "إعدادات الحساب" : "Account Preferences"}</h1>
+        <p className="text-gray-500 text-sm mt-1">{isRTL ? "خصّص تجربتك وخيارات الإشعارات." : "Customize your experience and notification options."}</p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Site Language */}
+        <Card className="border-0 shadow-sm shadow-gray-200/60">
+          <CardHeader className="pb-3 border-b bg-gray-50/50 rounded-t-xl">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+              <Globe className="h-4 w-4 text-primary" />
+              {isRTL ? "لغة الموقع" : "Site Language"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <LangRadio field="siteLanguage" label="Display language" labelAr="لغة العرض" />
+          </CardContent>
+        </Card>
+
+        {/* Notification Language */}
+        <Card className="border-0 shadow-sm shadow-gray-200/60">
+          <CardHeader className="pb-3 border-b bg-gray-50/50 rounded-t-xl">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+              <Bell className="h-4 w-4 text-primary" />
+              {isRTL ? "إعدادات الإشعارات" : "Notification Settings"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-5">
+            <LangRadio field="notificationLanguage" label="Email notification language" labelAr="لغة إشعارات البريد الإلكتروني" />
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">{isRTL ? "طرق الإشعار" : "Notification Methods"}</Label>
+              <div className="space-y-2.5">
+                {([
+                  { key: "notifyViaEmail" as const, icon: <Mail className="h-4 w-4" />, label: "Email", labelAr: "بريد إلكتروني", note: "", noteAr: "" },
+                  { key: "notifyViaSms" as const, icon: <Sms className="h-4 w-4" />, label: "SMS", labelAr: "رسالة قصيرة", note: "coming soon", noteAr: "قريباً" },
+                  { key: "notifyViaWhatsApp" as const, icon: <Bell className="h-4 w-4" />, label: "WhatsApp", labelAr: "واتساب", note: "coming soon", noteAr: "قريباً" },
+                ] as const).map(m => (
+                  <label
+                    key={m.key}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!(current[m.key])}
+                      onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))}
+                      className="accent-primary h-4 w-4"
+                    />
+                    <span className="text-gray-500">{m.icon}</span>
+                    <span className="text-sm font-medium text-gray-700">{isRTL ? m.labelAr : m.label}</span>
+                    {m.note && <span className="text-xs text-gray-400 italic ms-auto">{isRTL ? m.noteAr : m.note}</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => mut.mutate(form)}
+            disabled={mut.isPending}
+            className="min-w-[120px]"
+          >
+            {mut.isPending ? (isRTL ? "جاري الحفظ..." : "Saving...") : (isRTL ? "حفظ التغييرات" : "Save Changes")}
+          </Button>
+          {saved && <span className="text-sm text-green-600 font-medium">{isRTL ? "✓ تم الحفظ" : "✓ Saved"}</span>}
+          {mut.isError && <span className="text-sm text-red-500">{isRTL ? "حدث خطأ" : "Failed to save"}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
-  const { t, dir } = useLanguage();
+  const { t, dir, setLang } = useLanguage();
   const { user, signOut, refreshUser } = useAuth();
   const isRTL = dir === "rtl";
+
+  useEffect(() => {
+    if (user?.siteLanguage) setLang(user.siteLanguage);
+  }, [user?.siteLanguage]);
   const [activeTab, setActiveTab] = useState<Tab>("appointments");
   const qc = useQueryClient();
 
@@ -413,6 +551,7 @@ export default function Dashboard() {
     { tab: "appointments", icon: <CalendarDays className="h-4 w-4" />, label: isRTL ? "المواعيد" : t.dashboard.appointments },
     { tab: "patients", icon: <Users className="h-4 w-4" />, label: isRTL ? "سجل المرضى" : "My Patients" },
     { tab: "assistants", icon: <UserCog className="h-4 w-4" />, label: isRTL ? "المساعدون" : "Assistants" },
+    { tab: "preferences", icon: <Settings className="h-4 w-4" />, label: isRTL ? "الإعدادات" : "Preferences" },
   ];
 
   return (
@@ -677,6 +816,9 @@ export default function Dashboard() {
             {activeTab === "assistants" && user?.doctorId && (
               <AssistantsTab isRTL={isRTL} doctorId={user.doctorId} />
             )}
+
+            {/* ── Preferences Tab ── */}
+            {activeTab === "preferences" && <PreferencesTab isRTL={isRTL} />}
 
           </div>
         </main>

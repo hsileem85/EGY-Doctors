@@ -181,10 +181,14 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   // ── Send email on confirmed or cancelled ──
   const newStatus = parsed.data.status;
   if ((newStatus === "confirmed" || newStatus === "cancelled") && row.patientUserId) {
-    const [patient] = await db.select({ email: usersTable.email, name: usersTable.name })
-      .from(usersTable).where(eq(usersTable.id, row.patientUserId)).limit(1);
+    const [patient] = await db.select({
+      email: usersTable.email,
+      name: usersTable.name,
+      notifyViaEmail: usersTable.notifyViaEmail,
+      notificationLanguage: usersTable.notificationLanguage,
+    }).from(usersTable).where(eq(usersTable.id, row.patientUserId)).limit(1);
 
-    if (patient?.email) {
+    if (patient?.email && patient.notifyViaEmail !== false) {
       const [doctor] = await db.select({ name: usersTable.name })
         .from(doctorsTable)
         .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id))
@@ -205,6 +209,7 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
         date: String(row.appointmentDate),
         time: row.appointmentTime,
         clinicName,
+        lang: (patient.notificationLanguage ?? "ar") as "en" | "ar",
       };
 
       if (newStatus === "confirmed") {
