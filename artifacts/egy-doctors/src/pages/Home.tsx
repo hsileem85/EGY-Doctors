@@ -64,16 +64,16 @@ export default function Home() {
     });
   }
 
-  function getPricingInfo(doc: ApiDoctor): { label: string; suffix: string; multiple: boolean } {
+  function getPricingInfo(doc: ApiDoctor): { price: string; prefix: string; suffix: string; multiple: boolean } {
     const fees = doc.clinics.map(c => c.fee).filter((f): f is number => f != null && f > 0);
     if (fees.length === 0) {
       const fallback = doc.fee ?? 0;
-      return { label: fallback > 0 ? String(fallback) : "—", suffix: t.dashboard.egp, multiple: false };
+      return { price: fallback > 0 ? String(fallback) : "—", prefix: "", suffix: t.dashboard.egp, multiple: false };
     }
     const min = Math.min(...fees);
     const max = Math.max(...fees);
-    if (min === max) return { label: String(min), suffix: t.dashboard.egp, multiple: false };
-    return { label: isRTL ? `يبدأ من ${min}` : `Starts From ${min}`, suffix: t.dashboard.egp, multiple: true };
+    if (min === max) return { price: String(min), prefix: "", suffix: t.dashboard.egp, multiple: false };
+    return { price: String(min), prefix: isRTL ? "يبدأ من" : "Starts From", suffix: t.dashboard.egp, multiple: true };
   }
 
   function mapsUrl(clinic: ApiDoctor["clinics"][number]): string {
@@ -509,9 +509,10 @@ export default function Home() {
                       const pricing = getPricingInfo(doc);
                       return (
                         <div className="text-right shrink-0 self-start">
-                          <p className={`text-slate-900 leading-tight ${pricing.multiple ? "text-xs font-normal" : "text-xl font-black"}`}>
-                            {pricing.label}
-                          </p>
+                          {pricing.prefix && (
+                            <p className="text-[10px] font-normal text-slate-400 leading-tight">{pricing.prefix}</p>
+                          )}
+                          <p className="text-xl font-black text-slate-900 leading-tight">{pricing.price}</p>
                           <p className="text-[10px] text-slate-400 -mt-0.5">{pricing.suffix}</p>
                         </div>
                       );
