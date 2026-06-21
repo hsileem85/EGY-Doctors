@@ -64,6 +64,18 @@ export default function Home() {
     });
   }
 
+  function getPricingInfo(doc: ApiDoctor): { label: string; suffix: string; multiple: boolean } {
+    const fees = doc.clinics.map(c => c.fee).filter((f): f is number => f != null && f > 0);
+    if (fees.length === 0) {
+      const fallback = doc.fee ?? 0;
+      return { label: fallback > 0 ? String(fallback) : "—", suffix: t.dashboard.egp, multiple: false };
+    }
+    const min = Math.min(...fees);
+    const max = Math.max(...fees);
+    if (min === max) return { label: String(min), suffix: t.dashboard.egp, multiple: false };
+    return { label: isRTL ? `من ${min}` : `From ${min}`, suffix: t.dashboard.egp, multiple: true };
+  }
+
   function mapsUrl(clinic: ApiDoctor["clinics"][number]): string {
     if (clinic.lat && clinic.lng)
       return `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`;
@@ -493,29 +505,52 @@ export default function Home() {
                     </div>
 
                     {/* Fee */}
-                    <div className="text-right shrink-0 self-start">
-                      <p className="text-xl font-black text-slate-900 leading-tight">{doc.fee}</p>
-                      <p className="text-[10px] text-slate-400 -mt-0.5">{t.dashboard.egp}</p>
-                    </div>
+                    {(() => {
+                      const pricing = getPricingInfo(doc);
+                      return (
+                        <div className="text-right shrink-0 self-start">
+                          <p className={`font-black text-slate-900 leading-tight ${pricing.multiple ? "text-sm" : "text-xl"}`}>
+                            {pricing.label}
+                          </p>
+                          <p className="text-[10px] text-slate-400 -mt-0.5">{pricing.suffix}</p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* ── Zone 2: Action bar ── */}
-                  <div className="flex border-t border-slate-100">
-                    <Link href={`/profile/${doc.id}`} className="flex-1">
-                      <button className="w-full py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors">
-                        {isRTL ? "عرض الملف" : "View Profile"}
-                      </button>
-                    </Link>
-                    <div className="w-px bg-slate-100" />
-                    <Link href={`/doctor/${doc.id}`} className="flex-[2]">
-                      <button
-                        className="w-full py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                        style={{ background: "linear-gradient(135deg, #1E293B, #0F172A)" }}
-                      >
-                        {isRTL ? "احجز موعد" : "Book Appointment"}
-                      </button>
-                    </Link>
-                  </div>
+                  {(() => {
+                    const pricing = getPricingInfo(doc);
+                    return (
+                      <div className="flex border-t border-slate-100">
+                        <Link href={`/profile/${doc.id}`} className="flex-1">
+                          <button className="w-full py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors">
+                            {isRTL ? "عرض الملف" : "View Profile"}
+                          </button>
+                        </Link>
+                        <div className="w-px bg-slate-100" />
+                        {pricing.multiple ? (
+                          <Link href={`/profile/${doc.id}`} className="flex-[2]">
+                            <button
+                              className="w-full py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                              style={{ background: "linear-gradient(135deg, #D4A853, #b8922f)" }}
+                            >
+                              {isRTL ? "عرض الأسعار" : "View Profile"}
+                            </button>
+                          </Link>
+                        ) : (
+                          <Link href={`/doctor/${doc.id}`} className="flex-[2]">
+                            <button
+                              className="w-full py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                              style={{ background: "linear-gradient(135deg, #1E293B, #0F172A)" }}
+                            >
+                              {isRTL ? "احجز موعد" : "Book Appointment"}
+                            </button>
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                 </div>
               ))}
