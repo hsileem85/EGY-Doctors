@@ -509,7 +509,7 @@ export default function Home() {
                       const pricing = getPricingInfo(doc);
                       return (
                         <div className="text-right shrink-0 self-start">
-                          <p className={`font-black text-slate-900 leading-tight ${pricing.multiple ? "text-sm" : "text-xl"}`}>
+                          <p className={`text-slate-900 leading-tight ${pricing.multiple ? "text-xs font-normal" : "text-xl font-black"}`}>
                             {pricing.label}
                           </p>
                           <p className="text-[10px] text-slate-400 -mt-0.5">{pricing.suffix}</p>
