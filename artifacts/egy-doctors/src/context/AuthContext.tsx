@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { getMe, signIn as apiSignIn, signUp as apiSignUp, type AuthUser, type SignUpData, type AuthResponse } from "@/lib/api";
 
 interface AuthContextValue {
@@ -17,6 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     const storedToken = localStorage.getItem("egy_token");
@@ -56,7 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("egy_token");
     setToken(null);
     setUser(null);
-  }, []);
+    setLocation("/");
+  }, [setLocation]);
 
   const refreshUser = useCallback(async () => {
     const u = await getMe();

@@ -1,9 +1,9 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Search from "@/pages/Search";
@@ -24,6 +24,13 @@ import ContactUs from "@/pages/ContactUs";
 import Admin from "@/pages/Admin";
 import AssistantDashboard from "@/pages/AssistantDashboard";
 
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) return <Redirect to="/" />;
+  return <Component />;
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -41,21 +48,21 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/doctor/:id" component={DoctorProfile} />
       <Route path="/profile/:id" component={DoctorPublicProfile} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/dashboard/publish" component={PublishContent} />
+      <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/dashboard/publish">{() => <ProtectedRoute component={PublishContent} />}</Route>
       <Route path="/register" component={DoctorRegister} />
       <Route path="/auth" component={AuthPage} />
-      <Route path="/profile-setup" component={DoctorProfileSetup} />
-      <Route path="/edit-profile" component={DoctorProfileSetup} />
+      <Route path="/profile-setup">{() => <ProtectedRoute component={DoctorProfileSetup} />}</Route>
+      <Route path="/edit-profile">{() => <ProtectedRoute component={DoctorProfileSetup} />}</Route>
       <Route path="/about" component={AboutUs} />
-      <Route path="/patient/dashboard" component={PatientDashboard} />
-      <Route path="/patient/emr" component={PatientEMR} />
-      <Route path="/medical-center/dashboard" component={MedicalCenterDashboard} />
-      <Route path="/medical-center/profile-setup" component={MedicalCenterProfile} />
+      <Route path="/patient/dashboard">{() => <ProtectedRoute component={PatientDashboard} />}</Route>
+      <Route path="/patient/emr">{() => <ProtectedRoute component={PatientEMR} />}</Route>
+      <Route path="/medical-center/dashboard">{() => <ProtectedRoute component={MedicalCenterDashboard} />}</Route>
+      <Route path="/medical-center/profile-setup">{() => <ProtectedRoute component={MedicalCenterProfile} />}</Route>
       <Route path="/magazine" component={Magazine} />
       <Route path="/contact" component={ContactUs} />
-      <Route path="/admin" component={Admin} />
-      <Route path="/assistant/dashboard" component={AssistantDashboard} />
+      <Route path="/admin">{() => <ProtectedRoute component={Admin} />}</Route>
+      <Route path="/assistant/dashboard">{() => <ProtectedRoute component={AssistantDashboard} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -66,12 +73,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <AuthProvider>
               <Router />
-            </WouterRouter>
-            <Toaster />
-          </AuthProvider>
+              <Toaster />
+            </AuthProvider>
+          </WouterRouter>
         </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
