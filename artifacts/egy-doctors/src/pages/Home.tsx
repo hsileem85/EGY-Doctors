@@ -73,7 +73,7 @@ export default function Home() {
     const min = Math.min(...fees);
     const max = Math.max(...fees);
     if (min === max) return { label: String(min), suffix: t.dashboard.egp, multiple: false };
-    return { label: isRTL ? `من ${min}` : `From ${min}`, suffix: t.dashboard.egp, multiple: true };
+    return { label: isRTL ? `يبدأ من ${min}` : `Starts From ${min}`, suffix: t.dashboard.egp, multiple: true };
   }
 
   function mapsUrl(clinic: ApiDoctor["clinics"][number]): string {
@@ -529,17 +529,7 @@ export default function Home() {
                           </button>
                         </Link>
                         <div className="w-px bg-slate-100" />
-                        {pricing.multiple ? (
-                          <Link href={`/profile/${doc.id}`} className="flex-[2]">
-                            <button
-                              className="w-full py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                              style={{ background: "linear-gradient(135deg, #D4A853, #b8922f)" }}
-                            >
-                              {isRTL ? "عرض الأسعار" : "View Profile"}
-                            </button>
-                          </Link>
-                        ) : (
-                          <Link href={`/doctor/${doc.id}`} className="flex-[2]">
+                        <Link href={`/doctor/${doc.id}`} className="flex-[2]">
                             <button
                               className="w-full py-2.5 text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
                               style={{ background: "linear-gradient(135deg, #1E293B, #0F172A)" }}
@@ -547,7 +537,6 @@ export default function Home() {
                               {isRTL ? "احجز موعد" : "Book Appointment"}
                             </button>
                           </Link>
-                        )}
                       </div>
                     );
                   })()}
