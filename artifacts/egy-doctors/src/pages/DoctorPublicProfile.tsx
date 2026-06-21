@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
 import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle, Send } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function whatsappUrl(phone: string) {
   const digits = phone.replace(/[^\d]/g, "");
@@ -30,6 +30,10 @@ export default function DoctorPublicProfile() {
   const [reviewText, setReviewText] = useState("");
   const [reviewStatus, setReviewStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [reviewError, setReviewError] = useState("");
+
+  useEffect(() => {
+    if (user?.name && !reviewName) setReviewName(user.name);
+  }, [user?.name]);
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ["doctor", id],
@@ -66,7 +70,7 @@ export default function DoctorPublicProfile() {
 
   async function handleSubmitReview(e: React.FormEvent) {
     e.preventDefault();
-    const name = reviewName.trim() || (user?.name ?? "");
+    const name = reviewName.trim();
     if (!name) { setReviewError(isRTL ? "الرجاء إدخال اسمك" : "Please enter your name"); return; }
     if (reviewRating === 0) { setReviewError(isRTL ? "الرجاء اختيار تقييم" : "Please select a rating"); return; }
     setReviewError("");
@@ -312,7 +316,7 @@ export default function DoctorPublicProfile() {
                           </label>
                           <input
                             type="text"
-                            value={reviewName || (user?.name ?? "")}
+                            value={reviewName}
                             onChange={e => setReviewName(e.target.value)}
                             placeholder={isRTL ? "اسمك" : "Enter your name"}
                             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A853]/40 focus:border-[#D4A853]"
