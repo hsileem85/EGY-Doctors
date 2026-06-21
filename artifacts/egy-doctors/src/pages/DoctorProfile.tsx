@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "wouter";
-import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink, Building2 } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink, Building2, Hourglass } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -431,27 +431,42 @@ export default function DoctorProfile() {
               </div>
             )}
 
-            {bookingStep === "success" && selectedClinic && (
-              <div className="text-center py-6 animate-in zoom-in duration-300">
-                <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="h-8 w-8 text-[#D4A853]" />
+            {bookingStep === "success" && selectedClinic && (() => {
+              const isManual = selectedClinic.bookingConfirmationMethod === "manual";
+              return (
+                <div className="text-center py-6 animate-in zoom-in duration-300">
+                  {isManual ? (
+                    <>
+                      <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Hourglass className="h-8 w-8 text-orange-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingPending}</h3>
+                      <p className="text-sm text-gray-500 mb-4 leading-relaxed max-w-xs mx-auto">
+                        {t.profile.bookingPendingDesc}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 className="h-8 w-8 text-[#D4A853]" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingConfirmed}</h3>
+                      <p className="text-gray-600 mb-1">{t.profile.appointmentScheduled}</p>
+                    </>
+                  )}
+                  <p className="font-bold text-gray-900 mb-1">
+                    {fmtDateInfo(selectedDate || "", lang).fullDate} · {selectedTime}
+                  </p>
+                  <p className="text-sm text-gray-500 mb-6 flex items-center justify-center gap-1">
+                    <Building2 className="h-3.5 w-3.5 text-[#D4A853]" />
+                    {selectedClinic.name} · {t.locations[selectedClinic.location] ?? selectedClinic.location}
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={resetBooking}>
+                    {t.profile.bookAnother}
+                  </Button>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{t.profile.bookingConfirmed}</h3>
-                <p className="text-gray-600 mb-1">
-                  {t.profile.appointmentScheduled}
-                </p>
-                <p className="font-bold text-gray-900 mb-1">
-                  {fmtDateInfo(selectedDate || "", lang).fullDate} · {selectedTime}
-                </p>
-                <p className="text-sm text-gray-500 mb-6 flex items-center justify-center gap-1">
-                  <Building2 className="h-3.5 w-3.5 text-[#D4A853]" />
-                  {selectedClinic.name} · {t.locations[selectedClinic.location] ?? selectedClinic.location}
-                </p>
-                <Button variant="outline" className="w-full" onClick={resetBooking}>
-                  {t.profile.bookAnother}
-                </Button>
-              </div>
-            )}
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

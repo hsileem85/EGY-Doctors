@@ -70,6 +70,8 @@ const translations = {
       bookingConfirmed: "Booking Confirmed!",
       appointmentScheduled: "Your appointment is scheduled for",
       bookAnother: "Book Another",
+      bookingPending: "Booking Request Sent!",
+      bookingPendingDesc: "Your request is pending the doctor's approval. We'll notify you by email once it's confirmed.",
     },
     dashboard: {
       title: "Dashboard",
@@ -287,6 +289,8 @@ const translations = {
       bookingConfirmed: "تم تأكيد الحجز!",
       appointmentScheduled: "تم جدولة موعدك في",
       bookAnother: "حجز موعد آخر",
+      bookingPending: "تم إرسال طلب الحجز!",
+      bookingPendingDesc: "طلبك قيد المراجعة من قِبل الطبيب. سيتم إشعارك بالبريد الإلكتروني فور تأكيده.",
     },
     dashboard: {
       title: "لوحة التحكم",
