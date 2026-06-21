@@ -257,10 +257,7 @@ export default function Dashboard() {
                 <Users className="h-4 w-4" />
                 {t.dashboard.patients}
               </a>
-              <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors">
-                <TrendingUp className="h-4 w-4" />
-                {t.dashboard.performance}
-              </a>
+
               <Link href="/dashboard/publish">
                 <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
                   <PenSquare className="h-4 w-4" />
