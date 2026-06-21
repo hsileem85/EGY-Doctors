@@ -13,7 +13,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAppointments, type ApiAppointment, submitDoctorForReview,
   getAssistants, createAssistant, toggleAssistant, deleteAssistant,
-  getDoctorPatients, getMyDoctorProfile, type ApiAssistant, type ApiPatientRecord,
+  getDoctorPatients, getMyDoctorProfile, updateAppointmentStatus,
+  type ApiAssistant, type ApiPatientRecord,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -23,12 +24,14 @@ function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirm
   const map: Record<ApiAppointment["status"], string> = {
     confirmed: "bg-[#D4A853]/5 text-[#D4A853] border-[#D4A853]/20",
     pending: "bg-blue-50 text-blue-600 border-blue-200",
+    pending_confirmation: "bg-orange-50 text-orange-600 border-orange-200",
     cancelled: "bg-red-50 text-red-600 border-red-200",
     completed: "bg-green-50 text-green-600 border-green-200",
   };
   const labels: Record<ApiAppointment["status"], string> = {
     confirmed: t.dashboard.confirmed,
     pending: "Pending",
+    pending_confirmation: "Awaiting Confirmation",
     cancelled: "Cancelled",
     completed: "Completed",
   };
@@ -386,6 +389,7 @@ export default function Dashboard() {
   const { user, signOut, refreshUser } = useAuth();
   const isRTL = dir === "rtl";
   const [activeTab, setActiveTab] = useState<Tab>("appointments");
+  const qc = useQueryClient();
 
   const accountStatus = user?.accountStatus ?? "approved";
 
@@ -518,6 +522,72 @@ export default function Dashboard() {
                   </Card>
                 </div>
 
+                {/* ── Pending Confirmation Banner ── */}
+                {(() => {
+                  const pending = appointments.filter(a => a.status === "pending_confirmation");
+                  if (pending.length === 0) return null;
+                  return (
+                    <Card className="border border-orange-200 bg-orange-50/50 shadow-sm mb-6">
+                      <CardHeader className="pb-3 pt-4 px-5">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-orange-500" />
+                          <CardTitle className="text-base text-orange-700">
+                            {isRTL
+                              ? `${pending.length} طلب حجز بانتظار موافقتك`
+                              : `${pending.length} booking request${pending.length > 1 ? "s" : ""} awaiting your confirmation`}
+                          </CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="divide-y divide-orange-100">
+                          {pending.map(apt => (
+                            <div key={apt.id} className="flex items-center justify-between px-5 py-3 gap-4">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm text-gray-900 truncate">{apt.patientName}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {apt.appointmentDate} · {apt.appointmentTime}
+                                  {apt.isFollowUp && (
+                                    <span className="ml-2 inline-flex items-center text-emerald-600">
+                                      · {isRTL ? "متابعة" : "Follow-up"}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                                  onClick={() => {
+                                    updateAppointmentStatus(apt.id, "cancelled").then(() =>
+                                      qc.invalidateQueries({ queryKey: ["appointments"] })
+                                    );
+                                  }}
+                                >
+                                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                                  {isRTL ? "رفض" : "Reject"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                  onClick={() => {
+                                    updateAppointmentStatus(apt.id, "confirmed").then(() =>
+                                      qc.invalidateQueries({ queryKey: ["appointments"] })
+                                    );
+                                  }}
+                                >
+                                  <UserCheck className="h-3.5 w-3.5 mr-1" />
+                                  {isRTL ? "تأكيد" : "Confirm"}
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
                 <Card className="border-0 shadow-sm shadow-gray-200/50 mb-8">
                   <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b bg-gray-50/50 rounded-t-xl pb-4">
                     <div>
@@ -555,7 +625,7 @@ export default function Dashboard() {
                               <TableCell className="text-gray-600">{apt.appointmentTime}</TableCell>
                               <TableCell>{statusBadge(apt.status, t)}</TableCell>
                               <TableCell>
-                                {(apt as ApiAppointment & { isFollowUp?: boolean }).isFollowUp && (
+                                {apt.isFollowUp && (
                                   <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
                                     {isRTL ? "استشارة" : "Follow-up"}
                                   </Badge>

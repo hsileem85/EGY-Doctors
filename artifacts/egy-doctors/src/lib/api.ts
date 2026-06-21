@@ -22,6 +22,9 @@ export interface ApiClinic {
   mapUrl: string;
   phone: string;
   fee: number;
+  followUpDays?: number | null;
+  followUpPrice?: number | null;
+  bookingConfirmationMethod?: "automatic" | "manual" | null;
   location: string;
   areaId?: number | null;
   areaName: string;
@@ -93,8 +96,10 @@ export interface ApiAppointment {
   patientPhone: string;
   appointmentDate: string;
   appointmentTime: string;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "pending_confirmation";
   notes: string | null;
+  isFollowUp?: boolean;
+  feeCharged?: number | null;
   createdAt: string;
   updatedAt: string;
   doctorName?: string | null;
@@ -272,6 +277,9 @@ export function addClinic(data: {
   mapUrl?: string;
   phone?: string;
   fee?: number;
+  followUpDays?: number;
+  followUpPrice?: number;
+  bookingConfirmationMethod?: "automatic" | "manual";
   areaId?: number;
   lat?: number;
   lng?: number;
@@ -286,11 +294,18 @@ export function updateClinic(id: number, data: {
   mapUrl?: string;
   phone?: string;
   fee?: number;
+  followUpDays?: number;
+  followUpPrice?: number;
+  bookingConfirmationMethod?: "automatic" | "manual";
   areaId?: number;
   lat?: number;
   lng?: number;
 }): Promise<ApiClinic> {
   return request(`/doctor/clinics/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function updateAppointmentStatus(id: number, status: ApiAppointment["status"]): Promise<ApiAppointment> {
+  return request(`/appointments/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
 }
 
 export function deleteClinic(id: number): Promise<void> {

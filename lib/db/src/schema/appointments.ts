@@ -1,7 +1,7 @@
 import { pgTable, serial, integer, varchar, date, timestamp, text, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
-export const appointmentStatusEnum = ["pending", "confirmed", "cancelled", "completed"] as const;
+export const appointmentStatusEnum = ["pending", "confirmed", "cancelled", "completed", "pending_confirmation"] as const;
 
 export const appointmentsTable = pgTable("appointments", {
   id: serial("id").primaryKey(),

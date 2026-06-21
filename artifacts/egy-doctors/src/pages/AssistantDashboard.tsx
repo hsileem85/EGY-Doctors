@@ -14,6 +14,7 @@ function statusBadge(status: ApiAppointment["status"], isRTL: boolean) {
   const map: Record<ApiAppointment["status"], { cls: string; label: string; labelAr: string }> = {
     confirmed: { cls: "bg-[#D4A853]/5 text-[#D4A853] border-[#D4A853]/20", label: "Confirmed", labelAr: "مؤكد" },
     pending: { cls: "bg-blue-50 text-blue-600 border-blue-200", label: "Pending", labelAr: "قيد الانتظار" },
+    pending_confirmation: { cls: "bg-orange-50 text-orange-600 border-orange-200", label: "Awaiting Confirmation", labelAr: "بانتظار التأكيد" },
     cancelled: { cls: "bg-red-50 text-red-600 border-red-200", label: "Cancelled", labelAr: "ملغي" },
     completed: { cls: "bg-green-50 text-green-600 border-green-200", label: "Completed", labelAr: "مكتمل" },
   };

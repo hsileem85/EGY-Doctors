@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable } from "@workspace/db";
+import { sendAppointmentConfirmedEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -34,17 +35,28 @@ router.post("/appointments", async (req, res): Promise<void> => {
 
   const d = parsed.data;
 
-  // ── Follow-up detection ──
+  // ── Follow-up detection + confirmation method ──
   let isFollowUp = false;
   let feeCharged: number | null = null;
+  let initialStatus: typeof appointmentsTable.$inferSelect["status"] = "pending";
 
   if (d.clinicId) {
-    const [clinic] = await db.select({ fee: clinicsTable.fee, followUpDays: clinicsTable.followUpDays })
-      .from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
+    const [clinic] = await db.select({
+      fee: clinicsTable.fee,
+      followUpDays: clinicsTable.followUpDays,
+      followUpPrice: clinicsTable.followUpPrice,
+      bookingConfirmationMethod: clinicsTable.bookingConfirmationMethod,
+    }).from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
 
     if (clinic) {
       feeCharged = clinic.fee ?? null;
 
+      // Set initial status based on confirmation method
+      initialStatus = clinic.bookingConfirmationMethod === "manual"
+        ? "pending_confirmation"
+        : "confirmed";
+
+      // Follow-up detection
       const followUpDays = clinic.followUpDays ?? 15;
       const cutoff = new Date(d.appointmentDate);
       cutoff.setDate(cutoff.getDate() - followUpDays);
@@ -62,7 +74,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
 
       if (lastVisit && String(lastVisit.appointmentDate) >= cutoffStr) {
         isFollowUp = true;
-        feeCharged = 0;
+        feeCharged = clinic.followUpPrice ?? 0;
       }
     }
   }
@@ -76,6 +88,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
     appointmentDate: d.appointmentDate,
     appointmentTime: d.appointmentTime,
     notes: d.notes ?? null,
+    status: initialStatus,
     isFollowUp,
     feeCharged,
   }).returning();
@@ -147,7 +160,7 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   }
 
   const Schema = z.object({
-    status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+    status: z.enum(["pending", "confirmed", "cancelled", "completed", "pending_confirmation"]),
   });
   const parsed = Schema.safeParse(req.body);
   if (!parsed.success) {
@@ -163,6 +176,36 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   if (!row) {
     res.status(404).json({ error: "Appointment not found" });
     return;
+  }
+
+  // ── Send confirmation email when status changes to confirmed ──
+  if (parsed.data.status === "confirmed" && row.patientUserId) {
+    const [patient] = await db.select({ email: usersTable.email, name: usersTable.name })
+      .from(usersTable).where(eq(usersTable.id, row.patientUserId)).limit(1);
+
+    if (patient?.email) {
+      const [doctor] = await db.select({ name: usersTable.name })
+        .from(doctorsTable)
+        .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id))
+        .where(eq(doctorsTable.id, row.doctorId))
+        .limit(1);
+
+      let clinicName: string | undefined;
+      if (row.clinicId) {
+        const [clinic] = await db.select({ nameEn: clinicsTable.nameEn })
+          .from(clinicsTable).where(eq(clinicsTable.id, row.clinicId)).limit(1);
+        clinicName = clinic?.nameEn ?? undefined;
+      }
+
+      await sendAppointmentConfirmedEmail({
+        to: patient.email,
+        patientName: patient.name ?? row.patientName,
+        doctorName: doctor?.name ?? "Doctor",
+        date: String(row.appointmentDate),
+        time: row.appointmentTime,
+        clinicName,
+      });
+    }
   }
 
   res.json(serializeRow(row));

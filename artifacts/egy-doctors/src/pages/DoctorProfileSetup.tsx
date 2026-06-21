@@ -49,6 +49,9 @@ type Clinic = {
   lat: string;
   lng: string;
   fee: string;
+  followUpDays: string;
+  followUpPrice: string;
+  bookingConfirmationMethod: "automatic" | "manual";
   schedule: ClinicSchedule;
 };
 
@@ -63,6 +66,9 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
     lat: "",
     lng: "",
     fee: "",
+    followUpDays: "15",
+    followUpPrice: "0",
+    bookingConfirmationMethod: "automatic",
     schedule: defaultSchedule(),
     ...overrides,
   };
@@ -184,6 +190,9 @@ export default function DoctorProfileSetup() {
           lat: c.lat != null ? String(c.lat) : "",
           lng: c.lng != null ? String(c.lng) : "",
           fee: c.fee != null ? String(c.fee) : "",
+          followUpDays: c.followUpDays != null ? String(c.followUpDays) : "15",
+          followUpPrice: c.followUpPrice != null ? String(c.followUpPrice) : "0",
+          bookingConfirmationMethod: (c.bookingConfirmationMethod === "manual" ? "manual" : "automatic") as "automatic" | "manual",
           schedule: defaultSchedule(),
         };
       });
@@ -249,11 +258,16 @@ export default function DoctorProfileSetup() {
       await Promise.all(clinics.map(clinic => {
         const numId = parseInt(clinic.id, 10);
         const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
+        const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
+        const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
         const data = {
           name: clinic.name || `Clinic`,
           address: clinic.address || undefined,
           phone: clinic.phone || undefined,
           fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
+          followUpDays: followUpDaysVal && !isNaN(followUpDaysVal) ? followUpDaysVal : undefined,
+          followUpPrice: followUpPriceVal !== undefined && !isNaN(followUpPriceVal) ? followUpPriceVal : undefined,
+          bookingConfirmationMethod: clinic.bookingConfirmationMethod,
           areaId: areaId && !isNaN(areaId) ? areaId : undefined,
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
           lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
@@ -619,6 +633,87 @@ export default function DoctorProfileSetup() {
                               <span className="absolute end-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">
                                 {t.dashboard.egp}
                               </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ── Booking & Follow-up Settings ── */}
+                        <div className="space-y-4 pt-2 border-t border-gray-100">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            {isRTL ? "إعدادات الحجز والمتابعة" : "Booking & Follow-up Settings"}
+                          </p>
+
+                          {/* Booking Confirmation Mode */}
+                          <div className="space-y-2">
+                            <Label>{isRTL ? "طريقة تأكيد الحجز" : "Booking Confirmation"}</Label>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => updateClinic(clinic.id, { bookingConfirmationMethod: "automatic" })}
+                                className={`flex-1 py-2.5 px-4 rounded-lg border text-sm font-medium transition-all ${
+                                  clinic.bookingConfirmationMethod === "automatic"
+                                    ? "border-primary bg-primary/5 text-primary"
+                                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                                }`}
+                              >
+                                ⚡ {isRTL ? "تلقائي" : "Automatic"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateClinic(clinic.id, { bookingConfirmationMethod: "manual" })}
+                                className={`flex-1 py-2.5 px-4 rounded-lg border text-sm font-medium transition-all ${
+                                  clinic.bookingConfirmationMethod === "manual"
+                                    ? "border-primary bg-primary/5 text-primary"
+                                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                                }`}
+                              >
+                                ✋ {isRTL ? "يدوي" : "Manual"}
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-gray-400">
+                              {clinic.bookingConfirmationMethod === "manual"
+                                ? (isRTL ? "ستصل طلبات الحجز إلى لوحتك وتحتاج إلى موافقتك." : "Booking requests will arrive in your dashboard and require your approval.")
+                                : (isRTL ? "تُؤكَّد المواعيد فوراً بعد الحجز." : "Appointments are confirmed instantly after booking.")}
+                            </p>
+                          </div>
+
+                          {/* Follow-up Settings */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>{isRTL ? "مدة المتابعة (أيام)" : "Follow-up Window (days)"}</Label>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={clinic.followUpDays}
+                                  onChange={e => updateClinic(clinic.id, { followUpDays: e.target.value })}
+                                  placeholder="15"
+                                  data-testid={`input-clinic-followup-days-${idx}`}
+                                />
+                              </div>
+                              <p className="text-[11px] text-gray-400">
+                                {isRTL ? "عدد الأيام المسموح فيها بإجراء متابعة بعد آخر زيارة." : "Days after last visit within which a follow-up applies."}
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{isRTL ? "سعر المتابعة" : "Follow-up Price"}</Label>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={clinic.followUpPrice}
+                                  onChange={e => updateClinic(clinic.id, { followUpPrice: e.target.value })}
+                                  className="pe-12"
+                                  placeholder="0"
+                                  data-testid={`input-clinic-followup-price-${idx}`}
+                                />
+                                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">
+                                  {t.dashboard.egp}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-400">
+                                {isRTL ? "0 = متابعة مجانية" : "Set to 0 for a free follow-up."}
+                              </p>
                             </div>
                           </div>
                         </div>

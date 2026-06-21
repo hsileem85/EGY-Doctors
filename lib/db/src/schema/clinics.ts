@@ -1,6 +1,8 @@
 import { pgTable, serial, integer, varchar, text, doublePrecision, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
+export const bookingConfirmationMethodEnum = ["automatic", "manual"] as const;
+
 export const clinicsTable = pgTable("clinics", {
   id: serial("id").primaryKey(),
   doctorId: integer("doctor_id").notNull(),
@@ -12,6 +14,8 @@ export const clinicsTable = pgTable("clinics", {
   phone: varchar("phone", { length: 50 }),
   fee: integer("fee"),
   followUpDays: integer("follow_up_days").default(15),
+  followUpPrice: integer("follow_up_price"),
+  bookingConfirmationMethod: text("booking_confirmation_method").notNull().default("automatic"),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
