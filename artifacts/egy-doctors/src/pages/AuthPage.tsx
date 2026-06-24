@@ -241,7 +241,7 @@ export default function AuthPage() {
     email: isRTL ? "البريد الإلكتروني" : "Email",
     password: isRTL ? "كلمة المرور" : "Password",
     fullName: isRTL ? "الاسم بالإنجليزية" : "English Name",
-    centerName: isRTL ? "اسم المركز" : "Center Name",
+    centerName: isRTL ? "اسم المركز" : "English Name",
     phone: isRTL ? "رقم الجوال" : "Mobile",
     nationalId: isRTL ? "الرقم القومي (اختياري)" : "National ID (Optional)",
     specialty: isRTL ? "التخصص" : "Specialty",
