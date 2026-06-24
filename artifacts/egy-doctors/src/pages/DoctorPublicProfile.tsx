@@ -14,7 +14,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDoctor, submitReview } from "@/lib/api";
+import { getDoctor, submitReview, getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
+import { getEmbedUrl } from "@/lib/youtube";
 import { useAuth } from "@/context/AuthContext";
 
 export default function DoctorPublicProfile() {
@@ -23,6 +24,12 @@ export default function DoctorPublicProfile() {
   const isRTL = dir === "rtl";
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const { data: doctorPosts = [] } = useQuery<ApiMagazinePost[]>({
+    queryKey: ["doctorPosts", id],
+    queryFn: () => getMagazinePosts({ doctorId: parseInt(id!, 10) }),
+    enabled: !!id,
+  });
 
   const [reviewName, setReviewName] = useState("");
   const [reviewRating, setReviewRating] = useState(0);
@@ -286,6 +293,52 @@ export default function DoctorPublicProfile() {
                     <p className="text-gray-500 text-sm">
                       {isRTL ? "لا توجد تقييمات بعد" : "No reviews yet"}
                     </p>
+                  )}
+
+                  {/* Published Content */}
+                  {doctorPosts.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-[#D4A853]" />
+                        {isRTL ? "محتوى منشور" : "Published Content"}
+                      </h3>
+                      <div className="space-y-4">
+                        {doctorPosts.map(post => (
+                          <div key={post.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                            <div className="p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                  post.type === "article" ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                  post.type === "video" ? "bg-red-50 text-red-600 border-red-200" :
+                                  "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}>
+                                  {post.type === "article" ? (isRTL ? "مقال" : "Article") :
+                                   post.type === "video" ? (isRTL ? "فيديو" : "Video") :
+                                   (isRTL ? "نصيحة" : "Quick Tip")}
+                                </span>
+                                <span className="text-xs text-gray-400">{new Date(post.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              {post.title && <h4 className="font-semibold text-gray-900 text-sm mb-1">{post.title}</h4>}
+                              {post.content && <p className="text-gray-600 text-sm leading-relaxed">{post.content}</p>}
+                            </div>
+                            {post.type === "video" && post.mediaUrl && (() => {
+                              const embedUrl = getEmbedUrl(post.mediaUrl);
+                              return embedUrl ? (
+                                <div style={{ aspectRatio: "16/9" }}>
+                                  <iframe
+                                    src={embedUrl}
+                                    className="w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    title={post.title ?? "Video"}
+                                  />
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
 
                   {/* Write a review form — patients only */}

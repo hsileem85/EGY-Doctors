@@ -6,6 +6,7 @@ import contactRouter from "./contact";
 import doctorsRouter from "./doctors";
 import listingsRouter from "./listings";
 import appointmentsRouter from "./appointments";
+import magazineRouter from "./magazine";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(contactRouter);
 router.use(doctorsRouter);
 router.use(listingsRouter);
 router.use(appointmentsRouter);
+router.use(magazineRouter);
 
 export default router;

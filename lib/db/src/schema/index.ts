@@ -9,3 +9,4 @@ export * from "./appointments";
 export * from "./password_reset_tokens";
 export * from "./admin_notifications";
 export * from "./site_settings";
+export * from "./magazine_posts";

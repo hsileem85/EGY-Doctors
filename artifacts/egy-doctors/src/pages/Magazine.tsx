@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
+import { getEmbedUrl } from "@/lib/youtube";
 import {
   Heart, MessageCircle, Share2, Bookmark, BookmarkCheck,
   PlayCircle, FileText, MoreHorizontal, Send,
@@ -44,119 +47,39 @@ interface Post {
   tags: string[];
 }
 
-const mockPosts: Post[] = [
-  {
-    id: "1",
-    doctorId: "d1",
-    doctorName: "Dr. Ahmed Youssef",
-    specialty: "Cardiology",
-    avatar: "AY",
-    type: "article",
-    title: "5 Signs Your Heart is Healthier Than You Think",
-    content: "Many people worry about their heart health without realizing the positive signs already present. Regular exercise, stable blood pressure, and good cholesterol levels are all indicators that your heart is performing well. In this article, I break down the top 5 signs that suggest your cardiovascular system is in great shape...",
-    image: "https://images.unsplash.com/photo-1628348070888-cb656235b4eb?w=800&q=80",
-    time: "2 hours ago",
-    likes: 234,
-    comments: [
-      { id: "c1", author: "Sarah M.", avatar: "SM", text: "Very helpful! I've been exercising regularly and this is encouraging.", time: "1 hour ago", likes: 12 }
-    ],
-    shares: 45,
-    bookmarks: 67,
-    tags: ["Heart Health", "Wellness", "Prevention"]
-  },
-  {
-    id: "2",
-    doctorId: "d2",
-    doctorName: "Dr. Nour Hassan",
-    specialty: "Dermatology",
-    avatar: "NH",
-    type: "video",
-    title: "Summer Skincare Routine for Oily Skin",
-    content: "A complete 5-minute skincare routine specifically designed for oily skin during hot summer months. Includes product recommendations and application tips.",
-    videoUrl: "https://www.youtube.com/embed/placeholder",
-    image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d4a5?w=800&q=80",
-    time: "5 hours ago",
-    likes: 567,
-    comments: [
-      { id: "c2", author: "Lina K.", avatar: "LK", text: "Finally a routine that works! My skin has improved so much.", time: "3 hours ago", likes: 28 }
-    ],
-    shares: 123,
-    bookmarks: 189,
-    tags: ["Skincare", "Summer", "Dermatology"]
-  },
-  {
-    id: "3",
-    doctorId: "d3",
-    doctorName: "Dr. Karim Fathy",
-    specialty: "Pediatrics",
-    avatar: "KF",
-    type: "tip",
-    title: "Quick Tip: When to Worry About a Fever",
-    content: "Not every fever requires a doctor visit. Here's when you should be concerned: infants under 3 months with 100.4°F (38°C), fever lasting more than 3 days, or accompanying symptoms like rash, stiff neck, or difficulty breathing. Always trust your parental instincts — when in doubt, call your pediatrician.",
-    time: "8 hours ago",
-    likes: 892,
-    comments: [
-      { id: "c3", author: "Maya R.", avatar: "MR", text: "As a new mom, this is exactly what I needed. Thank you Dr. Karim!", time: "6 hours ago", likes: 45 }
-    ],
-    shares: 234,
-    bookmarks: 156,
-    tags: ["Pediatrics", "Parenting", "Health Tips"]
-  },
-  {
-    id: "4",
-    doctorId: "d4",
-    doctorName: "Dr. Sara Mahmoud",
-    specialty: "Nutrition",
-    avatar: "SM",
-    type: "article",
-    title: "The Mediterranean Diet: A Cardiologist's Perspective",
-    content: "After 15 years of clinical practice, I've seen the Mediterranean diet transform patient outcomes more than any prescription. The combination of olive oil, fish, nuts, and vegetables creates a powerful anti-inflammatory effect...",
-    image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&q=80",
-    time: "1 day ago",
-    likes: 445,
-    comments: [
-      { id: "c4", author: "Omar H.", avatar: "OH", text: "I've been following this for 6 months and my cholesterol dropped significantly!", time: "20 hours ago", likes: 34 }
-    ],
-    shares: 89,
-    bookmarks: 234,
-    tags: ["Nutrition", "Heart Health", "Diet"]
-  },
-  {
-    id: "5",
-    doctorId: "d1",
-    doctorName: "Dr. Ahmed Youssef",
-    specialty: "Cardiology",
-    avatar: "AY",
-    type: "video",
-    title: "Understanding Blood Pressure Readings",
-    content: "What do those two numbers really mean? I explain systolic vs diastolic pressure in under 3 minutes with visual examples.",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80",
-    time: "2 days ago",
-    likes: 1234,
+function apiPostToPost(p: ApiMagazinePost): Post {
+  const initials = p.doctorName
+    .split(" ")
+    .filter(w => w[0])
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join("");
+  const elapsed = (() => {
+    const diff = Date.now() - new Date(p.createdAt).getTime();
+    const h = Math.floor(diff / 3600000);
+    if (h < 1) return "Just now";
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    return d === 1 ? "1 day ago" : `${d} days ago`;
+  })();
+  return {
+    id: String(p.id),
+    doctorId: String(p.doctorId),
+    doctorName: p.doctorName,
+    specialty: p.specialty,
+    avatar: initials || "DR",
+    type: p.type,
+    title: p.title ?? "",
+    content: p.content ?? "",
+    videoUrl: p.mediaUrl ?? undefined,
+    time: elapsed,
+    likes: 0,
     comments: [],
-    shares: 345,
-    bookmarks: 567,
-    tags: ["Cardiology", "Blood Pressure", "Education"]
-  },
-  {
-    id: "6",
-    doctorId: "d5",
-    doctorName: "Dr. Layla Omar",
-    specialty: "Mental Health",
-    avatar: "LO",
-    type: "tip",
-    title: "The 4-7-8 Breathing Technique for Anxiety",
-    content: "Breathe in for 4 seconds, hold for 7, exhale for 8. This simple technique activates your parasympathetic nervous system and can reduce anxiety in under 2 minutes. I recommend it to all my patients dealing with stress and panic attacks.",
-    time: "3 days ago",
-    likes: 2345,
-    comments: [
-      { id: "c5", author: "Hassan A.", avatar: "HA", text: "Tried this during a panic attack and it worked. Thank you for sharing.", time: "2 days ago", likes: 67 }
-    ],
-    shares: 567,
-    bookmarks: 890,
-    tags: ["Mental Health", "Anxiety", "Self-Care"]
-  }
-];
+    shares: 0,
+    bookmarks: 0,
+    tags: [],
+  };
+}
 
 const typeFilters: { key: "all" | PostType; label: string; icon: React.ReactNode }[] = [
   { key: "all", label: "All", icon: <Newspaper className="h-4 w-4" /> },
@@ -174,19 +97,18 @@ export default function Magazine() {
   const [followedDoctors, setFollowedDoctors] = useState<Set<string>>(new Set());
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [postComments, setPostComments] = useState<Record<string, Comment[]>>(() => {
-    const map: Record<string, Comment[]> = {};
-    mockPosts.forEach(p => { map[p.id] = p.comments; });
-    return map;
-  });
-  const [postLikes, setPostLikes] = useState<Record<string, number>>(() => {
-    const map: Record<string, number> = {};
-    mockPosts.forEach(p => { map[p.id] = p.likes; });
-    return map;
-  });
+  const [postComments, setPostComments] = useState<Record<string, Comment[]>>({});
+  const [postLikes, setPostLikes] = useState<Record<string, number>>({});
   const [sharedPosts, setSharedPosts] = useState<Set<string>>(new Set());
 
-  const filteredPosts = filter === "all" ? mockPosts : mockPosts.filter(p => p.type === filter);
+  const { data: apiPosts = [], isLoading: postsLoading } = useQuery<ApiMagazinePost[]>({
+    queryKey: ["magazinePosts"],
+    queryFn: () => getMagazinePosts(),
+    staleTime: 30000,
+  });
+
+  const allPosts: Post[] = apiPosts.map(apiPostToPost);
+  const filteredPosts = filter === "all" ? allPosts : allPosts.filter(p => p.type === filter);
 
   const toggleLike = (postId: string) => {
     setLikedPosts(prev => {
@@ -349,6 +271,18 @@ export default function Magazine() {
 
         {/* Posts Feed */}
         <div className="space-y-6">
+          {postsLoading && (
+            <div className="py-16 text-center text-gray-500">
+              <Newspaper className="h-10 w-10 mx-auto mb-3 opacity-30 text-[#D4A853]" />
+              <p>{isRTL ? "جار تحميل المقالات..." : "Loading posts..."}</p>
+            </div>
+          )}
+          {!postsLoading && filteredPosts.length === 0 && (
+            <div className="py-16 text-center text-gray-500">
+              <Newspaper className="h-10 w-10 mx-auto mb-3 opacity-30 text-[#D4A853]" />
+              <p>{isRTL ? "لا توجد منشورات بعد. شجّع أطباءك على النشر!" : "No posts yet. Encourage your doctors to publish!"}</p>
+            </div>
+          )}
           {filteredPosts.map(post => {
             const isLiked = likedPosts.has(post.id);
             const isBookmarked = bookmarkedPosts.has(post.id);
@@ -441,21 +375,15 @@ export default function Magazine() {
                   </div>
 
                   {/* Media */}
-                  {post.image && (
-                    <div className="relative mx-5 mb-4 rounded-lg overflow-hidden">
-                      <img
-                        src={post.image}
-                        alt={post.title}
-                        className="w-full h-64 object-cover"
-                        loading="lazy"
+                  {post.type === "video" && post.videoUrl && (
+                    <div className="mx-5 mb-4 rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                      <iframe
+                        src={getEmbedUrl(post.videoUrl) ?? ""}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title={post.title}
                       />
-                      {post.type === "video" && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <div className="w-16 h-16 rounded-full bg-[#D4A853] flex items-center justify-center shadow-lg shadow-[#D4A853]/30 cursor-pointer hover:scale-110 transition-transform">
-                            <PlayCircle className="h-8 w-8 text-[#0F172A]" />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
 

@@ -452,3 +452,45 @@ export function getPreferences(): Promise<UserPreferences> {
 export function updatePreferences(data: Partial<UserPreferences>): Promise<UserPreferences> {
   return request("/auth/preferences", { method: "PATCH", body: JSON.stringify(data) });
 }
+
+/* ── Magazine ── */
+
+export interface ApiMagazinePost {
+  id: number;
+  doctorId: number;
+  type: "article" | "tip" | "video";
+  title: string | null;
+  content: string | null;
+  mediaUrl: string | null;
+  createdAt: string;
+  doctorName: string;
+  doctorNameAr: string | null;
+  doctorImage: string;
+  specialty: string;
+  specialtyAr: string;
+}
+
+export function getMagazinePosts(params?: { type?: string; doctorId?: number }): Promise<ApiMagazinePost[]> {
+  const qs = new URLSearchParams();
+  if (params?.type) qs.set("type", params.type);
+  if (params?.doctorId !== undefined) qs.set("doctorId", String(params.doctorId));
+  const q = qs.toString();
+  return request(`/magazine/posts${q ? `?${q}` : ""}`);
+}
+
+export function getMyMagazinePosts(): Promise<ApiMagazinePost[]> {
+  return request("/magazine/posts/mine");
+}
+
+export function createMagazinePost(data: {
+  type: "article" | "tip" | "video";
+  title?: string | null;
+  content?: string | null;
+  mediaUrl?: string | null;
+}): Promise<{ id: number }> {
+  return request("/magazine/posts", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function deleteMagazinePost(id: number): Promise<{ ok: boolean }> {
+  return request(`/magazine/posts/${id}`, { method: "DELETE" });
+}
