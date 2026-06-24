@@ -13,7 +13,6 @@ import Dashboard from "@/pages/Dashboard";
 import DoctorRegister from "@/pages/DoctorRegister";
 import AuthPage from "@/pages/AuthPage";
 import DoctorProfileSetup from "@/pages/DoctorProfileSetup";
-import PublishContent from "@/pages/PublishContent";
 import AboutUs from "@/pages/AboutUs";
 import PatientDashboard from "@/pages/PatientDashboard";
 import PatientEMR from "@/pages/PatientEMR";
@@ -49,7 +48,6 @@ function Router() {
       <Route path="/doctor/:id" component={DoctorProfile} />
       <Route path="/profile/:id" component={DoctorPublicProfile} />
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
-      <Route path="/dashboard/publish">{() => <ProtectedRoute component={PublishContent} />}</Route>
       <Route path="/register" component={DoctorRegister} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/profile-setup">{() => <ProtectedRoute component={DoctorProfileSetup} />}</Route>
