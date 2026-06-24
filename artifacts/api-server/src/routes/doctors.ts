@@ -20,16 +20,29 @@ function serializeDate(d: unknown): string {
   return String(d);
 }
 
+/* ─── Haversine distance (km) between two lat/lng points ─── */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /* ─── GET /doctors ─── */
 router.get("/doctors", async (req, res): Promise<void> => {
   const Schema = z.object({
     q: z.string().optional(),
     specialtyId: z.coerce.number().optional(),
     cityId: z.coerce.number().optional(),
+    lat: z.coerce.number().optional(),
+    lng: z.coerce.number().optional(),
   });
 
   const params = Schema.safeParse(req.query);
-  const { q, specialtyId, cityId } = params.success ? params.data : {};
+  const { q, specialtyId, cityId, lat, lng } = params.success ? params.data : {} as Record<string, undefined>;
 
   const conditions: ReturnType<typeof eq>[] = [
     eq(doctorsTable.accountStatus, "approved"),
@@ -115,6 +128,24 @@ router.get("/doctors", async (req, res): Promise<void> => {
       lng: c.lng ?? null,
     }));
 
+    // Calculate nearest clinic distance if user coords provided
+    let distanceKm: number | null = null;
+    if (lat != null && lng != null) {
+      for (const c of doctorClinics) {
+        if (c.lat != null && c.lng != null) {
+          const d = haversineKm(lat, lng, c.lat, c.lng);
+          if (distanceKm === null || d < distanceKm) distanceKm = d;
+        }
+      }
+    }
+
+    const distanceLabel =
+      distanceKm === null
+        ? ""
+        : distanceKm < 1
+        ? `${Math.round(distanceKm * 1000)} m`
+        : `${distanceKm.toFixed(1)} km`;
+
     return {
       id: r.id,
       name: r.nameEn,
@@ -134,11 +165,22 @@ router.get("/doctors", async (req, res): Promise<void> => {
       reviewsCount: r.reviews ?? 0,
       accountStatus: r.accountStatus,
       mapUrl: doctorClinics[0]?.mapUrl ?? "",
-      distance: "",
+      distance: distanceLabel,
+      distanceKm,
       clinics: doctorClinics,
       reviewList: [],
     };
   });
+
+  // Sort by distance when user coords supplied, otherwise leave as-is
+  if (lat != null && lng != null) {
+    response.sort((a, b) => {
+      if (a.distanceKm === null && b.distanceKm === null) return 0;
+      if (a.distanceKm === null) return 1;
+      if (b.distanceKm === null) return -1;
+      return a.distanceKm - b.distanceKm;
+    });
+  }
 
   res.set("Cache-Control", "no-store").json(response);
 });

@@ -254,11 +254,15 @@ export function getDoctors(params?: {
   q?: string;
   specialtyId?: number;
   cityId?: number;
+  lat?: number;
+  lng?: number;
 }): Promise<ApiDoctor[]> {
   const qs = new URLSearchParams();
   if (params?.q) qs.set("q", params.q);
   if (params?.specialtyId) qs.set("specialtyId", String(params.specialtyId));
   if (params?.cityId) qs.set("cityId", String(params.cityId));
+  if (params?.lat != null) qs.set("lat", String(params.lat));
+  if (params?.lng != null) qs.set("lng", String(params.lng));
   const query = qs.toString();
   return request(`/doctors${query ? `?${query}` : ""}`);
 }

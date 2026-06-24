@@ -35,6 +35,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDoctors, getSpecialties, getStats, type ApiDoctor } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
+type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
 
 const STATIC_STATS = [
   { key: "clinics", label: "Verified Clinics",  labelAr: "عيادة موثقة" },
@@ -51,12 +52,20 @@ export default function Home() {
   const [isDetecting, setIsDetecting] = useState(false);
   const [locationName, setLocationName] = useState("");
   const [shownPhones, setShownPhones] = useState<Map<number, Set<number>>>(new Map());
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearMeActive, setNearMeActive] = useState(false);
+  const [locationToast, setLocationToast] = useState<string | null>(null);
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
 
   const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: getStats, staleTime: 5 * 60 * 1000 });
   const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";
   const citiesValue = stats ? stats.citiesWithClinics.toLocaleString() : "—";
+
+  function showToast(msg: string) {
+    setLocationToast(msg);
+    setTimeout(() => setLocationToast(null), 4000);
+  }
 
   function togglePhone(docId: number, clinicIdx: number) {
     setShownPhones(prev => {
@@ -88,13 +97,21 @@ export default function Home() {
     return `https://www.google.com/maps/search/?api=1&query=${q}`;
   }
 
-  const detectLocation = useCallback(() => {
-    if (!navigator.geolocation) return;
+  const detectLocation = useCallback((activateNearMe = false) => {
+    if (!navigator.geolocation) {
+      showToast(isRTL ? "المتصفح لا يدعم تحديد الموقع" : "Geolocation is not supported by your browser");
+      return;
+    }
     setIsDetecting(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           const { latitude, longitude } = pos.coords;
+          setUserCoords({ lat: latitude, lng: longitude });
+          if (activateNearMe) {
+            setNearMeActive(true);
+            setSortBy("nearest");
+          }
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
             { headers: { "Accept-Language": isRTL ? "ar" : "en" } },
@@ -110,16 +127,23 @@ export default function Home() {
           setIsDetecting(false);
         }
       },
-      () => setIsDetecting(false),
+      () => {
+        setIsDetecting(false);
+        showToast(
+          isRTL
+            ? "الرجاء السماح بالوصول إلى موقعك أو اكتب منطقتك يدوياً"
+            : "Please allow location access or type your area manually",
+        );
+      },
       { timeout: 10000 },
     );
   }, [isRTL]);
 
   useEffect(() => { detectLocation(); }, []);
 
-  const { data: allDoctors = [], isLoading } = useQuery<ApiDoctor[]>({
-    queryKey: ["doctors"],
-    queryFn: () => getDoctors(),
+  const { data: allDoctors = [], isLoading } = useQuery<ApiDoctorWithDist[]>({
+    queryKey: ["doctors", nearMeActive ? userCoords : null],
+    queryFn: () => getDoctors(nearMeActive && userCoords ? { lat: userCoords.lat, lng: userCoords.lng } : undefined),
   });
 
   const { data: specialties = [] } = useQuery({
@@ -132,11 +156,21 @@ export default function Home() {
     const params = new URLSearchParams();
     if (doctorName.trim()) params.set("q", doctorName.trim());
     if (specialty) params.set("specialty", specialty);
+    if (nearMeActive && userCoords) {
+      params.set("lat", String(userCoords.lat));
+      params.set("lng", String(userCoords.lng));
+    }
     setLocation(`/search?${params.toString()}`);
   };
 
   const sortedDoctors = useMemo(() => {
     return [...allDoctors].sort((a, b) => {
+      if (sortBy === "nearest") {
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      }
       if (sortBy === "rating") return b.rating - a.rating;
       if (sortBy === "fee") return a.fee - b.fee;
       return 0;
@@ -171,7 +205,7 @@ export default function Home() {
                   </span>
                 </div>
                 <button
-                  onClick={detectLocation}
+                  onClick={() => detectLocation()}
                   disabled={isDetecting}
                   className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors disabled:opacity-50"
                 >
@@ -253,12 +287,29 @@ export default function Home() {
               {/* Near Me button */}
               <button
                 type="button"
-                onClick={detectLocation}
+                onClick={() => {
+                  if (nearMeActive) {
+                    setNearMeActive(false);
+                    setSortBy("rating");
+                  } else {
+                    if (userCoords) {
+                      setNearMeActive(true);
+                      setSortBy("nearest");
+                    } else {
+                      detectLocation(true);
+                    }
+                  }
+                }}
                 disabled={isDetecting}
-                className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap"
+                className={`hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap ${
+                  nearMeActive
+                    ? "bg-[#D4A853] text-white hover:bg-[#C49A48]"
+                    : "text-slate-600 bg-slate-100 hover:bg-slate-200"
+                }`}
               >
-                <LocateFixed className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <LocateFixed className={`w-3.5 h-3.5 shrink-0 ${nearMeActive ? "text-white" : "text-slate-500"}`} />
                 {isRTL ? "بالقرب مني" : "Near Me"}
+                {nearMeActive && <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />}
               </button>
 
               {/* Find Doctors */}
@@ -270,6 +321,14 @@ export default function Home() {
               </Button>
             </form>
           </div>
+        {/* Location toast */}
+        {locationToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm text-center">
+            <LocateFixed className="w-4 h-4 text-[#D4A853] shrink-0" />
+            {locationToast}
+          </div>
+        )}
+
         </header>
 
         {/* Stats Strip */}
@@ -378,7 +437,15 @@ export default function Home() {
         <main className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-5">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h1 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-              {isRTL ? "الأطباء القريبون منك" : "Doctors Near You"}
+              {nearMeActive
+                ? (isRTL ? "الأطباء الأقرب إليك" : "Doctors Near You")
+                : (isRTL ? "الأطباء المتاحون" : "Available Doctors")}
+              {nearMeActive && (
+                <span className="inline-flex items-center gap-1 bg-[#D4A853]/10 text-[#8B6914] text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#D4A853]/30">
+                  <LocateFixed className="w-2.5 h-2.5" />
+                  {isRTL ? "بالقرب مني" : "Near Me"}
+                </span>
+              )}
             </h1>
             <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
               <span className="text-[#0F172A]">
@@ -389,6 +456,9 @@ export default function Home() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
               >
+                {nearMeActive && (
+                  <option value="nearest">{isRTL ? "الأقرب" : "Nearest"}</option>
+                )}
                 <option value="rating">
                   {isRTL ? "الأعلى تقييماً" : "Highest Rated"}
                 </option>
@@ -443,7 +513,7 @@ export default function Home() {
                           }
                         </h3>
                       </Link>
-                      <p className="text-[11px] font-medium text-slate-500 mt-0.5 flex items-center gap-1.5">
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <span>{isRTL ? (doc.specialtyAr || t.specialties[doc.specialty] || doc.specialty) : (t.specialties[doc.specialty] ?? doc.specialty)}</span>
                         {doc.reviewsCount > 0 && (
                           <>
@@ -455,6 +525,15 @@ export default function Home() {
                             >
                               {doc.reviewsCount} {isRTL ? "تقييم" : "reviews"}
                             </Link>
+                          </>
+                        )}
+                        {doc.distance && (
+                          <>
+                            <span className="text-slate-300">·</span>
+                            <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold whitespace-nowrap">
+                              <Navigation className="w-2.5 h-2.5" />
+                              {doc.distance}
+                            </span>
                           </>
                         )}
                       </p>
