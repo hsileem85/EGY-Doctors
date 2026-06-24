@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, avg, count } from "drizzle-orm";
+import { eq, and, inArray, avg, count, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
@@ -799,8 +799,16 @@ router.get("/doctors/patients", async (req, res): Promise<void> => {
 
 /* ─── GET /stats ─── */
 router.get("/stats", async (req, res): Promise<void> => {
-  const [row] = await db.select({ clinicsCount: count() }).from(clinicsTable);
-  res.json({ clinicsCount: row?.clinicsCount ?? 0 });
+  const [clinicsRow] = await db.select({ clinicsCount: count() }).from(clinicsTable);
+  const cityRows = await db
+    .selectDistinct({ cityId: areasTable.cityId })
+    .from(clinicsTable)
+    .innerJoin(areasTable, eq(clinicsTable.areaId, areasTable.id))
+    .where(sql`${areasTable.cityId} is not null`);
+  res.json({
+    clinicsCount: clinicsRow?.clinicsCount ?? 0,
+    citiesWithClinics: cityRows.length,
+  });
 });
 
 export default router;

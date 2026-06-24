@@ -74,7 +74,7 @@ import {
 
 const router: IRouter = Router();
 
-router.use(requireAdmin);
+router.use("/admin", requireAdmin);
 
 /* ─── Doctors ─── */
 

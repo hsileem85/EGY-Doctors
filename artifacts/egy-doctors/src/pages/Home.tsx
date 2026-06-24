@@ -37,8 +37,8 @@ import { getDoctors, getSpecialties, getStats, type ApiDoctor } from "@/lib/api"
 type SortOption = "nearest" | "rating" | "fee";
 
 const STATIC_STATS = [
-  { key: "clinics", label: "Verified Clinics", labelAr: "عيادة موثقة" },
-  { key: "govs",    value: "27",    label: "Governorates",    labelAr: "محافظة" },
+  { key: "clinics", label: "Verified Clinics",  labelAr: "عيادة موثقة" },
+  { key: "govs",    label: "Governorates",      labelAr: "محافظة" },
   { key: "books",   value: "150K+", label: "Monthly Bookings", labelAr: "حجز شهرياً" },
   { key: "rating",  value: "4.9★",  label: "Avg. Rating",      labelAr: "متوسط التقييم" },
 ] as const;
@@ -56,6 +56,7 @@ export default function Home() {
 
   const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: getStats, staleTime: 5 * 60 * 1000 });
   const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";
+  const citiesValue = stats ? stats.citiesWithClinics.toLocaleString() : "—";
 
   function togglePhone(docId: number, clinicIdx: number) {
     setShownPhones(prev => {
@@ -277,7 +278,7 @@ export default function Home() {
             {STATIC_STATS.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
                 <span className="text-[#D4A853] font-bold">
-                  {s.key === "clinics" ? clinicsValue : s.value}
+                  {s.key === "clinics" ? clinicsValue : s.key === "govs" ? citiesValue : s.value}
                 </span>
                 <span className="font-medium text-gray-400 uppercase text-[11px] sm:text-xs tracking-wider">
                   {isRTL ? s.labelAr : s.label}
