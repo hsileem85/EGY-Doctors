@@ -11,7 +11,6 @@ import {
 } from "@workspace/db";
 
 const HASH = await bcrypt.hash("password123", 10);
-const ADMIN_HASH = await bcrypt.hash("admin123", 10);
 
 function img(name: string) {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F172A&color=D4A853&size=200`;
@@ -485,18 +484,6 @@ const doctorSeed = [
     ],
   },
 ];
-
-/* ── Admin user ── */
-console.log("🔐 Seeding admin user...");
-await db
-  .insert(usersTable)
-  .values({
-    name: "Admin",
-    phone: "01000000000",
-    passwordHash: ADMIN_HASH,
-    role: "admin",
-  })
-  .onConflictDoNothing();
 
 console.log("👨‍⚕️ Seeding doctors...");
 

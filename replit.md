@@ -47,12 +47,6 @@ A bilingual (EN/AR) medical directory platform for Egypt where patients can sear
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
 
-## Admin credentials
-
-- **Phone:** `01000000000`  
-- **Password:** `admin123`  
-- Login at `/admin` — the page has its own login gate (not behind ProtectedRoute)
-
 ## Gotchas
 
 - `zod` must be in `artifacts/api-server/package.json` dependencies (not just root) — esbuild won't find it otherwise.
