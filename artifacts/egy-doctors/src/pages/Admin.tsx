@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useSearch, useLocation } from "wouter";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 import {
   useListDoctors,
   useApproveDoctor,
@@ -204,28 +205,43 @@ function useInvalidateAdmin() {
 
 /* ─── Admin Login Gate ─── */
 
-const ADMIN_SESSION_KEY = "egy_admin_auth";
-
 function AdminLoginGate() {
   const { lang } = useLanguage();
+  const { user, signIn, signOut, isLoading } = useAuth();
   const isRTL = lang === "ar";
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem(ADMIN_SESSION_KEY) === "1");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <div className="h-8 w-8 border-2 border-[#D4A853] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (user?.role === "admin") {
+    return <AdminDashboard onSignOut={signOut} />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === "admin" && password === "koko@123") {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
-      setAuthed(true);
-      setError("");
-    } else {
-      setError(lang === "ar" ? "اسم المستخدم أو كلمة المرور غير صحيحة" : "Invalid username or password");
+    setError("");
+    setSubmitting(true);
+    try {
+      const result = await signIn(phone.trim(), password);
+      if (result.user.role !== "admin") {
+        signOut();
+        setError(lang === "ar" ? "هذا الحساب ليس حساب مشرف" : "This account does not have admin access");
+      }
+    } catch {
+      setError(lang === "ar" ? "رقم الهاتف أو كلمة المرور غير صحيحة" : "Invalid phone number or password");
+    } finally {
+      setSubmitting(false);
     }
   };
-
-  if (authed) return <AdminDashboard onSignOut={() => { sessionStorage.removeItem(ADMIN_SESSION_KEY); setAuthed(false); }} />;
 
   return (
     <div className={`min-h-screen bg-[#0F172A] flex items-center justify-center px-4 ${isRTL ? "font-arabic" : ""}`}>
@@ -245,15 +261,15 @@ function AdminLoginGate() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">
-              {lang === "ar" ? "اسم المستخدم" : "Username"}
+              {lang === "ar" ? "رقم الهاتف" : "Phone Number"}
             </label>
             <Input
-              type="text"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => { setUsername(e.target.value); setError(""); }}
+              type="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setError(""); }}
               className="bg-[#1E293B] border-[#334155] text-white placeholder:text-gray-600 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
-              placeholder={lang === "ar" ? "اسم المستخدم" : "Username"}
+              placeholder={lang === "ar" ? "رقم الهاتف" : "Phone number"}
               dir="ltr"
             />
           </div>
@@ -281,9 +297,10 @@ function AdminLoginGate() {
 
           <Button
             type="submit"
-            className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] font-semibold"
+            disabled={submitting}
+            className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] font-semibold disabled:opacity-60"
           >
-            {lang === "ar" ? "دخول" : "Sign In"}
+            {submitting ? (lang === "ar" ? "جارٍ الدخول..." : "Signing in...") : (lang === "ar" ? "دخول" : "Sign In")}
           </Button>
         </form>
       </div>

@@ -53,6 +53,13 @@ async function seedSpecialties() {
   }
 }
 
+if (!process.env["JWT_SECRET"]) {
+  if (process.env["NODE_ENV"] === "production") {
+    throw new Error("JWT_SECRET environment variable is required in production but was not set.");
+  }
+  logger.warn("JWT_SECRET is not set — using insecure dev default. Set JWT_SECRET before deploying.");
+}
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {

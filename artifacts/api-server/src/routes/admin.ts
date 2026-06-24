@@ -1,9 +1,30 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { eq, max, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
+
+const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
+
+function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number; role: string };
+    if (payload.role !== "admin") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+}
 
 function phoneVariants(phone: string): string[] {
   const digits = phone.replace(/\D/g, "");
@@ -52,6 +73,8 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+router.use(requireAdmin);
 
 /* ─── Doctors ─── */
 
