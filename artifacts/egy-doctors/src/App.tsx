@@ -59,7 +59,7 @@ function Router() {
       <Route path="/medical-center/profile-setup">{() => <ProtectedRoute component={MedicalCenterProfile} />}</Route>
       <Route path="/magazine" component={Magazine} />
       <Route path="/contact" component={ContactUs} />
-      <Route path="/admin">{() => <ProtectedRoute component={Admin} />}</Route>
+      <Route path="/admin" component={Admin} />
       <Route path="/assistant/dashboard">{() => <ProtectedRoute component={AssistantDashboard} />}</Route>
       <Route component={NotFound} />
     </Switch>
