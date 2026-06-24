@@ -301,7 +301,7 @@ export default function Home() {
                   }
                 }}
                 disabled={isDetecting}
-                className={`hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap ${
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap border-t sm:border-t-0 border-gray-100 ${
                   nearMeActive
                     ? "bg-[#D4A853] text-white hover:bg-[#C49A48]"
                     : "text-slate-600 bg-slate-100 hover:bg-slate-200"
