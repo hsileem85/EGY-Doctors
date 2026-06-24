@@ -506,3 +506,7 @@ export function createMagazinePost(data: {
 export function deleteMagazinePost(id: number): Promise<{ ok: boolean }> {
   return request(`/magazine/posts/${id}`, { method: "DELETE" });
 }
+
+export function getStats(): Promise<{ clinicsCount: number }> {
+  return request("/stats");
+}

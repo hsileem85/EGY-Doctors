@@ -797,4 +797,10 @@ router.get("/doctors/patients", async (req, res): Promise<void> => {
   res.json(Array.from(patientMap.values()));
 });
 
+/* ─── GET /stats ─── */
+router.get("/stats", async (req, res): Promise<void> => {
+  const [row] = await db.select({ clinicsCount: count() }).from(clinicsTable);
+  res.json({ clinicsCount: row?.clinicsCount ?? 0 });
+});
+
 export default router;

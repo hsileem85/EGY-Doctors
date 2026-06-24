@@ -32,16 +32,16 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, type ApiDoctor } from "@/lib/api";
+import { getDoctors, getSpecialties, getStats, type ApiDoctor } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
 
-const HOME_STATS = [
-  { value: "2,500+", label: "Verified Doctors", labelAr: "طبيب موثق" },
-  { value: "27", label: "Governorates", labelAr: "محافظة" },
-  { value: "150K+", label: "Monthly Bookings", labelAr: "حجز شهرياً" },
-  { value: "4.9★", label: "Avg. Rating", labelAr: "متوسط التقييم" },
-];
+const STATIC_STATS = [
+  { key: "clinics", label: "Verified Clinics", labelAr: "عيادة موثقة" },
+  { key: "govs",    value: "27",    label: "Governorates",    labelAr: "محافظة" },
+  { key: "books",   value: "150K+", label: "Monthly Bookings", labelAr: "حجز شهرياً" },
+  { key: "rating",  value: "4.9★",  label: "Avg. Rating",      labelAr: "متوسط التقييم" },
+] as const;
 
 export default function Home() {
   const [_, setLocation] = useLocation();
@@ -53,6 +53,9 @@ export default function Home() {
   const [shownPhones, setShownPhones] = useState<Map<number, Set<number>>>(new Map());
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
+
+  const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: getStats, staleTime: 5 * 60 * 1000 });
+  const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";
 
   function togglePhone(docId: number, clinicIdx: number) {
     setShownPhones(prev => {
@@ -197,8 +200,8 @@ export default function Home() {
               </h1>
               <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
                 {isRTL
-                  ? "تواصل مع أكثر من 2,500 طبيب موثق."
-                  : "Connect with 2,500+ verified medical professionals."}
+                  ? `تواصل مع ${clinicsValue} عيادة موثقة.`
+                  : `Connect with ${clinicsValue} verified medical professionals.`}
               </p>
             </div>
 
@@ -271,9 +274,11 @@ export default function Home() {
         {/* Stats Strip */}
         <div className="bg-[#1E293B] border-b border-[#334155] py-1.5">
           <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center sm:justify-between items-center text-xs sm:text-sm text-gray-300 gap-x-8 gap-y-4">
-            {HOME_STATS.map((s) => (
+            {STATIC_STATS.map((s) => (
               <div key={s.label} className="flex items-center gap-2 tracking-wide">
-                <span className="text-[#D4A853] font-bold">{s.value}</span>
+                <span className="text-[#D4A853] font-bold">
+                  {s.key === "clinics" ? clinicsValue : s.value}
+                </span>
                 <span className="font-medium text-gray-400 uppercase text-[11px] sm:text-xs tracking-wider">
                   {isRTL ? s.labelAr : s.label}
                 </span>
