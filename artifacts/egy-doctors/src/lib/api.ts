@@ -76,6 +76,12 @@ export interface ApiDoctor {
   distance: string;
   clinics: ApiClinic[];
   reviewList: ApiReview[];
+  websiteUrl?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  youtubeUrl?: string | null;
+  xUrl?: string | null;
 }
 
 export interface ApiSpecialty {
@@ -279,6 +285,12 @@ export function updateDoctorProfile(data: {
   fee?: number;
   experience?: number;
   license?: string;
+  websiteUrl?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  youtubeUrl?: string | null;
+  xUrl?: string | null;
 }): Promise<unknown> {
   return request("/doctor/profile", { method: "PUT", body: JSON.stringify(data) });
 }

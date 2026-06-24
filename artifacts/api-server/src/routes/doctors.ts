@@ -175,6 +175,12 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     cityNameAr: citiesTable.nameAr,
     areaName: areasTable.name,
     areaNameAr: areasTable.nameAr,
+    websiteUrl: doctorsTable.websiteUrl,
+    facebookUrl: doctorsTable.facebookUrl,
+    instagramUrl: doctorsTable.instagramUrl,
+    tiktokUrl: doctorsTable.tiktokUrl,
+    youtubeUrl: doctorsTable.youtubeUrl,
+    xUrl: doctorsTable.xUrl,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
@@ -233,6 +239,12 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     accountStatus: row.accountStatus,
     mapUrl: enrichedClinics[0]?.mapUrl ?? "",
     distance: "",
+    websiteUrl: row.websiteUrl ?? null,
+    facebookUrl: row.facebookUrl ?? null,
+    instagramUrl: row.instagramUrl ?? null,
+    tiktokUrl: row.tiktokUrl ?? null,
+    youtubeUrl: row.youtubeUrl ?? null,
+    xUrl: row.xUrl ?? null,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",
@@ -339,6 +351,12 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
     onboardingStatus: doctorsTable.onboardingStatus,
     specialtyName: specialtiesTable.name,
     cityName: citiesTable.name,
+    websiteUrl: doctorsTable.websiteUrl,
+    facebookUrl: doctorsTable.facebookUrl,
+    instagramUrl: doctorsTable.instagramUrl,
+    tiktokUrl: doctorsTable.tiktokUrl,
+    youtubeUrl: doctorsTable.youtubeUrl,
+    xUrl: doctorsTable.xUrl,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
@@ -391,6 +409,12 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
     fee: z.coerce.number().optional().nullable(),
     experience: z.coerce.number().optional().nullable(),
     license: z.string().optional().nullable(),
+    websiteUrl: z.string().optional().nullable(),
+    facebookUrl: z.string().optional().nullable(),
+    instagramUrl: z.string().optional().nullable(),
+    tiktokUrl: z.string().optional().nullable(),
+    youtubeUrl: z.string().optional().nullable(),
+    xUrl: z.string().optional().nullable(),
   });
 
   const parsed = Schema.safeParse(req.body);

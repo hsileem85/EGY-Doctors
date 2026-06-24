@@ -117,6 +117,15 @@ export default function DoctorProfileSetup() {
     bioAr: "",
   });
 
+  const [socialLinks, setSocialLinks] = useState({
+    websiteUrl: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    youtubeUrl: "",
+    xUrl: "",
+  });
+
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [clinics, setClinics] = useState<Clinic[]>([makeClinic()]);
   const [expandedId, setExpandedId] = useState<string>(() => clinics[0].id);
@@ -170,6 +179,15 @@ export default function DoctorProfileSetup() {
       qualificationDegree: "",
       bio: myProfile.bio ?? "",
       bioAr: myProfile.bioAr ?? "",
+    });
+
+    setSocialLinks({
+      websiteUrl: myProfile.websiteUrl ?? "",
+      facebookUrl: myProfile.facebookUrl ?? "",
+      instagramUrl: myProfile.instagramUrl ?? "",
+      tiktokUrl: myProfile.tiktokUrl ?? "",
+      youtubeUrl: myProfile.youtubeUrl ?? "",
+      xUrl: myProfile.xUrl ?? "",
     });
 
     if (myProfile.image) {
@@ -251,6 +269,12 @@ export default function DoctorProfileSetup() {
         cityId: firstClinicCity?.id,
         areaId: firstClinicAreaId,
         fee: firstClinicFee,
+        websiteUrl: socialLinks.websiteUrl || null,
+        facebookUrl: socialLinks.facebookUrl || null,
+        instagramUrl: socialLinks.instagramUrl || null,
+        tiktokUrl: socialLinks.tiktokUrl || null,
+        youtubeUrl: socialLinks.youtubeUrl || null,
+        xUrl: socialLinks.xUrl || null,
       });
 
       await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
@@ -446,6 +470,39 @@ export default function DoctorProfileSetup() {
                         {t.profileSetup.charCount(profile.bioAr.length)}
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Social Media & Web Links */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span>{isRTL ? "روابط التواصل الاجتماعي والموقع" : "Social Media & Web Links"}</span>
+                  </CardTitle>
+                  <p className="text-xs text-gray-500 mt-0.5">{isRTL ? "اختياري — الروابط المُدخلة ستظهر على ملفك الشخصي العام" : "Optional — provided links will appear on your public profile"}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {([
+                      { key: "websiteUrl",   label: isRTL ? "الموقع الإلكتروني" : "Personal Website",   placeholder: "https://yourwebsite.com" },
+                      { key: "facebookUrl",  label: "Facebook",  placeholder: "https://facebook.com/yourpage" },
+                      { key: "instagramUrl", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
+                      { key: "tiktokUrl",    label: "TikTok",    placeholder: "https://tiktok.com/@yourhandle" },
+                      { key: "youtubeUrl",   label: "YouTube",   placeholder: "https://youtube.com/@yourchannel" },
+                      { key: "xUrl",         label: "X (Twitter)", placeholder: "https://x.com/yourhandle" },
+                    ] as const).map(({ key, label, placeholder }) => (
+                      <div key={key} className="space-y-1.5">
+                        <Label className="text-xs text-gray-500 font-medium">{label}</Label>
+                        <Input
+                          type="url"
+                          value={socialLinks[key]}
+                          onChange={e => setSocialLinks(prev => ({ ...prev, [key]: e.target.value }))}
+                          placeholder={placeholder}
+                          dir="ltr"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
