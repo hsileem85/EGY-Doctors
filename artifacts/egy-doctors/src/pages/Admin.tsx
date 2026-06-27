@@ -63,6 +63,7 @@ import {
   Trash2,
   ShieldCheck,
   Eye,
+  EyeOff,
   Bell,
   UserPlus,
   Stethoscope as DoctorIcon,
@@ -213,6 +214,7 @@ function AdminLoginGate() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (isLoading) {
     return (
@@ -277,15 +279,25 @@ function AdminLoginGate() {
             <label className="block text-xs font-medium text-gray-400 mb-1.5">
               {lang === "ar" ? "كلمة المرور" : "Password"}
             </label>
-            <Input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(""); }}
-              className="bg-[#1E293B] border-[#334155] text-white placeholder:text-gray-600 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
-              placeholder="••••••••"
-              dir="ltr"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                className="bg-[#1E293B] border-[#334155] text-white placeholder:text-gray-600 focus:border-[#D4A853] focus:ring-[#D4A853]/20 pr-10"
+                placeholder="••••••••"
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-200 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {error && (
