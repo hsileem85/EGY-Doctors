@@ -91,6 +91,7 @@ export default function AuthPage() {
   }, []);
 
   const getRedirectFromRole = (role: string, isNewSignup: boolean) => {
+    if (role === "admin") return "/admin";
     if (role === "patient") return "/";
     if (role === "doctor") return "/dashboard";
     if (role === "assistant") return "/assistant/dashboard";
@@ -105,7 +106,7 @@ export default function AuthPage() {
     try {
       const result = await signIn(buildPhone(loginCountryCode, loginData.phone), loginData.password);
       const path = getRedirectFromRole(result.user.role, false);
-      if (result.user.role === "patient") {
+      if (result.user.role === "patient" || result.user.role === "admin") {
         setLocation(path);
       } else {
         setRedirectPath(path);
