@@ -27,6 +27,7 @@ function phoneVariants(phone: string): string[] {
   const withZero    = local.startsWith("0") ? local : "0" + local;
   const withoutZero = local.startsWith("0") ? local.slice(1) : local;
   return Array.from(new Set([
+    phone,                  // raw input as-is (e.g. "admin")
     withZero,               // 01070200998
     withoutZero,            // 1070200998
     "20" + withoutZero,     // 201070200998
