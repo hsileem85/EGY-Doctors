@@ -1,7 +1,8 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, specialtiesTable } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { db, specialtiesTable, usersTable } from "@workspace/db";
+import { sql, eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 const SPECIALTIES = [
   { id: 1,  name: "Cardiology",       nameAr: "أمراض القلب" },
@@ -53,6 +54,27 @@ async function seedSpecialties() {
   }
 }
 
+async function seedAdmin() {
+  try {
+    const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, "admin")).limit(1);
+    if (existing) {
+      logger.info("Admin user already exists — skipping");
+      return;
+    }
+    const passwordHash = await bcrypt.hash("koko@123", 10);
+    await db.insert(usersTable).values({
+      phone: "admin",
+      passwordHash,
+      role: "admin",
+      name: "Admin",
+      isActive: true,
+    });
+    logger.info("Admin user created successfully");
+  } catch (err) {
+    logger.error({ err }, "Failed to seed admin user — server will still start");
+  }
+}
+
 if (!process.env["JWT_SECRET"]) {
   if (process.env["NODE_ENV"] === "production") {
     throw new Error("JWT_SECRET environment variable is required in production but was not set.");
@@ -82,4 +104,5 @@ app.listen(port, async (err) => {
 
   logger.info({ port }, "Server listening");
   await seedSpecialties();
+  await seedAdmin();
 });
