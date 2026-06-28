@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SpecialtyCombobox } from "@/components/ui/SpecialtyCombobox";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getSpecialties, getCities, forgotPassword as apiForgotPassword, resetPassword as apiResetPassword } from "@/lib/api";
@@ -667,18 +668,15 @@ export default function AuthPage() {
                       <>
                         <div className="space-y-2">
                           <Label className="text-gray-300">{tl.specialty}</Label>
-                          <Select value={signupData.specialty} onValueChange={(v) => setSignupData({ ...signupData, specialty: v })}>
-                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
-                              <SelectValue placeholder={isRTL ? "اختر التخصص" : "Choose specialty"} />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {apiSpecialties.map((s) => (
-                                <SelectItem key={s.id} value={s.name} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
-                                  {s.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SpecialtyCombobox
+                            value={signupData.specialty}
+                            onValueChange={(v) => setSignupData({ ...signupData, specialty: v })}
+                            options={apiSpecialties.map((s) => ({ value: s.name, label: s.name }))}
+                            placeholder={isRTL ? "اختر التخصص" : "Choose specialty"}
+                            searchPlaceholder={isRTL ? "ابحث عن التخصص…" : "Search specialties…"}
+                            emptyMessage={isRTL ? "لا يوجد تخصص مطابق." : "No specialty found."}
+                            dark
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-gray-300">{tl.syndicateMembership}</Label>
