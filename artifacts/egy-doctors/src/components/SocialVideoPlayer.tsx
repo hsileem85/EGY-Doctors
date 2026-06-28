@@ -6,14 +6,9 @@ interface SocialVideoPlayerProps {
   className?: string;
 }
 
-/**
- * Instagram embed crop constants.
- * The native embed renders a header (~60px) and a footer action bar (~50px with
- * hidecaption=true). We hide both by overflowing and shifting the iframe upward.
- */
 const IG_CROP_TOP = 60;
-const IG_CROP_BOTTOM = 52;
-const IG_CROP_TOTAL = IG_CROP_TOP + IG_CROP_BOTTOM;
+const IG_CROP_BOTTOM = 90;
+const IG_VISIBLE_H = 450;
 
 export function SocialVideoPlayer({ url, title, className = "" }: SocialVideoPlayerProps) {
   const info = getSocialVideoInfo(url);
@@ -22,22 +17,24 @@ export function SocialVideoPlayer({ url, title, className = "" }: SocialVideoPla
   const { embedUrl, aspectRatio, platform } = info;
   const iframeTitle = title ?? platform;
 
-  /* ── Instagram — crop native header & footer ──────────────────── */
+  /* ── Instagram — strict height cap + double-crop (absolute + clip-path) ── */
   if (platform === "instagram") {
     return (
-      <div className={`w-full ${className}`}>
+      <div className={`w-full flex justify-center ${className}`}>
         {/*
-          Outer div clips the iframe. Its height = full 9:16 height minus the
-          cropped regions. We achieve this with the padding-bottom aspect-ratio
-          trick adjusted by the pixel crop.
-          177.78% = (16/9) * 100% — i.e. full portrait height.
+          Outer box: fixed height + overflow:hidden — this is the actual clip boundary.
+          The iframe is shifted up by IG_CROP_TOP so Instagram's header scrolls out of
+          view above the container. The iframe is also made tall enough so the footer
+          scrolls out of view below.
+          clip-path provides a secondary hard cut on the bottom 90px as a safeguard
+          against caption text or action bars that float above the footer region.
         */}
         <div
           style={{
             position: "relative",
-            overflow: "hidden",
             width: "100%",
-            paddingBottom: `calc(177.78% - ${IG_CROP_TOTAL}px)`,
+            height: IG_VISIBLE_H,
+            overflow: "hidden",
           }}
         >
           <iframe
@@ -47,12 +44,12 @@ export function SocialVideoPlayer({ url, title, className = "" }: SocialVideoPla
             allowFullScreen
             style={{
               position: "absolute",
-              top: `-${IG_CROP_TOP}px`,
+              top: -IG_CROP_TOP,
               left: 0,
               width: "100%",
-              /* iframe must be as tall as the visible region + the two cropped regions */
-              height: `calc(100% + ${IG_CROP_TOTAL}px)`,
+              height: IG_VISIBLE_H + IG_CROP_TOP + IG_CROP_BOTTOM,
               border: "none",
+              clipPath: `inset(${IG_CROP_TOP}px 0 ${IG_CROP_BOTTOM}px 0)`,
             }}
           />
         </div>
