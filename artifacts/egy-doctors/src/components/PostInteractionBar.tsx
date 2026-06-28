@@ -128,7 +128,7 @@ export function PostInteractionBar({
     setTimeout(() => setIsShared(false), 2000);
 
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    const url = doctorId ? `${base}/doctor/${doctorId}` : window.location.href;
+    const url = `${base}/magazine?postId=${postId}`;
     const shareData = {
       title: postTitle || (isRTL ? `منشور من ${doctorName}` : `Post by ${doctorName}`),
       text: isRTL
