@@ -82,6 +82,7 @@ export interface ApiDoctor {
   tiktokUrl?: string | null;
   youtubeUrl?: string | null;
   xUrl?: string | null;
+  isFollowing?: boolean;
 }
 
 export interface ApiSpecialty {

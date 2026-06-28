@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle, Send, Globe } from "lucide-react";
+import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle, Send, Globe, UserPlus, UserCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 
 function whatsappUrl(phone: string) {
@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDoctor, submitReview, getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { getDoctor, submitReview, getMagazinePosts, followDoctor, type ApiDoctor, type ApiMagazinePost } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { PostInteractionBar } from "@/components/PostInteractionBar";
 import { SocialVideoPlayer } from "@/components/SocialVideoPlayer";
 import { useAuth } from "@/context/AuthContext";
@@ -48,6 +49,37 @@ export default function DoctorPublicProfile() {
     queryFn: () => getDoctor(parseInt(id!, 10)),
     enabled: !!id,
   });
+
+  const { toast } = useToast();
+
+  const followMutation = useMutation({
+    mutationFn: () => followDoctor(parseInt(id!, 10)),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["doctor", id] });
+      const prev = queryClient.getQueryData<ApiDoctor>(["doctor", id]);
+      queryClient.setQueryData<ApiDoctor>(["doctor", id], (old) =>
+        old ? { ...old, isFollowing: !old.isFollowing } : old
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["doctor", id], ctx.prev);
+      toast({ title: isRTL ? "تعذّر تحديث المتابعة" : "Failed to update follow", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["doctor", id] });
+    },
+  });
+
+  const handleFollow = () => {
+    if (!user) {
+      toast({ title: isRTL ? "يرجى تسجيل الدخول أولاً" : "Sign in to follow this doctor" });
+      return;
+    }
+    followMutation.mutate();
+  };
+
+  const isOwnProfile = user?.doctorId === doctor?.id;
 
   if (isLoading) {
     return (
@@ -198,11 +230,37 @@ export default function DoctorPublicProfile() {
 
               <div className="flex flex-col gap-3 sm:self-center">
                 <Link href={`/doctor/${doctor.id}`}>
-                  <Button className="bg-[#D4A853] text-[#0F172A] hover:bg-[#c49a4a] font-semibold px-6 shadow-lg shadow-[#D4A853]/20">
+                  <Button className="bg-[#D4A853] text-[#0F172A] hover:bg-[#c49a4a] font-semibold px-6 shadow-lg shadow-[#D4A853]/20 w-full">
                     <Calendar className="h-4 w-4 mr-2" />
                     {isRTL ? "احجز موعد" : "Book Appointment"}
                   </Button>
                 </Link>
+
+                {!isOwnProfile && (
+                  <Button
+                    variant="outline"
+                    onClick={handleFollow}
+                    disabled={followMutation.isPending}
+                    className={`w-full font-semibold px-6 transition-colors ${
+                      doctor.isFollowing
+                        ? "bg-[#D4A853]/10 border-[#D4A853]/40 text-[#D4A853] hover:bg-[#D4A853]/20 hover:border-[#D4A853]/60"
+                        : "bg-transparent border-white/20 text-white hover:bg-white/10 hover:border-white/40"
+                    }`}
+                  >
+                    {doctor.isFollowing ? (
+                      <>
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        {isRTL ? "متابَع" : "Following"}
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {isRTL ? "متابعة" : "Follow"}
+                      </>
+                    )}
+                  </Button>
+                )}
+
                 <span className="inline-flex items-center justify-center gap-2 text-sm text-gray-500">
                   <Phone className="h-4 w-4" />
                   {isRTL ? "اتصل بالعيادة" : "Contact via booking"}

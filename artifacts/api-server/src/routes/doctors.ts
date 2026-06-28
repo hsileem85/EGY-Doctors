@@ -195,6 +195,16 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  /* Resolve optional caller identity for isFollowing */
+  let callerId: number | null = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const p = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
+      callerId = p.sub;
+    } catch { /* unauthenticated — callerId stays null */ }
+  }
+
   const [row] = await db.select({
     id: doctorsTable.id,
     userId: doctorsTable.userId,
@@ -260,6 +270,20 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     .where(eq(reviewsTable.doctorId, id))
     .orderBy(reviewsTable.createdAt);
 
+  /* isFollowing — only meaningful when caller is authenticated */
+  let isFollowing = false;
+  if (callerId !== null) {
+    const [follow] = await db
+      .select({ id: doctorFollowsTable.id })
+      .from(doctorFollowsTable)
+      .where(and(
+        eq(doctorFollowsTable.followerId, callerId),
+        eq(doctorFollowsTable.doctorId, id),
+      ))
+      .limit(1);
+    isFollowing = !!follow;
+  }
+
   res.json({
     id: row.id,
     name: row.nameEn,
@@ -288,6 +312,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     tiktokUrl: row.tiktokUrl ?? null,
     youtubeUrl: row.youtubeUrl ?? null,
     xUrl: row.xUrl ?? null,
+    isFollowing,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",
