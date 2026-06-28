@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
@@ -100,6 +101,7 @@ export default function Magazine() {
   const [postComments, setPostComments] = useState<Record<string, Comment[]>>({});
   const [postLikes, setPostLikes] = useState<Record<string, number>>({});
   const [sharedPosts, setSharedPosts] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
 
   const { data: apiPosts = [], isLoading: postsLoading } = useQuery<ApiMagazinePost[]>({
     queryKey: ["magazinePosts"],
@@ -151,15 +153,34 @@ export default function Magazine() {
     });
   };
 
-  const handleShare = (postId: string) => {
-    setSharedPosts(prev => new Set(prev).add(postId));
+  const handleShare = async (post: Post) => {
+    const base = window.location.origin + (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+    const url = `${base}/profile/${post.doctorId}`;
+    const shareData = {
+      title: post.title || `${isRTL ? "منشور من" : "Post by"} ${post.doctorName}`,
+      text: `${isRTL ? `تحقق من هذه النصيحة الطبية من الدكتور ${post.doctorName} على إيجي دكتورز` : `Check out this medical advice from Dr. ${post.doctorName} on EGY Doctors.`}`,
+      url,
+    };
+
+    setSharedPosts(prev => new Set(prev).add(post.id));
     setTimeout(() => {
-      setSharedPosts(prev => {
-        const next = new Set(prev);
-        next.delete(postId);
-        return next;
-      });
+      setSharedPosts(prev => { const n = new Set(prev); n.delete(post.id); return n; });
     }, 2000);
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user dismissed — no action needed
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: isRTL ? "تم نسخ الرابط!" : "Link copied to clipboard!" });
+      } catch {
+        toast({ title: isRTL ? "تعذر نسخ الرابط" : "Could not copy link", variant: "destructive" });
+      }
+    }
   };
 
   const addComment = (postId: string) => {
@@ -394,7 +415,7 @@ export default function Magazine() {
                       </button>
 
                       <button
-                        onClick={() => handleShare(post.id)}
+                        onClick={() => handleShare(post)}
                         className={`flex items-center gap-1.5 text-sm transition-colors ${
                           isShared ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
                         }`}
