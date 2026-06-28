@@ -479,11 +479,24 @@ export interface ApiMagazinePost {
   content: string | null;
   mediaUrl: string | null;
   createdAt: string;
+  sharesCount: number;
+  likesCount: number;
+  commentsCount: number;
+  isLikedByCurrentUser: boolean;
   doctorName: string;
   doctorNameAr: string | null;
   doctorImage: string;
   specialty: string;
   specialtyAr: string;
+}
+
+export interface ApiPostComment {
+  id: number;
+  postId: number;
+  userId: number;
+  userName: string;
+  text: string;
+  createdAt: string;
 }
 
 export function getMagazinePosts(params?: { type?: string; doctorId?: number }): Promise<ApiMagazinePost[]> {
@@ -509,6 +522,25 @@ export function createMagazinePost(data: {
 
 export function deleteMagazinePost(id: number): Promise<{ ok: boolean }> {
   return request(`/magazine/posts/${id}`, { method: "DELETE" });
+}
+
+export function getPostComments(postId: number): Promise<ApiPostComment[]> {
+  return request(`/magazine/posts/${postId}/comments`);
+}
+
+export function likePost(postId: number): Promise<{ liked: boolean; likesCount: number }> {
+  return request(`/magazine/posts/${postId}/like`, { method: "POST" });
+}
+
+export function commentOnPost(postId: number, text: string): Promise<ApiPostComment> {
+  return request(`/magazine/posts/${postId}/comment`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
+export function sharePost(postId: number): Promise<{ sharesCount: number }> {
+  return request(`/magazine/posts/${postId}/share`, { method: "POST" });
 }
 
 export function getStats(): Promise<{ clinicsCount: number; citiesWithClinics: number }> {

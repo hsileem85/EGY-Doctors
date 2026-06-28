@@ -9,6 +9,7 @@ export const magazinePostsTable = pgTable("magazine_posts", {
   title: varchar("title", { length: 500 }),
   content: text("content"),
   mediaUrl: varchar("media_url", { length: 2000 }),
+  sharesCount: integer("shares_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

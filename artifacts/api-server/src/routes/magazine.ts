@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
   db, magazinePostsTable, doctorsTable, specialtiesTable, usersTable,
+  magazinePostLikesTable, magazinePostCommentsTable,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -32,8 +33,14 @@ async function getDoctorRowByUserId(userId: number) {
   return row ?? null;
 }
 
-/* shared helper — fetch posts joined with doctor/specialty/user */
-async function fetchPosts(filters: { doctorId?: number; type?: string }) {
+/* shared helper — fetch posts joined with doctor/specialty/user + interaction counts */
+async function fetchPosts(filters: { doctorId?: number; type?: string; currentUserId?: number | null }) {
+  const currentUserId = filters.currentUserId ?? null;
+
+  const isLikedExpr = currentUserId != null
+    ? sql<boolean>`EXISTS(SELECT 1 FROM magazine_post_likes WHERE post_id = ${magazinePostsTable.id} AND user_id = ${currentUserId})`
+    : sql<boolean>`false`;
+
   const query = db
     .select({
       id: magazinePostsTable.id,
@@ -42,12 +49,16 @@ async function fetchPosts(filters: { doctorId?: number; type?: string }) {
       title: magazinePostsTable.title,
       content: magazinePostsTable.content,
       mediaUrl: magazinePostsTable.mediaUrl,
+      sharesCount: magazinePostsTable.sharesCount,
       createdAt: magazinePostsTable.createdAt,
       doctorNameEn: doctorsTable.nameEn,
       doctorNameAr: doctorsTable.name,
       doctorImage: doctorsTable.image,
       specialtyName: specialtiesTable.name,
       specialtyNameAr: specialtiesTable.nameAr,
+      likesCount: sql<number>`(SELECT COUNT(*)::int FROM magazine_post_likes WHERE post_id = ${magazinePostsTable.id})`,
+      commentsCount: sql<number>`(SELECT COUNT(*)::int FROM magazine_post_comments WHERE post_id = ${magazinePostsTable.id})`,
+      isLikedByCurrentUser: isLikedExpr,
     })
     .from(magazinePostsTable)
     .leftJoin(doctorsTable, eq(magazinePostsTable.doctorId, doctorsTable.id))
@@ -73,6 +84,10 @@ async function fetchPosts(filters: { doctorId?: number; type?: string }) {
     title: r.title ?? null,
     content: r.content ?? null,
     mediaUrl: r.mediaUrl ?? null,
+    sharesCount: r.sharesCount,
+    likesCount: r.likesCount,
+    commentsCount: r.commentsCount,
+    isLikedByCurrentUser: Boolean(r.isLikedByCurrentUser),
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     doctorName: r.doctorNameEn ?? "Unknown",
     doctorNameAr: r.doctorNameAr ?? null,
@@ -87,7 +102,8 @@ router.get("/magazine/posts", async (req, res): Promise<void> => {
   const typeFilter = typeof req.query.type === "string" ? req.query.type : undefined;
   const doctorIdRaw = typeof req.query.doctorId === "string" ? parseInt(req.query.doctorId, 10) : undefined;
   const doctorId = doctorIdRaw && !isNaN(doctorIdRaw) ? doctorIdRaw : undefined;
-  const posts = await fetchPosts({ type: typeFilter, doctorId });
+  const payload = decodeJwt(req.headers.authorization);
+  const posts = await fetchPosts({ type: typeFilter, doctorId, currentUserId: payload?.sub ?? null });
   res.json(posts);
 });
 
@@ -100,7 +116,7 @@ router.get("/magazine/posts/mine", async (req, res): Promise<void> => {
   }
   const doctor = await getDoctorRowByUserId(payload.sub);
   if (!doctor) { res.status(404).json({ error: "Doctor profile not found" }); return; }
-  const posts = await fetchPosts({ doctorId: doctor.id });
+  const posts = await fetchPosts({ doctorId: doctor.id, currentUserId: payload.sub });
   res.json(posts);
 });
 
@@ -174,6 +190,132 @@ router.delete("/magazine/posts/:id", async (req, res): Promise<void> => {
 
   await db.delete(magazinePostsTable).where(eq(magazinePostsTable.id, postId));
   res.json({ ok: true });
+});
+
+/* ─── GET /magazine/posts/:id/comments ─── */
+router.get("/magazine/posts/:id/comments", async (req, res): Promise<void> => {
+  const postId = parseInt(req.params.id, 10);
+  if (isNaN(postId)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const comments = await db
+    .select({
+      id: magazinePostCommentsTable.id,
+      postId: magazinePostCommentsTable.postId,
+      userId: magazinePostCommentsTable.userId,
+      userName: magazinePostCommentsTable.userName,
+      text: magazinePostCommentsTable.text,
+      createdAt: magazinePostCommentsTable.createdAt,
+    })
+    .from(magazinePostCommentsTable)
+    .where(eq(magazinePostCommentsTable.postId, postId))
+    .orderBy(magazinePostCommentsTable.createdAt);
+
+  res.json(comments.map(c => ({
+    ...c,
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
+  })));
+});
+
+/* ─── POST /magazine/posts/:id/like ─── */
+router.post("/magazine/posts/:id/like", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const postId = parseInt(req.params.id, 10);
+  if (isNaN(postId)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const [post] = await db.select({ id: magazinePostsTable.id })
+    .from(magazinePostsTable)
+    .where(eq(magazinePostsTable.id, postId))
+    .limit(1);
+  if (!post) { res.status(404).json({ error: "Post not found" }); return; }
+
+  const [existing] = await db.select({ id: magazinePostLikesTable.id })
+    .from(magazinePostLikesTable)
+    .where(and(
+      eq(magazinePostLikesTable.postId, postId),
+      eq(magazinePostLikesTable.userId, payload.sub),
+    ))
+    .limit(1);
+
+  if (existing) {
+    await db.delete(magazinePostLikesTable).where(eq(magazinePostLikesTable.id, existing.id));
+  } else {
+    await db.insert(magazinePostLikesTable).values({ postId, userId: payload.sub });
+  }
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(magazinePostLikesTable)
+    .where(eq(magazinePostLikesTable.postId, postId));
+
+  res.json({ liked: !existing, likesCount: count });
+});
+
+/* ─── POST /magazine/posts/:id/comment ─── */
+const createCommentSchema = z.object({
+  text: z.string().min(1).max(2000),
+});
+
+router.post("/magazine/posts/:id/comment", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const postId = parseInt(req.params.id, 10);
+  if (isNaN(postId)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const parsed = createCommentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(422).json({ error: "Validation failed", issues: parsed.error.issues });
+    return;
+  }
+
+  const [post] = await db.select({ id: magazinePostsTable.id })
+    .from(magazinePostsTable)
+    .where(eq(magazinePostsTable.id, postId))
+    .limit(1);
+  if (!post) { res.status(404).json({ error: "Post not found" }); return; }
+
+  const [user] = await db.select({ name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.id, payload.sub))
+    .limit(1);
+  const userName = user?.name ?? "User";
+
+  const [inserted] = await db.insert(magazinePostCommentsTable).values({
+    postId,
+    userId: payload.sub,
+    userName,
+    text: parsed.data.text,
+  }).returning();
+
+  res.status(201).json({
+    id: inserted.id,
+    postId: inserted.postId,
+    userId: inserted.userId,
+    userName: inserted.userName,
+    text: inserted.text,
+    createdAt: inserted.createdAt instanceof Date ? inserted.createdAt.toISOString() : String(inserted.createdAt),
+  });
+});
+
+/* ─── POST /magazine/posts/:id/share ─── */
+router.post("/magazine/posts/:id/share", async (req, res): Promise<void> => {
+  const postId = parseInt(req.params.id, 10);
+  if (isNaN(postId)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const [updated] = await db.update(magazinePostsTable)
+    .set({ sharesCount: sql`${magazinePostsTable.sharesCount} + 1` })
+    .where(eq(magazinePostsTable.id, postId))
+    .returning({ sharesCount: magazinePostsTable.sharesCount });
+
+  if (!updated) { res.status(404).json({ error: "Post not found" }); return; }
+
+  res.json({ sharesCount: updated.sharesCount });
 });
 
 export default router;
