@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
-import { getEmbedUrl } from "@/lib/youtube";
+import { SocialVideoPlayer } from "@/components/SocialVideoPlayer";
 import {
   Bookmark, BookmarkCheck,
   PlayCircle, FileText, MoreHorizontal,
@@ -178,14 +178,8 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
 
         {/* Media */}
         {post.type === "video" && post.videoUrl && (
-          <div className="mx-5 mb-4 rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
-            <iframe
-              src={getEmbedUrl(post.videoUrl) ?? ""}
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={post.title}
-            />
+          <div className="mx-5 mb-4 rounded-lg overflow-hidden">
+            <SocialVideoPlayer url={post.videoUrl} title={post.title} />
           </div>
         )}
 

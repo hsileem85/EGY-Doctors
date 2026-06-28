@@ -541,7 +541,7 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
       return;
     }
     if (type === "video" && !mediaUrl.trim()) {
-      setFormError(isRTL ? "رابط يوتيوب مطلوب" : "YouTube URL is required");
+      setFormError(isRTL ? "رابط الفيديو مطلوب" : "Video URL is required");
       return;
     }
     setIsSubmitting(true);
@@ -641,12 +641,12 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
             ) : (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  {isRTL ? "رابط يوتيوب" : "YouTube URL"}<span className="text-red-400"> *</span>
+                  {isRTL ? "رابط الفيديو" : "Video URL"}<span className="text-red-400"> *</span>
                 </label>
                 <input
                   value={mediaUrl}
                   onChange={e => setMediaUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                  placeholder={isRTL ? "الصق رابطاً من يوتيوب أو تيك توك أو إنستغرام أو فيسبوك" : "Paste link from YouTube, TikTok, Instagram, or Facebook"}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>

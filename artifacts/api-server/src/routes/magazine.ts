@@ -121,11 +121,35 @@ router.get("/magazine/posts/mine", async (req, res): Promise<void> => {
 });
 
 /* ─── POST /magazine/posts ─── */
+const ALLOWED_VIDEO_HOSTS = new Set([
+  "youtube.com", "youtu.be",
+  "tiktok.com",
+  "instagram.com",
+  "facebook.com", "fb.watch",
+]);
+
+function isAllowedVideoUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return ALLOWED_VIDEO_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
 const createPostSchema = z.object({
   type: z.enum(["article", "tip", "video"]),
   title: z.string().max(500).optional().nullable(),
   content: z.string().max(10000).optional().nullable(),
-  mediaUrl: z.string().url().max(2000).optional().nullable(),
+  mediaUrl: z
+    .string()
+    .url()
+    .max(2000)
+    .refine(isAllowedVideoUrl, {
+      message: "URL must be from YouTube, TikTok, Instagram, or Facebook",
+    })
+    .optional()
+    .nullable(),
 });
 
 router.post("/magazine/posts", async (req, res): Promise<void> => {

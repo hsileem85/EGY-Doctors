@@ -16,7 +16,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDoctor, submitReview, getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
 import { PostInteractionBar } from "@/components/PostInteractionBar";
-import { getEmbedUrl } from "@/lib/youtube";
+import { SocialVideoPlayer } from "@/components/SocialVideoPlayer";
 import { useAuth } from "@/context/AuthContext";
 
 export default function DoctorPublicProfile() {
@@ -364,20 +364,9 @@ export default function DoctorPublicProfile() {
                               {post.title && <h4 className="font-semibold text-gray-900 text-sm mb-1">{post.title}</h4>}
                               {post.content && <p className="text-gray-600 text-sm leading-relaxed">{post.content}</p>}
                             </div>
-                            {post.type === "video" && post.mediaUrl && (() => {
-                              const embedUrl = getEmbedUrl(post.mediaUrl);
-                              return embedUrl ? (
-                                <div style={{ aspectRatio: "16/9" }}>
-                                  <iframe
-                                    src={embedUrl}
-                                    className="w-full h-full border-0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                    title={post.title ?? "Video"}
-                                  />
-                                </div>
-                              ) : null;
-                            })()}
+                            {post.type === "video" && post.mediaUrl && (
+                              <SocialVideoPlayer url={post.mediaUrl} title={post.title ?? "Video"} />
+                            )}
                             <div className="px-4">
                               <PostInteractionBar
                                 postId={post.id}
