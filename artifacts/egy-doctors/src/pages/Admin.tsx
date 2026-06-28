@@ -685,8 +685,10 @@ function BillingManagementSection({ lang }: { lang: "en" | "ar" }) {
           { id: "vouchers" as const, label: "Vouchers",          labelAr: "كودات الخصم" },
         ]).map((t) => (
           <button key={t.id} onClick={() => setSubTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              subTab === t.id ? "bg-[#D4A853] text-[#0F172A]" : "bg-white/10 text-white/70 hover:bg-white/20"
+            className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              subTab === t.id
+                ? "bg-[#D4A853] text-[#0F172A] border-[#D4A853]"
+                : "bg-transparent text-white border-white/40 hover:border-white/70 hover:bg-white/10"
             }`}>
             {isAr ? t.labelAr : t.label}
           </button>
