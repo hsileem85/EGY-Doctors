@@ -17,7 +17,8 @@ import {
   getPreferences, updatePreferences, type UserPreferences,
   getMyMagazinePosts, createMagazinePost, deleteMagazinePost, type ApiMagazinePost,
   type ApiAssistant, type ApiPatientRecord,
-  getBillingInfo, checkout, type BillingInfo,
+  getBillingInfo, checkout, startTrial, validateVoucher,
+  type BillingInfo, type VoucherValidation, type PlanType,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -724,6 +725,11 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
 
 function BillingTab({ isRTL }: { isRTL: boolean }) {
   const qc = useQueryClient();
+  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
+  const [voucherInput, setVoucherInput] = useState("");
+  const [voucherResult, setVoucherResult] = useState<VoucherValidation | null>(null);
+  const [voucherError, setVoucherError] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const { data, isLoading } = useQuery<BillingInfo>({
@@ -731,28 +737,73 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
     queryFn: getBillingInfo,
   });
 
-  const mut = useMutation({
+  const trialMut = useMutation({
+    mutationFn: startTrial,
+    onSuccess: () => { setSuccess(true); qc.invalidateQueries({ queryKey: ["billingInfo"] }); },
+  });
+
+  const checkoutMut = useMutation({
     mutationFn: checkout,
     onSuccess: () => {
       setSuccess(true);
+      setVoucherResult(null);
+      setVoucherInput("");
       qc.invalidateQueries({ queryKey: ["billingInfo"] });
     },
   });
 
   const status = data?.status ?? "INACTIVE";
+  const currency = data?.currency ?? "EGP";
 
   const statusStyle: Record<string, string> = {
-    ACTIVE: "bg-green-50 text-green-700 border-green-200",
-    TRIAL:  "bg-amber-50 text-amber-700 border-amber-200",
+    ACTIVE:   "bg-green-50 text-green-700 border-green-200",
+    TRIAL:    "bg-amber-50 text-amber-700 border-amber-200",
     INACTIVE: "bg-red-50 text-red-700 border-red-200",
   };
   const statusLabel: Record<string, string> = {
-    ACTIVE:   isRTL ? "نشط" : "Active",
-    TRIAL:    isRTL ? "تجريبي" : "Trial",
+    ACTIVE:   isRTL ? "نشط"      : "Active",
+    TRIAL:    isRTL ? "تجريبي"   : "Trial",
     INACTIVE: isRTL ? "غير نشط" : "Inactive",
   };
 
+  const planCfg: Record<PlanType, { label: string; labelAr: string; price: number; months: number; badge?: string }> = {
+    MONTHS_3: { label: "3 Months",  labelAr: "3 أشهر",      price: data?.price3Months ?? 800,  months: 3 },
+    MONTHS_6: { label: "6 Months",  labelAr: "6 أشهر",      price: data?.price6Months ?? 1500, months: 6,  badge: isRTL ? "الأكثر شيوعاً" : "Most Popular" },
+    YEARLY:   { label: "1 Year",    labelAr: "سنة كاملة",   price: data?.price1Year   ?? 2500, months: 12, badge: isRTL ? "أفضل قيمة"     : "Best Value" },
+  };
+
+  async function handleValidateVoucher() {
+    if (!selectedPlan || !voucherInput.trim()) return;
+    setIsValidating(true);
+    setVoucherError("");
+    setVoucherResult(null);
+    try {
+      const result = await validateVoucher(voucherInput.trim(), selectedPlan);
+      setVoucherResult(result);
+    } catch (err: unknown) {
+      setVoucherError(err instanceof Error ? err.message : (isRTL ? "كود غير صالح أو منتهي" : "Invalid or expired promo code"));
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  function selectPlan(plan: PlanType) {
+    setSelectedPlan(plan);
+    setVoucherResult(null);
+    setVoucherInput("");
+    setVoucherError("");
+    setSuccess(false);
+  }
+
   if (isLoading) return <div className="py-12 text-center text-gray-400 text-sm">{isRTL ? "جار التحميل..." : "Loading..."}</div>;
+
+  const planLabel = (plan: string) => {
+    if (plan === "MONTHS_3") return isRTL ? "3 أشهر" : "3 Months";
+    if (plan === "MONTHS_6") return isRTL ? "6 أشهر" : "6 Months";
+    if (plan === "YEARLY")   return isRTL ? "سنة كاملة" : "1 Year";
+    if (plan === "TRIAL")    return isRTL ? "تجريبي" : "Free Trial";
+    return plan;
+  };
 
   return (
     <div>
@@ -761,75 +812,189 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
         <p className="text-gray-500 text-sm mt-1">{isRTL ? "إدارة اشتراكك في المنصة" : "Manage your platform subscription"}</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <p className="text-xs font-medium text-gray-500 mb-2">{isRTL ? "حالة الاشتراك" : "Status"}</p>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusStyle[status] ?? statusStyle.INACTIVE}`}>
-              {statusLabel[status] ?? status}
-            </span>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <p className="text-xs font-medium text-gray-500 mb-2">{isRTL ? "نوع الخطة" : "Plan"}</p>
-            <p className="text-lg font-bold text-gray-900">{isRTL ? "نصف سنوي" : "Semi-Annual"}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <p className="text-xs font-medium text-gray-500 mb-2">{isRTL ? "تاريخ الانتهاء" : "Expires"}</p>
-            <p className="text-lg font-bold text-gray-900">
-              {data?.endDate
-                ? new Date(data.endDate).toLocaleDateString(isRTL ? "ar-EG" : "en-GB", { year: "numeric", month: "short", day: "numeric" })
-                : "—"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="border-b bg-gray-50/50 rounded-t-xl pb-4">
-          <CardTitle className="text-base">{isRTL ? "تجديد الاشتراك" : "Renew Subscription"}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-6">
+      {/* Current status bar */}
+      <Card className="border-0 shadow-sm mb-6">
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-center gap-6">
             <div>
-              <p className="font-semibold text-gray-900">{isRTL ? "خطة نصف سنوية" : "Semi-Annual Plan"}</p>
-              <p className="text-sm text-gray-500 mt-0.5">{isRTL ? "6 أشهر وصول كامل للمنصة" : "6 months of full platform access"}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">{isRTL ? "الحالة" : "Status"}</p>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusStyle[status] ?? statusStyle.INACTIVE}`}>
+                {statusLabel[status] ?? status}
+              </span>
             </div>
-            <p className="text-2xl font-bold text-primary">
-              {data?.price ?? 1500}
-              <span className="text-sm font-normal text-gray-500 ms-1">{data?.currency ?? "EGP"}</span>
-            </p>
+            {data?.plan && data.plan !== "SEMI_ANNUAL" && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">{isRTL ? "الخطة" : "Plan"}</p>
+                <p className="text-sm font-semibold text-gray-800">{planLabel(data.plan)}</p>
+              </div>
+            )}
+            {data?.endDate && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">{isRTL ? "تاريخ الانتهاء" : "Expires"}</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {new Date(data.endDate).toLocaleDateString(isRTL ? "ar-EG" : "en-GB", { year: "numeric", month: "short", day: "numeric" })}
+                </p>
+              </div>
+            )}
           </div>
-
-          {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-              {isRTL ? "✓ تم تفعيل اشتراكك بنجاح!" : "✓ Subscription activated successfully!"}
-            </div>
-          )}
-          {mut.isError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {isRTL ? "حدث خطأ. يرجى المحاولة مرة أخرى." : "An error occurred. Please try again."}
-            </div>
-          )}
-
-          <Button onClick={() => { setSuccess(false); mut.mutate(); }} disabled={mut.isPending} className="gap-2">
-            <CreditCard className="h-4 w-4" />
-            {mut.isPending
-              ? (isRTL ? "جارٍ المعالجة..." : "Processing...")
-              : status === "ACTIVE"
-                ? (isRTL ? "تجديد الاشتراك" : "Renew Subscription")
-                : (isRTL ? "اشترك الآن" : "Subscribe Now")}
-          </Button>
-          <p className="text-xs text-gray-400 mt-3">
-            {isRTL
-              ? "* هذا نظام إدارة الاشتراكات. يتم التنسيق مع الفريق لإتمام الدفع."
-              : "* This is a subscription management system. Payment is coordinated with our team."}
-          </p>
         </CardContent>
       </Card>
+
+      {success && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-center gap-2">
+          <span className="text-base">✓</span>
+          {isRTL ? "تم تفعيل اشتراكك بنجاح!" : "Subscription activated successfully!"}
+        </div>
+      )}
+
+      {/* Free trial banner */}
+      {!data?.isTrialUsed && status === "INACTIVE" && (
+        <div className="mb-6 p-5 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-amber-800">
+                🎁 {isRTL
+                  ? `جرّب المنصة مجاناً لمدة ${data?.trialDays ?? 14} يوم`
+                  : `Start your ${data?.trialDays ?? 14}-Day Free Trial`}
+              </p>
+              <p className="text-sm text-amber-600 mt-0.5">
+                {isRTL ? "بدون بطاقة ائتمان — وصول كامل لجميع الميزات." : "No credit card required — full access to all features."}
+              </p>
+            </div>
+            <Button
+              onClick={() => { setSuccess(false); trialMut.mutate(); }}
+              disabled={trialMut.isPending}
+              className="bg-amber-500 hover:bg-amber-600 text-white gap-2 shrink-0"
+            >
+              {trialMut.isPending ? (isRTL ? "جارٍ التفعيل..." : "Activating...") : (isRTL ? "ابدأ التجربة المجانية" : "Start Free Trial")}
+            </Button>
+          </div>
+          {trialMut.isError && (
+            <p className="text-red-600 text-sm mt-2">
+              {trialMut.error instanceof Error ? trialMut.error.message : (isRTL ? "حدث خطأ" : "An error occurred")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Pricing cards */}
+      <h2 className="text-base font-bold text-gray-900 mb-3">{isRTL ? "اختر خطتك" : "Choose Your Plan"}</h2>
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        {(["MONTHS_3", "MONTHS_6", "YEARLY"] as PlanType[]).map((plan) => {
+          const cfg = planCfg[plan];
+          const isSelected = selectedPlan === plan;
+          return (
+            <button
+              key={plan}
+              type="button"
+              onClick={() => selectPlan(plan)}
+              className={`relative text-start rounded-xl border-2 p-5 transition-all ${
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-md"
+                  : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+              }`}
+            >
+              {cfg.badge && (
+                <span className="absolute -top-2.5 start-4 bg-primary text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                  {cfg.badge}
+                </span>
+              )}
+              <p className="font-bold text-gray-900">{isRTL ? cfg.labelAr : cfg.label}</p>
+              <p className="text-2xl font-bold text-primary mt-2">
+                {cfg.price}
+                <span className="text-sm font-normal text-gray-500 ms-1">{currency}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {isRTL
+                  ? `≈ ${Math.round(cfg.price / cfg.months)} جنيه / شهر`
+                  : `≈ ${Math.round(cfg.price / cfg.months)} ${currency}/mo`}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Checkout panel */}
+      {selectedPlan && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="border-b bg-gray-50/50 rounded-t-xl pb-4">
+            <CardTitle className="text-base">
+              {isRTL ? "إتمام الاشتراك" : "Complete Subscription"}
+              {" — "}
+              {isRTL ? planCfg[selectedPlan].labelAr : planCfg[selectedPlan].label}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {/* Promo code */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                {isRTL ? "كود الخصم (اختياري)" : "Promo Code (optional)"}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={voucherInput}
+                  onChange={(e) => { setVoucherInput(e.target.value.toUpperCase()); setVoucherResult(null); setVoucherError(""); }}
+                  placeholder={isRTL ? "أدخل كود الخصم" : "Enter promo code"}
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleValidateVoucher}
+                  disabled={isValidating || !voucherInput.trim()}
+                  className="shrink-0"
+                >
+                  {isValidating ? "..." : (isRTL ? "تحقق" : "Apply")}
+                </Button>
+              </div>
+              {voucherError && <p className="text-red-500 text-xs mt-1.5">{voucherError}</p>}
+              {voucherResult && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium">
+                  ✓ {voucherResult.discountPercentage > 0 && `${voucherResult.discountPercentage}% ${isRTL ? "خصم" : "discount"}`}
+                  {voucherResult.discountPercentage > 0 && voucherResult.additionalFreeDays > 0 && " + "}
+                  {voucherResult.additionalFreeDays > 0 && `${voucherResult.additionalFreeDays} ${isRTL ? "يوم إضافي" : "bonus days"}`}
+                  {isRTL ? " مُطبَّق" : " applied"}
+                </div>
+              )}
+            </div>
+
+            {/* Price summary */}
+            <div className="flex items-center justify-between py-3 border-t border-gray-100">
+              <span className="text-sm font-medium text-gray-700">{isRTL ? "الإجمالي" : "Total"}</span>
+              <div className="text-end">
+                {voucherResult && voucherResult.discountPercentage > 0 && (
+                  <span className="text-sm text-gray-400 line-through me-2">
+                    {voucherResult.originalPrice} {currency}
+                  </span>
+                )}
+                <span className="text-xl font-bold text-primary">
+                  {voucherResult ? voucherResult.finalPrice : planCfg[selectedPlan].price}
+                  <span className="text-sm font-normal text-gray-500 ms-1">{currency}</span>
+                </span>
+              </div>
+            </div>
+
+            {checkoutMut.isError && (
+              <p className="text-red-500 text-sm">{isRTL ? "حدث خطأ. يرجى المحاولة مرة أخرى." : "An error occurred. Please try again."}</p>
+            )}
+
+            <Button
+              onClick={() => {
+                setSuccess(false);
+                checkoutMut.mutate({ planType: selectedPlan, voucherCode: voucherResult ? voucherInput.trim() : undefined });
+              }}
+              disabled={checkoutMut.isPending}
+              className="w-full gap-2"
+            >
+              <CreditCard className="h-4 w-4" />
+              {checkoutMut.isPending ? (isRTL ? "جارٍ المعالجة..." : "Processing...") : (isRTL ? "اشترك الآن" : "Subscribe Now")}
+            </Button>
+            <p className="text-xs text-gray-400">
+              {isRTL ? "* يتم التنسيق مع الفريق لإتمام الدفع." : "* Payment is coordinated with our team."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

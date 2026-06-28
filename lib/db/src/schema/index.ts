@@ -12,3 +12,4 @@ export * from "./site_settings";
 export * from "./magazine_posts";
 export * from "./magazine_post_interactions";
 export * from "./doctor_follows";
+export * from "./vouchers";

@@ -76,7 +76,7 @@ import {
   Save,
   DollarSign,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -414,7 +414,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         {activeTab === "cities" && <CitiesSection lang={lang} />}
         {activeTab === "areas" && <AreasSection lang={lang} />}
         {activeTab === "contact" && <ContactInfoSection lang={lang} />}
-        {activeTab === "billing" && <PlatformSettingsSection lang={lang} />}
+        {activeTab === "billing" && <BillingManagementSection lang={lang} />}
       </div>
     </div>
   );
@@ -435,10 +435,12 @@ const CONTACT_DEFAULTS: ContactSettings = {
   whatsapp: "201234567890",
 };
 
-function PlatformSettingsSection({ lang }: { lang: "en" | "ar" }) {
+/* ─── Pricing settings panel ─── */
+function PricingSettingsPanel({ lang }: { lang: "en" | "ar" }) {
   const isAr = lang === "ar";
   const qc = useQueryClient();
-  const [form, setForm] = useState<PlatformSettings>({ subscriptionPrice: 1500, currency: "EGP" });
+  const DEFAULTS: PlatformSettings = { price3Months: 800, price6Months: 1500, price1Year: 2500, defaultFreeTrialDays: 14, currency: "EGP" };
+  const [form, setForm] = useState<PlatformSettings>(DEFAULTS);
   const [saved, setSaved] = useState(false);
 
   const { data: settings, isLoading } = useQuery<PlatformSettings>({
@@ -446,9 +448,7 @@ function PlatformSettingsSection({ lang }: { lang: "en" | "ar" }) {
     queryFn: getAdminPlatformSettings,
   });
 
-  useEffect(() => {
-    if (settings) setForm({ subscriptionPrice: settings.subscriptionPrice, currency: settings.currency });
-  }, [settings]);
+  useEffect(() => { if (settings) setForm(settings); }, [settings]);
 
   const mut = useMutation({
     mutationFn: updateAdminPlatformSettings,
@@ -459,52 +459,241 @@ function PlatformSettingsSection({ lang }: { lang: "en" | "ar" }) {
     },
   });
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">{isAr ? "إعدادات المنصة" : "Platform Settings"}</h2>
+  function numField(key: keyof PlatformSettings, label: string, labelAr: string) {
+    return (
+      <div>
+        <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? labelAr : label}</label>
+        <Input type="number" min={0} value={form[key] as number}
+          onChange={(e) => setForm((f) => ({ ...f, [key]: Number(e.target.value) }))} />
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-md">
-        <h3 className="font-semibold text-gray-900 mb-1">{isAr ? "سعر الاشتراك" : "Subscription Pricing"}</h3>
-        <p className="text-sm text-gray-500 mb-5">{isAr ? "سعر الاشتراك النصف سنوي الظاهر للأطباء" : "Semi-annual subscription price shown to doctors"}</p>
-        {isLoading ? (
-          <div className="text-gray-400 text-sm py-4">{isAr ? "جاري التحميل..." : "Loading..."}</div>
-        ) : (
-          <div className="space-y-4">
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-lg">
+      <h3 className="font-semibold text-gray-900 mb-1">{isAr ? "أسعار الاشتراك" : "Subscription Pricing"}</h3>
+      <p className="text-sm text-gray-500 mb-5">{isAr ? "الأسعار الظاهرة للأطباء في صفحة الاشتراك" : "Prices shown to doctors on the subscription page"}</p>
+      {isLoading ? (
+        <div className="text-gray-400 text-sm py-4">{isAr ? "جاري التحميل..." : "Loading..."}</div>
+      ) : (
+        <div className="space-y-4">
+          {numField("price3Months",        "3-Month Price (EGP)",   "سعر 3 أشهر (جنيه)")}
+          {numField("price6Months",        "6-Month Price (EGP)",   "سعر 6 أشهر (جنيه)")}
+          {numField("price1Year",          "1-Year Price (EGP)",    "سعر السنة (جنيه)")}
+          {numField("defaultFreeTrialDays","Free Trial Days",        "أيام التجربة المجانية")}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "العملة" : "Currency"}</label>
+            <Input value={form.currency} placeholder="EGP"
+              onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} />
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <Button onClick={() => { setSaved(false); mut.mutate(form); }} disabled={mut.isPending}
+              className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2">
+              <Save className="h-4 w-4" />
+              {mut.isPending ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ" : "Save Settings")}
+            </Button>
+            {saved && <span className="text-sm text-green-400 font-medium">{isAr ? "✓ تم الحفظ" : "✓ Saved"}</span>}
+            {mut.isError && <span className="text-sm text-red-400">{isAr ? "خطأ في الحفظ" : "Failed to save"}</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Vouchers panel ─── */
+function VouchersPanel({ lang }: { lang: "en" | "ar" }) {
+  const isAr = lang === "ar";
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ code: "", discountPercentage: 0, additionalFreeDays: 0, expirationDate: "", maxUses: "" });
+  const [formError, setFormError] = useState("");
+
+  const { data: vouchers = [], isLoading } = useQuery<AdminVoucher[]>({
+    queryKey: ["adminVouchers"],
+    queryFn: getAdminVouchers,
+  });
+
+  const createMut = useMutation({
+    mutationFn: (d: Parameters<typeof createAdminVoucher>[0]) => createAdminVoucher(d),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminVouchers"] });
+      setShowForm(false);
+      setFormData({ code: "", discountPercentage: 0, additionalFreeDays: 0, expirationDate: "", maxUses: "" });
+      setFormError("");
+    },
+    onError: (e: Error) => setFormError(e.message ?? (isAr ? "حدث خطأ" : "Error creating voucher")),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => updateAdminVoucher(id, { isActive }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminVouchers"] }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => deleteAdminVoucher(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminVouchers"] }),
+  });
+
+  function handleCreate() {
+    setFormError("");
+    if (!formData.code.trim()) { setFormError(isAr ? "الكود مطلوب" : "Code is required"); return; }
+    createMut.mutate({
+      code: formData.code.trim().toUpperCase(),
+      discountPercentage: Number(formData.discountPercentage),
+      additionalFreeDays: Number(formData.additionalFreeDays),
+      expirationDate: formData.expirationDate ? new Date(formData.expirationDate).toISOString() : null,
+      isActive: true,
+      maxUses: formData.maxUses ? Number(formData.maxUses) : null,
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-gray-900">{isAr ? "إنشاء كود خصم جديد" : "Create New Voucher"}</h3>
+            <p className="text-sm text-gray-500 mt-0.5">{isAr ? "أضف كوداً جديداً للأطباء" : "Add a promo code for doctors"}</p>
+          </div>
+          <Button variant={showForm ? "outline" : "default"}
+            onClick={() => { setShowForm(!showForm); setFormError(""); }}
+            className={showForm ? "" : "bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]"}>
+            <Plus className="h-4 w-4 me-1" />
+            {showForm ? (isAr ? "إلغاء" : "Cancel") : (isAr ? "كود جديد" : "New Code")}
+          </Button>
+        </div>
+        {showForm && (
+          <div className="border-t pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
-                {isAr ? "السعر (لكل 6 أشهر)" : "Price (per 6 months)"}
-              </label>
-              <Input
-                type="number"
-                min={0}
-                value={form.subscriptionPrice}
-                onChange={(e) => setForm((f) => ({ ...f, subscriptionPrice: Number(e.target.value) }))}
-              />
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "الكود *" : "Code *"}</label>
+              <Input value={formData.code} placeholder="WELCOME2026" className="font-mono uppercase"
+                onChange={(e) => setFormData(f => ({ ...f, code: e.target.value.toUpperCase() }))} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "العملة" : "Currency"}</label>
-              <Input
-                value={form.currency}
-                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
-                placeholder="EGP"
-              />
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "نسبة الخصم %" : "Discount %"}</label>
+              <Input type="number" min={0} max={100} value={formData.discountPercentage}
+                onChange={(e) => setFormData(f => ({ ...f, discountPercentage: Number(e.target.value) }))} />
             </div>
-            <div className="flex items-center gap-3 pt-1">
-              <Button
-                onClick={() => { setSaved(false); mut.mutate(form); }}
-                disabled={mut.isPending}
-                className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {mut.isPending ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ" : "Save Settings")}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "أيام إضافية مجانية" : "Bonus Days"}</label>
+              <Input type="number" min={0} value={formData.additionalFreeDays}
+                onChange={(e) => setFormData(f => ({ ...f, additionalFreeDays: Number(e.target.value) }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "تاريخ الانتهاء" : "Expiration Date"}</label>
+              <Input type="date" value={formData.expirationDate}
+                onChange={(e) => setFormData(f => ({ ...f, expirationDate: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "الحد الأقصى للاستخدام" : "Max Uses (optional)"}</label>
+              <Input type="number" min={1} value={formData.maxUses} placeholder={isAr ? "غير محدود" : "Unlimited"}
+                onChange={(e) => setFormData(f => ({ ...f, maxUses: e.target.value }))} />
+            </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={handleCreate} disabled={createMut.isPending}
+                className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2">
+                <Plus className="h-4 w-4" />
+                {createMut.isPending ? (isAr ? "جارٍ الإنشاء..." : "Creating...") : (isAr ? "إنشاء" : "Create")}
               </Button>
-              {saved && <span className="text-sm text-green-400 font-medium">{isAr ? "✓ تم الحفظ" : "✓ Saved"}</span>}
-              {mut.isError && <span className="text-sm text-red-400">{isAr ? "خطأ في الحفظ" : "Failed to save"}</span>}
             </div>
+            {formError && <p className="text-red-500 text-sm col-span-full">{formError}</p>}
           </div>
         )}
       </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b">
+          <h3 className="font-semibold text-gray-900">{isAr ? "كودات الخصم" : "Vouchers"}</h3>
+        </div>
+        {isLoading ? (
+          <div className="py-8 text-center text-gray-400 text-sm">{isAr ? "جاري التحميل..." : "Loading..."}</div>
+        ) : vouchers.length === 0 ? (
+          <div className="py-8 text-center text-gray-400 text-sm">{isAr ? "لا توجد كودات بعد" : "No vouchers yet"}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-3 text-start">{isAr ? "الكود" : "Code"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "خصم" : "Discount"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "أيام إضافية" : "Bonus Days"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "الانتهاء" : "Expires"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "الاستخدام" : "Uses"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "الحالة" : "Status"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "إجراءات" : "Actions"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {vouchers.map((v) => (
+                  <tr key={v.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono font-semibold text-gray-900">{v.code}</td>
+                    <td className="px-4 py-3 text-gray-700">{v.discountPercentage > 0 ? `${v.discountPercentage}%` : "—"}</td>
+                    <td className="px-4 py-3 text-gray-700">{v.additionalFreeDays > 0 ? `+${v.additionalFreeDays}d` : "—"}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {v.expirationDate
+                        ? new Date(v.expirationDate).toLocaleDateString(isAr ? "ar-EG" : "en-GB", { day: "numeric", month: "short", year: "numeric" })
+                        : (isAr ? "لا يوجد" : "Never")}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{v.currentUses}{v.maxUses ? `/${v.maxUses}` : ""}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        v.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {v.isActive ? (isAr ? "نشط" : "Active") : (isAr ? "معطّل" : "Inactive")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => toggleMut.mutate({ id: v.id, isActive: !v.isActive })}
+                          disabled={toggleMut.isPending}
+                          className="text-xs text-blue-600 hover:underline disabled:opacity-50">
+                          {v.isActive ? (isAr ? "تعطيل" : "Disable") : (isAr ? "تفعيل" : "Enable")}
+                        </button>
+                        <button
+                          onClick={() => { if (confirm(isAr ? "حذف هذا الكود؟" : "Delete this voucher?")) deleteMut.mutate(v.id); }}
+                          disabled={deleteMut.isPending}
+                          className="text-xs text-red-500 hover:underline disabled:opacity-50">
+                          {isAr ? "حذف" : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Billing management wrapper ─── */
+function BillingManagementSection({ lang }: { lang: "en" | "ar" }) {
+  const isAr = lang === "ar";
+  const [subTab, setSubTab] = useState<"settings" | "vouchers">("settings");
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-white">{isAr ? "إدارة الاشتراكات" : "Billing Management"}</h2>
+      </div>
+      <div className="flex gap-2 mb-6">
+        {([
+          { id: "settings" as const, label: "Pricing Settings", labelAr: "الأسعار والإعدادات" },
+          { id: "vouchers" as const, label: "Vouchers",          labelAr: "كودات الخصم" },
+        ]).map((t) => (
+          <button key={t.id} onClick={() => setSubTab(t.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              subTab === t.id ? "bg-[#D4A853] text-[#0F172A]" : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}>
+            {isAr ? t.labelAr : t.label}
+          </button>
+        ))}
+      </div>
+      {subTab === "settings" && <PricingSettingsPanel lang={lang} />}
+      {subTab === "vouchers" && <VouchersPanel lang={lang} />}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { eq, max, inArray } from "drizzle-orm";
+import { eq, max, inArray, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -624,36 +624,125 @@ router.put("/admin/settings/contact", async (req, res): Promise<void> => {
 
 /* ─── GET /admin/settings ─── */
 router.get("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
-  const rows = await db.select().from(siteSettingsTable)
-    .where(inArray(siteSettingsTable.key, ["subscription_price", "subscription_currency"]));
-  const map: Record<string, string> = {};
-  for (const r of rows) map[r.key] = r.value;
+  const keys = ["price_3_months", "price_6_months", "price_1_year", "default_free_trial_days", "subscription_currency"];
+  const rows = await db.select().from(siteSettingsTable).where(inArray(siteSettingsTable.key, keys));
+  const m: Record<string, string> = {};
+  for (const r of rows) m[r.key] = r.value;
   res.json({
-    subscriptionPrice: Number(map["subscription_price"] ?? 1500),
-    currency: map["subscription_currency"] ?? "EGP",
+    price3Months:        Number(m["price_3_months"]           ?? 800),
+    price6Months:        Number(m["price_6_months"]           ?? 1500),
+    price1Year:          Number(m["price_1_year"]             ?? 2500),
+    defaultFreeTrialDays: Number(m["default_free_trial_days"] ?? 14),
+    currency:            m["subscription_currency"]           ?? "EGP",
   });
 });
 
 /* ─── PUT /admin/settings ─── */
 router.put("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
   const schema = z.object({
-    subscriptionPrice: z.number().positive(),
-    currency: z.string().min(1).optional(),
+    price3Months:         z.number().positive(),
+    price6Months:         z.number().positive(),
+    price1Year:           z.number().positive(),
+    defaultFreeTrialDays: z.number().int().min(1).max(365),
+    currency:             z.string().min(1).optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(422).json({ error: "Invalid settings data" }); return; }
-  const { subscriptionPrice, currency } = parsed.data;
+  const { price3Months, price6Months, price1Year, defaultFreeTrialDays, currency } = parsed.data;
 
-  await db.insert(siteSettingsTable).values({ key: "subscription_price", value: String(subscriptionPrice) })
-    .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: String(subscriptionPrice) } });
+  const entries: { key: string; value: string }[] = [
+    { key: "price_3_months",           value: String(price3Months) },
+    { key: "price_6_months",           value: String(price6Months) },
+    { key: "price_1_year",             value: String(price1Year) },
+    { key: "default_free_trial_days",  value: String(defaultFreeTrialDays) },
+  ];
+  if (currency) entries.push({ key: "subscription_currency", value: currency });
 
-  if (currency) {
-    await db.insert(siteSettingsTable).values({ key: "subscription_currency", value: currency })
-      .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: currency } });
+  for (const entry of entries) {
+    await db.insert(siteSettingsTable).values(entry)
+      .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: entry.value } });
   }
 
-  req.log.info({ subscriptionPrice }, "Platform settings updated");
+  req.log.info({ price3Months, price6Months, price1Year, defaultFreeTrialDays }, "Platform settings updated");
   res.json({ message: "Settings saved." });
+});
+
+/* ─── GET /admin/vouchers ─── */
+router.get("/admin/vouchers", requireAdmin, async (req, res): Promise<void> => {
+  const rows = await db.select().from(vouchersTable).orderBy(desc(vouchersTable.createdAt));
+  res.json(rows.map(v => ({
+    ...v,
+    expirationDate: v.expirationDate?.toISOString() ?? null,
+    createdAt: v.createdAt.toISOString(),
+    updatedAt: v.updatedAt.toISOString(),
+  })));
+});
+
+/* ─── POST /admin/vouchers ─── */
+router.post("/admin/vouchers", requireAdmin, async (req, res): Promise<void> => {
+  const schema = z.object({
+    code:                z.string().min(1).max(50).transform(s => s.toUpperCase()),
+    discountPercentage:  z.number().min(0).max(100).default(0),
+    additionalFreeDays:  z.number().int().min(0).default(0),
+    expirationDate:      z.string().datetime().nullable().optional(),
+    maxUses:             z.number().int().positive().nullable().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Invalid voucher data", details: parsed.error.issues }); return; }
+
+  const { code, discountPercentage, additionalFreeDays, expirationDate, maxUses } = parsed.data;
+
+  const [existing] = await db.select({ id: vouchersTable.id }).from(vouchersTable).where(eq(vouchersTable.code, code)).limit(1);
+  if (existing) { res.status(409).json({ error: "A voucher with this code already exists." }); return; }
+
+  const [voucher] = await db.insert(vouchersTable).values({
+    code,
+    discountPercentage,
+    additionalFreeDays,
+    expirationDate: expirationDate ? new Date(expirationDate) : null,
+    maxUses: maxUses ?? null,
+  }).returning();
+
+  req.log.info({ code }, "Voucher created");
+  res.status(201).json({ ...voucher, expirationDate: voucher.expirationDate?.toISOString() ?? null, createdAt: voucher.createdAt.toISOString(), updatedAt: voucher.updatedAt.toISOString() });
+});
+
+/* ─── PUT /admin/vouchers/:id ─── */
+router.put("/admin/vouchers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid voucher ID" }); return; }
+
+  const schema = z.object({
+    discountPercentage:  z.number().min(0).max(100).optional(),
+    additionalFreeDays:  z.number().int().min(0).optional(),
+    expirationDate:      z.string().datetime().nullable().optional(),
+    isActive:            z.boolean().optional(),
+    maxUses:             z.number().int().positive().nullable().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Invalid voucher data" }); return; }
+
+  const update: Partial<{ discountPercentage: number; additionalFreeDays: number; expirationDate: Date | null; isActive: boolean; maxUses: number | null }> = {};
+  if (parsed.data.discountPercentage !== undefined) update.discountPercentage = parsed.data.discountPercentage;
+  if (parsed.data.additionalFreeDays !== undefined) update.additionalFreeDays = parsed.data.additionalFreeDays;
+  if (parsed.data.isActive !== undefined) update.isActive = parsed.data.isActive;
+  if ("maxUses" in parsed.data) update.maxUses = parsed.data.maxUses ?? null;
+  if ("expirationDate" in parsed.data) update.expirationDate = parsed.data.expirationDate ? new Date(parsed.data.expirationDate) : null;
+
+  const [voucher] = await db.update(vouchersTable).set(update).where(eq(vouchersTable.id, id)).returning();
+  if (!voucher) { res.status(404).json({ error: "Voucher not found" }); return; }
+
+  res.json({ ...voucher, expirationDate: voucher.expirationDate?.toISOString() ?? null, createdAt: voucher.createdAt.toISOString(), updatedAt: voucher.updatedAt.toISOString() });
+});
+
+/* ─── DELETE /admin/vouchers/:id ─── */
+router.delete("/admin/vouchers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid voucher ID" }); return; }
+  const [deleted] = await db.delete(vouchersTable).where(eq(vouchersTable.id, id)).returning({ id: vouchersTable.id });
+  if (!deleted) { res.status(404).json({ error: "Voucher not found" }); return; }
+  req.log.info({ id }, "Voucher deleted");
+  res.json({ message: "Voucher deleted." });
 });
 
 export default router;

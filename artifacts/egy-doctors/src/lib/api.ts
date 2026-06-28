@@ -559,22 +559,50 @@ export interface BillingInfo {
   status: "ACTIVE" | "INACTIVE" | "TRIAL";
   plan: string;
   endDate: string | null;
-  price: number;
+  isTrialUsed: boolean;
+  price3Months: number;
+  price6Months: number;
+  price1Year: number;
+  trialDays: number;
   currency: string;
 }
+
+export type PlanType = "MONTHS_3" | "MONTHS_6" | "YEARLY";
 
 export function getBillingInfo(): Promise<BillingInfo> {
   return request("/billing/subscription");
 }
 
-export function checkout(): Promise<{ success: boolean; status: string; endDate: string; price: number; currency: string; plan: string }> {
-  return request("/billing/checkout", { method: "POST" });
+export function startTrial(): Promise<{ success: boolean; status: string; endDate: string; trialDays: number }> {
+  return request("/billing/start-trial", { method: "POST" });
+}
+
+export interface VoucherValidation {
+  valid: boolean;
+  code: string;
+  discountPercentage: number;
+  additionalFreeDays: number;
+  originalPrice: number;
+  finalPrice: number;
+  currency: string;
+}
+
+export function validateVoucher(code: string, planType: PlanType): Promise<VoucherValidation> {
+  return request("/billing/validate-voucher", { method: "POST", body: JSON.stringify({ code, planType }) });
+}
+
+export interface CheckoutParams { planType: PlanType; voucherCode?: string }
+export function checkout(params: CheckoutParams): Promise<{ success: boolean; status: string; plan: string; endDate: string; price: number; currency: string }> {
+  return request("/billing/checkout", { method: "POST", body: JSON.stringify(params) });
 }
 
 /* ─── Admin Platform Settings ─── */
 
 export interface PlatformSettings {
-  subscriptionPrice: number;
+  price3Months: number;
+  price6Months: number;
+  price1Year: number;
+  defaultFreeTrialDays: number;
   currency: string;
 }
 
@@ -584,4 +612,34 @@ export function getAdminPlatformSettings(): Promise<PlatformSettings> {
 
 export function updateAdminPlatformSettings(data: PlatformSettings): Promise<{ message: string }> {
   return request("/admin/settings", { method: "PUT", body: JSON.stringify(data) });
+}
+
+/* ─── Admin Vouchers ─── */
+
+export interface AdminVoucher {
+  id: number;
+  code: string;
+  discountPercentage: number;
+  additionalFreeDays: number;
+  expirationDate: string | null;
+  isActive: boolean;
+  maxUses: number | null;
+  currentUses: number;
+  createdAt: string;
+}
+
+export function getAdminVouchers(): Promise<AdminVoucher[]> {
+  return request("/admin/vouchers");
+}
+
+export function createAdminVoucher(data: Omit<AdminVoucher, "id" | "currentUses" | "createdAt">): Promise<AdminVoucher> {
+  return request("/admin/vouchers", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateAdminVoucher(id: number, data: Partial<Pick<AdminVoucher, "discountPercentage" | "additionalFreeDays" | "expirationDate" | "isActive" | "maxUses">>): Promise<AdminVoucher> {
+  return request(`/admin/vouchers/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteAdminVoucher(id: number): Promise<{ message: string }> {
+  return request(`/admin/vouchers/${id}`, { method: "DELETE" });
 }

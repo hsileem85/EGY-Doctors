@@ -1,0 +1,34 @@
+Please expand the EGY Doctors Subscription Billing System to support flexible frequencies (3 months, 6 months, 1 year), free trial periods, and a comprehensive Voucher/Promo Code system.
+
+Please implement the following architecture across the stack:
+
+### 1. Database Schema Updates
+* **SystemSettings Model:** Expand the singleton to include: `price3Months` (Float), `price6Months` (Float), `price1Year` (Float), and `defaultFreeTrialDays` (Integer, e.g., 14 or 30).
+* **Doctor Model:** - Update `subscriptionPlan` enum to `['MONTHS_3', 'MONTHS_6', 'YEARLY', 'TRIAL']`.
+  - Add `isTrialUsed` (Boolean, default: false) to prevent exploiting the free trial multiple times.
+* **Voucher Model (NEW):** Create a table for promo codes:
+  - `code`: String (Unique, e.g., 'WELCOME2026').
+  - `discountPercentage`: Float (0 to 100).
+  - `additionalFreeDays`: Integer (Allows a voucher to grant time instead of money).
+  - `expirationDate`: DateTime.
+  - `isActive`: Boolean (Default: true).
+  - `maxUses`: Integer (Optional limitation).
+  - `currentUses`: Integer (Default: 0).
+
+### 2. Backend APIs & Logic
+* **Admin Settings & Vouchers APIs:**
+  - Update `PUT /api/admin/settings` to handle the new frequency prices and default trial days.
+  - Create full CRUD endpoints `GET, POST, PUT, DELETE /api/admin/vouchers` to manage promo codes.
+* **Checkout/Subscription APIs:**
+  - **Start Trial:** Create `POST /api/billing/start-trial`. If `!doctor.isTrialUsed`, set status to `TRIAL`, add `defaultFreeTrialDays` to `subscriptionEndDate`, and set `isTrialUsed = true`.
+  - **Validate Voucher:** Create `POST /api/billing/validate-voucher` to check if a code is valid, active, and not expired, returning the calculated discount or free days.
+  - **Checkout:** Update `POST /api/billing/checkout` to accept `planType` ('MONTHS_3', 'MONTHS_6', 'YEARLY') and an optional `voucherCode`. Dynamically calculate the final price using the selected plan's price from `SystemSettings` minus any voucher discount. Add the corresponding months (3, 6, or 12) + any `additionalFreeDays` from the voucher to the `subscriptionEndDate`.
+
+### 3. Admin Dashboard UI
+* **Settings Tab:** Update the Billing Management screen to include input fields for: 3-Month Price, 6-Month Price, 1-Year Price, and Default Free Trial Days.
+* **Vouchers Tab:** Create a new "Vouchers Management" screen. Include a datatable of existing vouchers and a form to generate a new voucher (inputting the code name, discount %, extra free days, and expiration date).
+
+### 4. Doctor Dashboard UI (Checkout Flow)
+* **Plan Selection:** Upgrade the "Billing & Subscription" page. Display 3 beautifully designed pricing cards (3 Months, 6 Months, 1 Year) with their dynamically fetched prices.
+* **Free Trial Banner:** If `isTrialUsed` is false, show a prominent button allowing them to "Start your [X]-Day Free Trial Now" without requiring a credit card.
+* **Checkout Form:** When they select a paid plan, show an "Apply Promo Code" input field. When applied, make an API call to validate it and visually cross out the original price, displaying the new discounted total before they proceed to payment.
