@@ -244,13 +244,9 @@ export async function sendNewPostNotificationEmail(data: NewPostEmailData): Prom
     </div>`;
 
   const content = lang === "ar" ? bodyAr : bodyEn;
-  try {
-    await sendEmail(to, subject,
-      `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">${LOGO}${content}${FOOTER}</div>`
-    );
-  } catch {
-    // Notification failures should not interrupt post creation
-  }
+  await sendEmail(to, subject,
+    `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">${LOGO}${content}${FOOTER}</div>`
+  );
 }
 
 export async function sendDoctorApprovedEmail(to: string, doctorName: string): Promise<void> {

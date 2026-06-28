@@ -7,6 +7,7 @@ import {
   magazinePostLikesTable, magazinePostCommentsTable, doctorFollowsTable,
 } from "@workspace/db";
 import { sendNewPostNotificationEmail } from "../lib/email";
+import { logger } from "../lib/logger";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 const router: IRouter = Router();
@@ -200,6 +201,7 @@ router.post("/magazine/posts", async (req, res): Promise<void> => {
 
   /* ── Fire-and-forget: email followers ── */
   (async () => {
+    let notified = 0, skipped = 0, failed = 0;
     try {
       const followers = await db
         .select({
@@ -213,7 +215,15 @@ router.post("/magazine/posts", async (req, res): Promise<void> => {
         .where(eq(doctorFollowsTable.doctorId, doctorRow.id));
 
       for (const follower of followers) {
-        if (follower.email && follower.notifyViaEmail) {
+        if (!follower.email || !follower.notifyViaEmail) {
+          logger.info(
+            { noEmail: !follower.email, notifyOff: !follower.notifyViaEmail },
+            "Skipping follower notification",
+          );
+          skipped++;
+          continue;
+        }
+        try {
           await sendNewPostNotificationEmail({
             to: follower.email,
             followerName: follower.name,
@@ -223,10 +233,19 @@ router.post("/magazine/posts", async (req, res): Promise<void> => {
             postId: inserted.id,
             lang: (follower.notificationLanguage as "en" | "ar") ?? "en",
           });
+          notified++;
+        } catch (err) {
+          failed++;
+          logger.error({ err, to: follower.email }, "Failed to send new-post notification email");
         }
       }
-    } catch {
-      /* Notification errors must not surface to the client */
+
+      logger.info(
+        { postId: inserted.id, doctorId: doctorRow.id, notified, skipped, failed },
+        "New-post follower notification complete",
+      );
+    } catch (err) {
+      logger.error({ err, postId: inserted.id }, "Failed to query followers for new-post notification");
     }
   })();
 });
