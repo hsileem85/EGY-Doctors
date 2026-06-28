@@ -1,26 +1,21 @@
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import {
-  getMagazinePosts, getPostComments, likePost, commentOnPost, sharePost,
-  type ApiMagazinePost, type ApiPostComment,
-} from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import { getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
 import { getEmbedUrl } from "@/lib/youtube";
 import {
-  Heart, MessageCircle, Share2, Bookmark, BookmarkCheck,
-  PlayCircle, FileText, MoreHorizontal, Send,
-  Filter, TrendingUp, Clock, UserPlus, UserCheck, Newspaper, Loader2,
+  Bookmark, BookmarkCheck,
+  PlayCircle, FileText, MoreHorizontal,
+  Filter, TrendingUp, Clock, UserPlus, UserCheck, Newspaper,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { PostInteractionBar } from "@/components/PostInteractionBar";
 
 type PostType = "article" | "video" | "tip";
 
@@ -101,131 +96,10 @@ function getTypeLabel(type: PostType) {
   }
 }
 
-function formatCommentTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const h = Math.floor(diff / 3600000);
-  if (h < 1) return "Just now";
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return d === 1 ? "1d ago" : `${d}d ago`;
-}
-
 /* ── PostCard ─────────────────────────────────────────────────────── */
 function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [commentInput, setCommentInput] = useState("");
-  const [isShared, setIsShared] = useState(false);
-
-  /* Comments query — only fetches when section is expanded */
-  const { data: comments = [], isLoading: commentsLoading } = useQuery<ApiPostComment[]>({
-    queryKey: ["postComments", post.numericId],
-    queryFn: () => getPostComments(post.numericId),
-    enabled: isExpanded,
-    staleTime: 60_000,
-  });
-
-  /* Optimistic like toggle */
-  const likeMutation = useMutation({
-    mutationFn: () => likePost(post.numericId),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["magazinePosts"] });
-      const prev = queryClient.getQueryData<ApiMagazinePost[]>(["magazinePosts"]);
-      queryClient.setQueryData<ApiMagazinePost[]>(["magazinePosts"], (old = []) =>
-        old.map(p => p.id === post.numericId
-          ? {
-              ...p,
-              isLikedByCurrentUser: !p.isLikedByCurrentUser,
-              likesCount: p.likesCount + (p.isLikedByCurrentUser ? -1 : 1),
-            }
-          : p)
-      );
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(["magazinePosts"], ctx.prev);
-      toast({ title: isRTL ? "فشل تسجيل الإعجاب" : "Failed to update like", variant: "destructive" });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["magazinePosts"] });
-    },
-  });
-
-  /* Add comment */
-  const commentMutation = useMutation({
-    mutationFn: (text: string) => commentOnPost(post.numericId, text),
-    onSuccess: () => {
-      setCommentInput("");
-      queryClient.invalidateQueries({ queryKey: ["postComments", post.numericId] });
-      queryClient.setQueryData<ApiMagazinePost[]>(["magazinePosts"], (old = []) =>
-        old.map(p => p.id === post.numericId ? { ...p, commentsCount: p.commentsCount + 1 } : p)
-      );
-    },
-    onError: () => {
-      toast({ title: isRTL ? "فشل إضافة التعليق" : "Failed to add comment", variant: "destructive" });
-    },
-  });
-
-  /* Share — increments DB counter + native share UI */
-  const shareMutation = useMutation({
-    mutationFn: () => sharePost(post.numericId),
-    onSuccess: (data) => {
-      queryClient.setQueryData<ApiMagazinePost[]>(["magazinePosts"], (old = []) =>
-        old.map(p => p.id === post.numericId ? { ...p, sharesCount: data.sharesCount } : p)
-      );
-    },
-  });
-
-  const handleLike = () => {
-    if (!user) {
-      toast({ title: isRTL ? "يرجى تسجيل الدخول أولاً" : "Please sign in to like posts" });
-      return;
-    }
-    likeMutation.mutate();
-  };
-
-  const handleShare = async () => {
-    setIsShared(true);
-    setTimeout(() => setIsShared(false), 2000);
-
-    const base = window.location.origin + (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    const url = `${base}/doctor/${post.doctorId}`;
-    const shareData = {
-      title: post.title || `${isRTL ? "منشور من" : "Post by"} ${post.doctorName}`,
-      text: isRTL
-        ? `تحقق من هذه النصيحة الطبية من الدكتور ${post.doctorName} على إيجي دكتورز`
-        : `Check out this medical advice from Dr. ${post.doctorName} on EGY Doctors.`,
-      url,
-    };
-
-    shareMutation.mutate();
-
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch { /* dismissed */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(url);
-        toast({ title: isRTL ? "تم نسخ الرابط!" : "Link copied to clipboard!" });
-      } catch {
-        toast({ title: isRTL ? "تعذر نسخ الرابط" : "Could not copy link", variant: "destructive" });
-      }
-    }
-  };
-
-  const handleComment = () => {
-    if (!user) {
-      toast({ title: isRTL ? "يرجى تسجيل الدخول أولاً" : "Please sign in to comment" });
-      return;
-    }
-    const text = commentInput.trim();
-    if (!text) return;
-    commentMutation.mutate(text);
-  };
 
   return (
     <Card className="bg-[#1E293B]/80 border-[#334155] overflow-hidden hover:border-[#D4A853]/30 transition-colors">
@@ -293,11 +167,7 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
               <span className="ml-1">{getTypeLabel(post.type)}</span>
             </Badge>
             {post.tags.map(tag => (
-              <Badge
-                key={tag}
-                variant="outline"
-                className="bg-[#0F172A]/50 border-[#334155] text-gray-400 text-xs shrink-0"
-              >
+              <Badge key={tag} variant="outline" className="bg-[#0F172A]/50 border-[#334155] text-gray-400 text-xs shrink-0">
                 {tag}
               </Badge>
             ))}
@@ -319,134 +189,31 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
           </div>
         )}
 
-        {/* Action Bar */}
-        <div className="px-5 py-3 border-t border-[#334155] flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Like */}
-            <button
-              onClick={handleLike}
-              disabled={likeMutation.isPending}
-              className={`flex items-center gap-1.5 text-sm transition-colors ${
-                post.isLikedByCurrentUser ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
-              }`}
-            >
-              <Heart className={`h-5 w-5 ${post.isLikedByCurrentUser ? "fill-[#D4A853]" : ""}`} />
-              <span>{post.likesCount}</span>
-            </button>
-
-            {/* Comment toggle */}
-            <button
-              onClick={() => setIsExpanded(e => !e)}
-              className={`flex items-center gap-1.5 text-sm transition-colors ${
-                isExpanded ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
-              }`}
-            >
-              <MessageCircle className="h-5 w-5" />
-              <span>{post.commentsCount}</span>
-            </button>
-
-            {/* Share */}
-            <button
-              onClick={handleShare}
-              className={`flex items-center gap-1.5 text-sm transition-colors ${
-                isShared ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
-              }`}
-            >
-              <Share2 className="h-5 w-5" />
-              <span>{isShared ? (isRTL ? "مشاركة!" : "Shared!") : post.sharesCount}</span>
-            </button>
+        {/* Interaction bar + bookmark row */}
+        <div className="px-5 flex items-start gap-3">
+          <div className="flex-1">
+            <PostInteractionBar
+              postId={post.numericId}
+              initialLikesCount={post.likesCount}
+              initialCommentsCount={post.commentsCount}
+              initialSharesCount={post.sharesCount}
+              isLikedByCurrentUser={post.isLikedByCurrentUser}
+              doctorName={post.doctorName}
+              postTitle={post.title}
+              doctorId={post.doctorId}
+              isRTL={isRTL}
+              variant="dark"
+            />
           </div>
-
           <button
             onClick={() => setIsBookmarked(b => !b)}
-            className={`text-sm transition-colors ${
+            className={`mt-3 shrink-0 transition-colors ${
               isBookmarked ? "text-[#D4A853]" : "text-gray-400 hover:text-[#D4A853]"
             }`}
           >
             {isBookmarked ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
           </button>
         </div>
-
-        {/* Comments Section */}
-        {isExpanded && (
-          <div className="px-5 py-4 border-t border-[#334155] bg-[#0F172A]/30">
-            {commentsLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-[#D4A853]" />
-              </div>
-            ) : (
-              <div className="space-y-4 mb-4">
-                {comments.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-4">
-                    {isRTL ? "لا توجد تعليقات بعد. كن أول معلق!" : "No comments yet. Be the first!"}
-                  </p>
-                ) : (
-                  comments.map(comment => {
-                    const initials = comment.userName
-                      .split(" ")
-                      .filter(w => w[0])
-                      .slice(0, 2)
-                      .map(w => w[0].toUpperCase())
-                      .join("") || "U";
-                    return (
-                      <div key={comment.id} className="flex items-start gap-3">
-                        <Avatar className="w-8 h-8 border border-[#334155]">
-                          <AvatarFallback className="bg-[#1E293B] text-[#D4A853] text-xs font-bold">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="bg-[#1E293B] rounded-lg px-3 py-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm text-white">{comment.userName}</span>
-                              <span className="text-xs text-gray-500">{formatCommentTime(comment.createdAt)}</span>
-                            </div>
-                            <p className="text-sm text-gray-300">{comment.text}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {/* Comment Input */}
-            <div className="flex items-center gap-2">
-              <Avatar className="w-8 h-8 border border-[#334155] shrink-0">
-                <AvatarFallback className="bg-[#D4A853]/10 text-[#D4A853] text-xs font-bold">
-                  {user
-                    ? user.name.split(" ").filter(w => w[0]).slice(0, 2).map(w => w[0].toUpperCase()).join("")
-                    : "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 flex items-center gap-2">
-                <Input
-                  value={commentInput}
-                  onChange={e => setCommentInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") handleComment(); }}
-                  placeholder={
-                    user
-                      ? (isRTL ? "أكتب تعليقاً..." : "Write a comment...")
-                      : (isRTL ? "سجّل الدخول للتعليق" : "Sign in to comment")
-                  }
-                  disabled={!user || commentMutation.isPending}
-                  className="bg-[#0F172A] border-[#334155] text-white placeholder:text-gray-500 focus-visible:ring-[#D4A853] focus-visible:ring-1 h-9 text-sm"
-                />
-                <Button
-                  size="icon"
-                  onClick={handleComment}
-                  disabled={!user || commentMutation.isPending || !commentInput.trim()}
-                  className="h-9 w-9 bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] shrink-0"
-                >
-                  {commentMutation.isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <Send className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

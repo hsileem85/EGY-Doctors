@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDoctor, submitReview, getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
+import { PostInteractionBar } from "@/components/PostInteractionBar";
 import { getEmbedUrl } from "@/lib/youtube";
 import { useAuth } from "@/context/AuthContext";
 
@@ -377,6 +378,20 @@ export default function DoctorPublicProfile() {
                                 </div>
                               ) : null;
                             })()}
+                            <div className="px-4">
+                              <PostInteractionBar
+                                postId={post.id}
+                                initialLikesCount={post.likesCount}
+                                initialCommentsCount={post.commentsCount}
+                                initialSharesCount={post.sharesCount}
+                                isLikedByCurrentUser={post.isLikedByCurrentUser}
+                                doctorName={post.doctorName}
+                                postTitle={post.title ?? ""}
+                                doctorId={doctor.id}
+                                isRTL={isRTL}
+                                variant="light"
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
