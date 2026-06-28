@@ -9,6 +9,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SpecialtyCombobox } from "@/components/ui/SpecialtyCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { specialties, locations } from "@/lib/data";
 
@@ -408,25 +409,16 @@ export default function DoctorAuth() {
                         <Label htmlFor="signupSpecialty" className="text-gray-300">
                           {dir === "rtl" ? "التخصص" : "Specialty"}
                         </Label>
-                        <Select
+                        <SpecialtyCombobox
+                          data-testid="select-signup-specialty"
                           value={signupData.specialty}
-                          onValueChange={(v) =>
-                            setSignupData({ ...signupData, specialty: v })
-                          }
-                        >
-                          <SelectTrigger id="signupSpecialty" data-testid="select-signup-specialty" className="bg-[#0F172A]/60 border-[#334155] text-white">
-                            <SelectValue
-                              placeholder={dir === "rtl" ? "اختر التخصص" : "Choose specialty"}
-                            />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1E293B] border-[#334155]">
-                            {specialties.map((s) => (
-                              <SelectItem key={s} value={s} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onValueChange={(v) => setSignupData({ ...signupData, specialty: v })}
+                          options={specialties.map((s) => ({ value: s, label: s }))}
+                          placeholder={dir === "rtl" ? "اختر التخصص" : "Choose specialty"}
+                          searchPlaceholder={dir === "rtl" ? "ابحث عن التخصص…" : "Search specialties…"}
+                          emptyMessage={dir === "rtl" ? "لا يوجد تخصص مطابق." : "No specialty found."}
+                          dark
+                        />
                       </div>
 
                       <div className="space-y-2">

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SpecialtyCombobox } from "@/components/ui/SpecialtyCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -211,16 +212,15 @@ export default function DoctorRegister() {
             <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleRegister(); }}>
               <div className="space-y-2">
                 <Label>{t.register.specialty}</Label>
-                <Select value={formData.specialty} onValueChange={v => setFormData({...formData, specialty: v})}>
-                  <SelectTrigger data-testid="select-register-specialty">
-                    <SelectValue placeholder={t.home.chooseSpecialty} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {apiSpecialties.map(s => (
-                      <SelectItem key={s.id} value={s.name}>{t.specialties[s.name] ?? s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SpecialtyCombobox
+                  data-testid="select-register-specialty"
+                  value={formData.specialty}
+                  onValueChange={v => setFormData({...formData, specialty: v})}
+                  options={apiSpecialties.map(s => ({ value: s.name, label: t.specialties[s.name] ?? s.name }))}
+                  placeholder={t.home.chooseSpecialty}
+                  searchPlaceholder={lang === "ar" ? "ابحث عن التخصص…" : "Search specialties…"}
+                  emptyMessage={lang === "ar" ? "لا يوجد تخصص مطابق." : "No specialty found."}
+                />
               </div>
               
               <div className="space-y-2">
