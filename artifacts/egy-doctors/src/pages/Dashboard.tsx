@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,10 +17,11 @@ import {
   getPreferences, updatePreferences, type UserPreferences,
   getMyMagazinePosts, createMagazinePost, deleteMagazinePost, type ApiMagazinePost,
   type ApiAssistant, type ApiPatientRecord,
+  getBillingInfo, checkout, type BillingInfo,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-type Tab = "appointments" | "patients" | "assistants" | "publications" | "preferences";
+type Tab = "appointments" | "patients" | "assistants" | "publications" | "preferences" | "billing";
 
 function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirmed: string } }) {
   const map: Record<ApiAppointment["status"], string> = {
@@ -721,6 +722,118 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
   );
 }
 
+function BillingTab({ isRTL }: { isRTL: boolean }) {
+  const qc = useQueryClient();
+  const [success, setSuccess] = useState(false);
+
+  const { data, isLoading } = useQuery<BillingInfo>({
+    queryKey: ["billingInfo"],
+    queryFn: getBillingInfo,
+  });
+
+  const mut = useMutation({
+    mutationFn: checkout,
+    onSuccess: () => {
+      setSuccess(true);
+      qc.invalidateQueries({ queryKey: ["billingInfo"] });
+    },
+  });
+
+  const status = data?.status ?? "INACTIVE";
+
+  const statusStyle: Record<string, string> = {
+    ACTIVE: "bg-green-50 text-green-700 border-green-200",
+    TRIAL:  "bg-amber-50 text-amber-700 border-amber-200",
+    INACTIVE: "bg-red-50 text-red-700 border-red-200",
+  };
+  const statusLabel: Record<string, string> = {
+    ACTIVE:   isRTL ? "نشط" : "Active",
+    TRIAL:    isRTL ? "تجريبي" : "Trial",
+    INACTIVE: isRTL ? "غير نشط" : "Inactive",
+  };
+
+  if (isLoading) return <div className="py-12 text-center text-gray-400 text-sm">{isRTL ? "جار التحميل..." : "Loading..."}</div>;
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{isRTL ? "الاشتراك والفاتورة" : "Subscription & Billing"}</h1>
+        <p className="text-gray-500 text-sm mt-1">{isRTL ? "إدارة اشتراكك في المنصة" : "Manage your platform subscription"}</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <p className="text-xs font-medium text-gray-500 mb-2">{isRTL ? "حالة الاشتراك" : "Status"}</p>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusStyle[status] ?? statusStyle.INACTIVE}`}>
+              {statusLabel[status] ?? status}
+            </span>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <p className="text-xs font-medium text-gray-500 mb-2">{isRTL ? "نوع الخطة" : "Plan"}</p>
+            <p className="text-lg font-bold text-gray-900">{isRTL ? "نصف سنوي" : "Semi-Annual"}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <p className="text-xs font-medium text-gray-500 mb-2">{isRTL ? "تاريخ الانتهاء" : "Expires"}</p>
+            <p className="text-lg font-bold text-gray-900">
+              {data?.endDate
+                ? new Date(data.endDate).toLocaleDateString(isRTL ? "ar-EG" : "en-GB", { year: "numeric", month: "short", day: "numeric" })
+                : "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-gray-50/50 rounded-t-xl pb-4">
+          <CardTitle className="text-base">{isRTL ? "تجديد الاشتراك" : "Renew Subscription"}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="font-semibold text-gray-900">{isRTL ? "خطة نصف سنوية" : "Semi-Annual Plan"}</p>
+              <p className="text-sm text-gray-500 mt-0.5">{isRTL ? "6 أشهر وصول كامل للمنصة" : "6 months of full platform access"}</p>
+            </div>
+            <p className="text-2xl font-bold text-primary">
+              {data?.price ?? 1500}
+              <span className="text-sm font-normal text-gray-500 ms-1">{data?.currency ?? "EGP"}</span>
+            </p>
+          </div>
+
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+              {isRTL ? "✓ تم تفعيل اشتراكك بنجاح!" : "✓ Subscription activated successfully!"}
+            </div>
+          )}
+          {mut.isError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {isRTL ? "حدث خطأ. يرجى المحاولة مرة أخرى." : "An error occurred. Please try again."}
+            </div>
+          )}
+
+          <Button onClick={() => { setSuccess(false); mut.mutate(); }} disabled={mut.isPending} className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            {mut.isPending
+              ? (isRTL ? "جارٍ المعالجة..." : "Processing...")
+              : status === "ACTIVE"
+                ? (isRTL ? "تجديد الاشتراك" : "Renew Subscription")
+                : (isRTL ? "اشترك الآن" : "Subscribe Now")}
+          </Button>
+          <p className="text-xs text-gray-400 mt-3">
+            {isRTL
+              ? "* هذا نظام إدارة الاشتراكات. يتم التنسيق مع الفريق لإتمام الدفع."
+              : "* This is a subscription management system. Payment is coordinated with our team."}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { t, dir, setLang } = useLanguage();
   const { user, signOut, refreshUser } = useAuth();
@@ -740,6 +853,13 @@ export default function Dashboard() {
     enabled: !!user?.doctorId && accountStatus === "approved",
   });
 
+  const { data: billingInfo } = useQuery<BillingInfo>({
+    queryKey: ["billingInfo"],
+    queryFn: getBillingInfo,
+    enabled: !!user?.doctorId && accountStatus === "approved",
+  });
+  const isSubscribed = billingInfo?.status === "ACTIVE" || billingInfo?.status === "TRIAL";
+
   const doctorName = user?.name ?? "Doctor";
 
   if (user?.role === "doctor" && accountStatus === "incomplete") {
@@ -756,6 +876,7 @@ export default function Dashboard() {
     { tab: "assistants", icon: <UserCog className="h-4 w-4" />, label: isRTL ? "المساعدون" : "Assistants" },
     { tab: "publications", icon: <Newspaper className="h-4 w-4" />, label: isRTL ? "المنشورات" : "Publications" },
     { tab: "preferences", icon: <Settings className="h-4 w-4" />, label: isRTL ? "الإعدادات" : "Preferences" },
+    { tab: "billing",     icon: <CreditCard className="h-4 w-4" />, label: isRTL ? "الاشتراك" : "Billing" },
   ];
 
   return (
@@ -1016,10 +1137,35 @@ export default function Dashboard() {
             )}
 
             {/* ── Publications Tab ── */}
-            {activeTab === "publications" && <PublicationsTab isRTL={isRTL} />}
+            {activeTab === "publications" && (
+              isSubscribed
+                ? <PublicationsTab isRTL={isRTL} />
+                : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
+                      <Lock className="h-8 w-8 text-amber-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+                      {isRTL ? "ميزة مدفوعة" : "Subscription Required"}
+                    </h2>
+                    <p className="text-gray-500 text-sm max-w-sm mb-6">
+                      {isRTL
+                        ? "نشر المقالات والنصائح والفيديوهات متاح فقط للأطباء المشتركين في المنصة."
+                        : "Publishing articles, tips, and videos is available only to subscribed doctors."}
+                    </p>
+                    <Button onClick={() => setActiveTab("billing")} className="gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      {isRTL ? "اشترك الآن" : "Subscribe Now"}
+                    </Button>
+                  </div>
+                )
+            )}
 
             {/* ── Preferences Tab ── */}
             {activeTab === "preferences" && <PreferencesTab isRTL={isRTL} />}
+
+            {/* ── Billing Tab ── */}
+            {activeTab === "billing" && <BillingTab isRTL={isRTL} />}
 
           </div>
         </main>

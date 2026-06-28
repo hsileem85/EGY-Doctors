@@ -552,3 +552,36 @@ export function followDoctor(doctorId: number): Promise<{ following: boolean }> 
 export function getStats(): Promise<{ clinicsCount: number; citiesWithClinics: number }> {
   return request("/stats");
 }
+
+/* ─── Billing ─── */
+
+export interface BillingInfo {
+  status: "ACTIVE" | "INACTIVE" | "TRIAL";
+  plan: string;
+  endDate: string | null;
+  price: number;
+  currency: string;
+}
+
+export function getBillingInfo(): Promise<BillingInfo> {
+  return request("/billing/subscription");
+}
+
+export function checkout(): Promise<{ success: boolean; status: string; endDate: string; price: number; currency: string; plan: string }> {
+  return request("/billing/checkout", { method: "POST" });
+}
+
+/* ─── Admin Platform Settings ─── */
+
+export interface PlatformSettings {
+  subscriptionPrice: number;
+  currency: string;
+}
+
+export function getAdminPlatformSettings(): Promise<PlatformSettings> {
+  return request("/admin/settings");
+}
+
+export function updateAdminPlatformSettings(data: PlatformSettings): Promise<{ message: string }> {
+  return request("/admin/settings", { method: "PUT", body: JSON.stringify(data) });
+}

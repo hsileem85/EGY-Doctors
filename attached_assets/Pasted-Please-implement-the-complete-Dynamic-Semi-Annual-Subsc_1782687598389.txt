@@ -1,0 +1,20 @@
+Please implement the complete Dynamic Semi-Annual Subscription Billing System for the EGY Doctors platform. This requires a synchronized update across the Database, Backend APIs, Admin Dashboard, and Doctor Dashboard.
+
+Please execute the following implementation plan:
+
+### 1. Database Schema Updates
+* **Doctor Model:** Add `subscriptionStatus` (Enum: `ACTIVE`, `INACTIVE`, `TRIAL`, default: `INACTIVE`), `subscriptionPlan` (String, default: `SEMI_ANNUAL`), and `subscriptionEndDate` (DateTime).
+* **SystemSettings Model:** Create a new singleton model/table to store global platform settings. Add fields: `semiAnnualSubscriptionPrice` (Float) and `currency` (String, default: `EGP`).
+
+### 2. Backend APIs & Access Control
+* **Admin Settings API:** Create `GET /api/admin/settings` and `PUT /api/admin/settings` to fetch and update the global subscription price securely.
+* **Checkout API:** Create `POST /api/billing/checkout`. This endpoint MUST dynamically fetch the current `semiAnnualSubscriptionPrice` from the `SystemSettings` table to generate the payment/checkout session. Do not hardcode the price.
+* **Subscription Guard:** Implement a middleware or utility function that automatically checks a doctor's `subscriptionEndDate`. If the current date exceeds the end date, their status must be treated as `INACTIVE`, hiding them from public search results.
+
+### 3. Admin Dashboard UI (Pricing Management)
+* Add a new view/tab in the Admin Module named "Platform Settings" or "Billing Management".
+* Build a secure form allowing the Admin to view the current `semiAnnualSubscriptionPrice` and update it. Ensure successful updates reflect immediately in the database.
+
+### 4. Doctor Dashboard & Paywall UI
+* **Billing Page:** Add a "Billing & Subscription" tab in the Doctor Dashboard. Display their current status (Active/Inactive), next renewal date, and a prominent "Renew Subscription" button that displays the dynamically fetched price (e.g., "Renew now for [Price] EGP").
+* **Feature Paywall:** In the "Publications" (Magazine Content) section of the dashboard, check the doctor's subscription status. If `INACTIVE`, disable the ability to add new articles, tips, or videos, and display a beautifully designed overlay or modal stating: "Please activate your semi-annual subscription to unlock publishing tools and appear in patient searches."

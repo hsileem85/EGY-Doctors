@@ -622,4 +622,38 @@ router.put("/admin/settings/contact", async (req, res): Promise<void> => {
   res.json({ message: "Contact settings saved." });
 });
 
+/* ─── GET /admin/settings ─── */
+router.get("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
+  const rows = await db.select().from(siteSettingsTable)
+    .where(inArray(siteSettingsTable.key, ["subscription_price", "subscription_currency"]));
+  const map: Record<string, string> = {};
+  for (const r of rows) map[r.key] = r.value;
+  res.json({
+    subscriptionPrice: Number(map["subscription_price"] ?? 1500),
+    currency: map["subscription_currency"] ?? "EGP",
+  });
+});
+
+/* ─── PUT /admin/settings ─── */
+router.put("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
+  const schema = z.object({
+    subscriptionPrice: z.number().positive(),
+    currency: z.string().min(1).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Invalid settings data" }); return; }
+  const { subscriptionPrice, currency } = parsed.data;
+
+  await db.insert(siteSettingsTable).values({ key: "subscription_price", value: String(subscriptionPrice) })
+    .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: String(subscriptionPrice) } });
+
+  if (currency) {
+    await db.insert(siteSettingsTable).values({ key: "subscription_currency", value: currency })
+      .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: currency } });
+  }
+
+  req.log.info({ subscriptionPrice }, "Platform settings updated");
+  res.json({ message: "Settings saved." });
+});
+
 export default router;

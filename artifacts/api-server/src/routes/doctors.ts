@@ -45,9 +45,10 @@ router.get("/doctors", async (req, res): Promise<void> => {
   const params = Schema.safeParse(req.query);
   const { q, specialtyId, cityId, lat, lng } = params.success ? params.data : {} as Record<string, undefined>;
 
-  const conditions: ReturnType<typeof eq>[] = [
+  const conditions = [
     eq(doctorsTable.accountStatus, "approved"),
     eq(doctorsTable.isActive, true),
+    sql`(${doctorsTable.subscriptionStatus} = 'TRIAL' OR (${doctorsTable.subscriptionStatus} = 'ACTIVE' AND (${doctorsTable.subscriptionEndDate} IS NULL OR ${doctorsTable.subscriptionEndDate} > NOW())))`,
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));

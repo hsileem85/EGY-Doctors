@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 
 export const doctorStatusEnum = ["incomplete", "pending", "approved", "rejected"] as const;
 export const doctorOnboardingEnum = ["pending", "approved", "rejected"] as const;
+export const subscriptionStatusEnum = ["ACTIVE", "INACTIVE", "TRIAL"] as const;
 
 export const doctorsTable = pgTable("doctors", {
   id: serial("id").primaryKey(),
@@ -30,6 +31,9 @@ export const doctorsTable = pgTable("doctors", {
   youtubeUrl: text("youtube_url"),
   xUrl: text("x_url"),
   isActive: boolean("is_active").notNull().default(true),
+  subscriptionStatus: text("subscription_status", { enum: subscriptionStatusEnum }).notNull().default("INACTIVE"),
+  subscriptionPlan: text("subscription_plan").notNull().default("SEMI_ANNUAL"),
+  subscriptionEndDate: timestamp("subscription_end_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -74,8 +74,9 @@ import {
   Mail,
   Globe,
   Save,
+  DollarSign,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -327,6 +328,7 @@ const tabs = [
   { id: "cities", label: "Cities", labelAr: "المحافظات", icon: MapPinHouse },
   { id: "areas", label: "Areas", labelAr: "المناطق", icon: MapPin },
   { id: "contact", label: "Contact Info", labelAr: "معلومات التواصل", icon: Globe },
+  { id: "billing", label: "Billing", labelAr: "الاشتراكات", icon: DollarSign },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -412,6 +414,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         {activeTab === "cities" && <CitiesSection lang={lang} />}
         {activeTab === "areas" && <AreasSection lang={lang} />}
         {activeTab === "contact" && <ContactInfoSection lang={lang} />}
+        {activeTab === "billing" && <PlatformSettingsSection lang={lang} />}
       </div>
     </div>
   );
@@ -431,6 +434,80 @@ const CONTACT_DEFAULTS: ContactSettings = {
   daysAr: "الأحد – الخميس",
   whatsapp: "201234567890",
 };
+
+function PlatformSettingsSection({ lang }: { lang: "en" | "ar" }) {
+  const isAr = lang === "ar";
+  const qc = useQueryClient();
+  const [form, setForm] = useState<PlatformSettings>({ subscriptionPrice: 1500, currency: "EGP" });
+  const [saved, setSaved] = useState(false);
+
+  const { data: settings, isLoading } = useQuery<PlatformSettings>({
+    queryKey: ["adminPlatformSettings"],
+    queryFn: getAdminPlatformSettings,
+  });
+
+  useEffect(() => {
+    if (settings) setForm({ subscriptionPrice: settings.subscriptionPrice, currency: settings.currency });
+  }, [settings]);
+
+  const mut = useMutation({
+    mutationFn: updateAdminPlatformSettings,
+    onSuccess: () => {
+      setSaved(true);
+      qc.invalidateQueries({ queryKey: ["adminPlatformSettings"] });
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-white">{isAr ? "إعدادات المنصة" : "Platform Settings"}</h2>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-md">
+        <h3 className="font-semibold text-gray-900 mb-1">{isAr ? "سعر الاشتراك" : "Subscription Pricing"}</h3>
+        <p className="text-sm text-gray-500 mb-5">{isAr ? "سعر الاشتراك النصف سنوي الظاهر للأطباء" : "Semi-annual subscription price shown to doctors"}</p>
+        {isLoading ? (
+          <div className="text-gray-400 text-sm py-4">{isAr ? "جاري التحميل..." : "Loading..."}</div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">
+                {isAr ? "السعر (لكل 6 أشهر)" : "Price (per 6 months)"}
+              </label>
+              <Input
+                type="number"
+                min={0}
+                value={form.subscriptionPrice}
+                onChange={(e) => setForm((f) => ({ ...f, subscriptionPrice: Number(e.target.value) }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "العملة" : "Currency"}</label>
+              <Input
+                value={form.currency}
+                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
+                placeholder="EGP"
+              />
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <Button
+                onClick={() => { setSaved(false); mut.mutate(form); }}
+                disabled={mut.isPending}
+                className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {mut.isPending ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ" : "Save Settings")}
+              </Button>
+              {saved && <span className="text-sm text-green-400 font-medium">{isAr ? "✓ تم الحفظ" : "✓ Saved"}</span>}
+              {mut.isError && <span className="text-sm text-red-400">{isAr ? "خطأ في الحفظ" : "Failed to save"}</span>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ContactInfoSection({ lang }: { lang: "en" | "ar" }) {
   const isAr = lang === "ar";
