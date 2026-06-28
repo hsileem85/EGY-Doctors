@@ -178,7 +178,7 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
 
         {/* Media */}
         {post.type === "video" && post.videoUrl && (
-          <div className="mx-5 mb-4 rounded-lg overflow-hidden">
+          <div className="mb-4 overflow-hidden">
             <SocialVideoPlayer url={post.videoUrl} title={post.title} />
           </div>
         )}
@@ -232,7 +232,7 @@ export default function Magazine() {
     <div className="min-h-screen bg-[#0F172A]" dir={dir}>
       <Navbar />
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">

@@ -50,7 +50,7 @@ export function getSocialVideoInfo(url: string): SocialVideoInfo | null {
       if (!m) return null;
       return {
         platform: "instagram",
-        embedUrl: `https://www.instagram.com/p/${m[1]}/embed/`,
+        embedUrl: `https://www.instagram.com/p/${m[1]}/embed/?hidecaption=true`,
         aspectRatio: "9/16",
       };
     }
