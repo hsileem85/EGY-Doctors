@@ -223,7 +223,7 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
 
         {/* Media */}
         {post.type === "video" && post.videoUrl && (
-          <div className="mb-2 overflow-hidden">
+          <div className="mb-0 px-0">
             <SocialVideoPlayer url={post.videoUrl} title={post.title} />
           </div>
         )}
