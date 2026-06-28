@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { getMagazinePosts, type ApiMagazinePost } from "@/lib/api";
+import { getMagazinePosts, followDoctor, type ApiMagazinePost } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { SocialVideoPlayer } from "@/components/SocialVideoPlayer";
 import {
   Bookmark, BookmarkCheck,
@@ -35,6 +37,8 @@ interface Post {
   commentsCount: number;
   sharesCount: number;
   isLikedByCurrentUser: boolean;
+  isFollowingDoctor: boolean;
+  numericDoctorId: number;
   tags: string[];
 }
 
@@ -69,6 +73,8 @@ function apiPostToPost(p: ApiMagazinePost): Post {
     commentsCount: p.commentsCount,
     sharesCount: p.sharesCount,
     isLikedByCurrentUser: p.isLikedByCurrentUser,
+    isFollowingDoctor: p.isFollowingDoctor,
+    numericDoctorId: p.doctorId,
     tags: [],
   };
 }
@@ -99,7 +105,45 @@ function getTypeLabel(type: PostType) {
 /* ── PostCard ─────────────────────────────────────────────────────── */
 function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const followMutation = useMutation({
+    mutationFn: () => followDoctor(post.numericDoctorId),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["magazinePosts"] });
+      const prev = qc.getQueryData<ApiMagazinePost[]>(["magazinePosts"]);
+      qc.setQueryData<ApiMagazinePost[]>(["magazinePosts"], (old = []) =>
+        old.map(p =>
+          p.doctorId === post.numericDoctorId
+            ? { ...p, isFollowingDoctor: !post.isFollowingDoctor }
+            : p
+        )
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["magazinePosts"], ctx.prev);
+      toast({
+        title: isRTL ? "تعذّر تحديث المتابعة" : "Failed to update follow",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["magazinePosts"] });
+    },
+  });
+
+  const handleFollow = () => {
+    if (!user) {
+      toast({
+        title: isRTL ? "يرجى تسجيل الدخول أولاً" : "Sign in to follow doctors",
+      });
+      return;
+    }
+    followMutation.mutate();
+  };
 
   return (
     <Card className="bg-[#1E293B]/80 border-[#334155] overflow-hidden hover:border-[#D4A853]/30 transition-colors">
@@ -134,14 +178,15 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setIsFollowing(f => !f)}
+              onClick={handleFollow}
+              disabled={followMutation.isPending}
               className={`h-8 text-xs px-3 transition-colors ${
-                isFollowing
+                post.isFollowingDoctor
                   ? "bg-[#D4A853]/10 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/20"
                   : "bg-transparent border-[#334155] text-gray-400 hover:border-[#D4A853]/50 hover:text-[#D4A853]"
               }`}
             >
-              {isFollowing ? (
+              {post.isFollowingDoctor ? (
                 <>
                   <UserCheck className="h-3 w-3 mr-1" />
                   <span className="hidden sm:inline">{isRTL ? "متابع" : "Following"}</span>

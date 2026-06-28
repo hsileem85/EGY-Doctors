@@ -4,8 +4,9 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
   db, magazinePostsTable, doctorsTable, specialtiesTable, usersTable,
-  magazinePostLikesTable, magazinePostCommentsTable,
+  magazinePostLikesTable, magazinePostCommentsTable, doctorFollowsTable,
 } from "@workspace/db";
+import { sendNewPostNotificationEmail } from "../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 const router: IRouter = Router();
@@ -41,6 +42,10 @@ async function fetchPosts(filters: { doctorId?: number; type?: string; currentUs
     ? sql<boolean>`EXISTS(SELECT 1 FROM magazine_post_likes WHERE post_id = ${magazinePostsTable.id} AND user_id = ${currentUserId})`
     : sql<boolean>`false`;
 
+  const isFollowingExpr = currentUserId != null
+    ? sql<boolean>`EXISTS(SELECT 1 FROM doctor_follows WHERE doctor_id = ${magazinePostsTable.doctorId} AND follower_id = ${currentUserId})`
+    : sql<boolean>`false`;
+
   const query = db
     .select({
       id: magazinePostsTable.id,
@@ -59,6 +64,7 @@ async function fetchPosts(filters: { doctorId?: number; type?: string; currentUs
       likesCount: sql<number>`(SELECT COUNT(*)::int FROM magazine_post_likes WHERE post_id = ${magazinePostsTable.id})`,
       commentsCount: sql<number>`(SELECT COUNT(*)::int FROM magazine_post_comments WHERE post_id = ${magazinePostsTable.id})`,
       isLikedByCurrentUser: isLikedExpr,
+      isFollowingDoctor: isFollowingExpr,
     })
     .from(magazinePostsTable)
     .leftJoin(doctorsTable, eq(magazinePostsTable.doctorId, doctorsTable.id))
@@ -88,6 +94,7 @@ async function fetchPosts(filters: { doctorId?: number; type?: string; currentUs
     likesCount: r.likesCount,
     commentsCount: r.commentsCount,
     isLikedByCurrentUser: Boolean(r.isLikedByCurrentUser),
+    isFollowingDoctor: Boolean(r.isFollowingDoctor),
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     doctorName: r.doctorNameEn ?? "Unknown",
     doctorNameAr: r.doctorNameAr ?? null,
@@ -174,11 +181,15 @@ router.post("/magazine/posts", async (req, res): Promise<void> => {
     return;
   }
 
-  const doctor = await getDoctorRowByUserId(payload.sub);
-  if (!doctor) { res.status(404).json({ error: "Doctor profile not found" }); return; }
+  const [doctorRow] = await db
+    .select({ id: doctorsTable.id, nameEn: doctorsTable.nameEn })
+    .from(doctorsTable)
+    .where(eq(doctorsTable.userId, payload.sub))
+    .limit(1);
+  if (!doctorRow) { res.status(404).json({ error: "Doctor profile not found" }); return; }
 
   const [inserted] = await db.insert(magazinePostsTable).values({
-    doctorId: doctor.id,
+    doctorId: doctorRow.id,
     type,
     title: title ?? null,
     content: content ?? null,
@@ -186,6 +197,38 @@ router.post("/magazine/posts", async (req, res): Promise<void> => {
   }).returning({ id: magazinePostsTable.id });
 
   res.status(201).json({ id: inserted.id });
+
+  /* ── Fire-and-forget: email followers ── */
+  (async () => {
+    try {
+      const followers = await db
+        .select({
+          name: usersTable.name,
+          email: usersTable.email,
+          notifyViaEmail: usersTable.notifyViaEmail,
+          notificationLanguage: usersTable.notificationLanguage,
+        })
+        .from(doctorFollowsTable)
+        .innerJoin(usersTable, eq(doctorFollowsTable.followerId, usersTable.id))
+        .where(eq(doctorFollowsTable.doctorId, doctorRow.id));
+
+      for (const follower of followers) {
+        if (follower.email && follower.notifyViaEmail) {
+          await sendNewPostNotificationEmail({
+            to: follower.email,
+            followerName: follower.name,
+            doctorName: doctorRow.nameEn,
+            postTitle: title ?? undefined,
+            postType: type,
+            postId: inserted.id,
+            lang: (follower.notificationLanguage as "en" | "ar") ?? "en",
+          });
+        }
+      }
+    } catch {
+      /* Notification errors must not surface to the client */
+    }
+  })();
 });
 
 /* ─── DELETE /magazine/posts/:id ─── */

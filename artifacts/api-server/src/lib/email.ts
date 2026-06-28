@@ -188,6 +188,71 @@ export async function sendAppointmentCancelledEmail(data: ApptEmailData): Promis
   }
 }
 
+/* ── New-post follower notification ── */
+
+type NewPostEmailData = {
+  to: string;
+  followerName: string;
+  doctorName: string;
+  postTitle?: string;
+  postType: "article" | "tip" | "video";
+  postId: number;
+  lang: "en" | "ar";
+};
+
+const typeLabels = {
+  en: { article: "article", tip: "health tip", video: "video" },
+  ar: { article: "مقال", tip: "نصيحة صحية", video: "فيديو" },
+};
+
+export async function sendNewPostNotificationEmail(data: NewPostEmailData): Promise<void> {
+  const { to, followerName, doctorName, postTitle, postType, postId, lang } = data;
+  const base = process.env.APP_URL ?? "https://egydoctors.com";
+  const postUrl = `${base}/magazine?postId=${postId}`;
+  const label = typeLabels[lang][postType];
+
+  const subject = lang === "ar"
+    ? `📣 د. ${doctorName} نشر ${label} جديداً — EGY Doctors`
+    : `📣 Dr. ${doctorName} published a new ${label} — EGY Doctors`;
+
+  const bodyAr = `
+    <div dir="rtl" style="text-align:right">
+      <h2 style="color:#0F172A;font-size:20px">مرحباً، ${followerName}!</h2>
+      <p style="color:#475569;line-height:1.8">
+        نشر <strong>د. ${doctorName}</strong>، الذي تتابعه، ${label} جديداً على منصة إيجي دكتورز.
+      </p>
+      ${postTitle ? `<div style="background:#FEF9F0;border:1px solid #D4A853;border-radius:8px;padding:16px;margin:20px 0"><p style="color:#92400E;margin:0;font-weight:600">${postTitle}</p></div>` : ""}
+      <div style="text-align:center;margin:28px 0">
+        <a href="${postUrl}" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
+          اقرأ الآن
+        </a>
+      </div>
+    </div>`;
+
+  const bodyEn = `
+    <div dir="ltr" style="text-align:left">
+      <h2 style="color:#0F172A;font-size:20px">Hello, ${followerName}!</h2>
+      <p style="color:#475569;line-height:1.6">
+        <strong>Dr. ${doctorName}</strong>, whom you follow, just published a new ${label} on EGY Doctors.
+      </p>
+      ${postTitle ? `<div style="background:#FEF9F0;border:1px solid #D4A853;border-radius:8px;padding:16px;margin:20px 0"><p style="color:#92400E;margin:0;font-weight:600">${postTitle}</p></div>` : ""}
+      <div style="text-align:center;margin:28px 0">
+        <a href="${postUrl}" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
+          Read Now
+        </a>
+      </div>
+    </div>`;
+
+  const content = lang === "ar" ? bodyAr : bodyEn;
+  try {
+    await sendEmail(to, subject,
+      `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">${LOGO}${content}${FOOTER}</div>`
+    );
+  } catch {
+    // Notification failures should not interrupt post creation
+  }
+}
+
 export async function sendDoctorApprovedEmail(to: string, doctorName: string): Promise<void> {
   try {
     await sendEmail(

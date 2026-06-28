@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
   clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable,
+  doctorFollowsTable,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -837,6 +838,49 @@ router.get("/doctors/patients", async (req, res): Promise<void> => {
   }
 
   res.json(Array.from(patientMap.values()));
+});
+
+/* ─── POST /doctors/:id/follow  (toggle follow/unfollow) ─── */
+router.post("/doctors/:id/follow", async (req, res): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  let payload: { sub: number; role: string };
+  try {
+    payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number; role: string };
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+
+  const doctorId = parseInt(req.params.id, 10);
+  if (isNaN(doctorId)) { res.status(400).json({ error: "Invalid doctor id" }); return; }
+
+  const [doctor] = await db.select({ id: doctorsTable.id })
+    .from(doctorsTable)
+    .where(eq(doctorsTable.id, doctorId))
+    .limit(1);
+  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+
+  const followerId = payload.sub;
+
+  const [existing] = await db.select({ id: doctorFollowsTable.id })
+    .from(doctorFollowsTable)
+    .where(and(
+      eq(doctorFollowsTable.followerId, followerId),
+      eq(doctorFollowsTable.doctorId, doctorId),
+    ))
+    .limit(1);
+
+  if (existing) {
+    await db.delete(doctorFollowsTable).where(eq(doctorFollowsTable.id, existing.id));
+    res.json({ following: false });
+  } else {
+    await db.insert(doctorFollowsTable).values({ followerId, doctorId });
+    res.json({ following: true });
+  }
 });
 
 /* ─── GET /stats ─── */

@@ -483,6 +483,7 @@ export interface ApiMagazinePost {
   likesCount: number;
   commentsCount: number;
   isLikedByCurrentUser: boolean;
+  isFollowingDoctor: boolean;
   doctorName: string;
   doctorNameAr: string | null;
   doctorImage: string;
@@ -541,6 +542,10 @@ export function commentOnPost(postId: number, text: string): Promise<ApiPostComm
 
 export function sharePost(postId: number): Promise<{ sharesCount: number }> {
   return request(`/magazine/posts/${postId}/share`, { method: "POST" });
+}
+
+export function followDoctor(doctorId: number): Promise<{ following: boolean }> {
+  return request(`/doctors/${doctorId}/follow`, { method: "POST" });
 }
 
 export function getStats(): Promise<{ clinicsCount: number; citiesWithClinics: number }> {

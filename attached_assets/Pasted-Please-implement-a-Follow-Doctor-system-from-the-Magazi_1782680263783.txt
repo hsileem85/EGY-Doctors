@@ -1,0 +1,28 @@
+Please implement a "Follow Doctor" system from the Magazine page. When a user follows a doctor, they should receive instant notifications whenever that doctor publishes a new post (Article, Quick Tip, or Video).
+
+Please update the Database Schema, Backend APIs, and Frontend components with the following:
+
+### 1. Database Schema Updates (`Follow` Model)
+* Create a new `Follow` model/table to map the relationship between users (Patients) and Doctors:
+  - `id`: Unique identifier.
+  - `followerId`: Foreign key linking to the User (Patient) who clicked follow.
+  - `doctorId`: Foreign key linking to the Doctor being followed.
+  - `createdAt`: Timestamp.
+* Add a unique compound index on `[followerId, doctorId]` to prevent duplicate follow records.
+
+### 2. Backend API Routes
+* **Toggle Follow:** Create a `POST /api/doctors/:id/follow` endpoint. If a record exists for this follower-doctor pair, delete it (Unfollow). If it doesn't exist, create it (Follow).
+* **Magazine Feed Update:** Update the `GET /api/publications` endpoint so that each post's doctor data includes a boolean flag `isFollowing` indicating if the currently logged-in user is following that specific doctor.
+
+### 3. Notification Trigger Logic (Crucial Step)
+* Locate the publication creation endpoint (`POST /api/publications`) used by doctors to add new content.
+* **Trigger Workflow:** Immediately after a new post is successfully saved to the database:
+  1. Query the `Follow` table to fetch all `followerId`s linked to this `doctorId`.
+  2. For each follower, fetch their general account preferences (Preferred Notification Language and Notification Methods: EMAIL, SMS, or WHATSAPP).
+  3. Dispatch the notification to the follower through their chosen channels, localized to their preferred language. (e.g., "Dr. [Name] just published a new video: [Title]. Watch it now!").
+
+### 4. Frontend UI Updates (Magazine Page Layout)
+* On the global Magazine page, inside each publication card, add a "Follow" button next to the Doctor's name/avatar header.
+* **Conditional UI State:** - If `isFollowing` is true, display the button style as secondary/grayed-out with the text "Following" (متابع).
+  - If false, display it as a primary action button with the text "Follow" (متابعة).
+* **Optimistic UI Update:** When clicked, instantly toggle the UI state between "Follow" and "Following" while the background API call to `/follow` is executing to ensure a snappy user experience.
