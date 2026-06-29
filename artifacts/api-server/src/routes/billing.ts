@@ -144,10 +144,8 @@ router.post("/billing/validate-voucher", async (req, res): Promise<void> => {
 /* ─── POST /billing/paymob/initiate ─── */
 router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   const apiKey = process.env.PAYMOB_API_KEY;
-  const integrationId = process.env.PAYMOB_CARD_INTEGRATION_ID;
-  const iframeId = process.env.PAYMOB_IFRAME_ID;
 
-  if (!apiKey || !integrationId || !iframeId) {
+  if (!apiKey) {
     res.status(503).json({ error: "Payment gateway not configured. Please contact support." });
     return;
   }
@@ -158,10 +156,29 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   const schema = z.object({
     planType: z.enum(["MONTHS_3", "MONTHS_6", "YEARLY"]),
     voucherCode: z.string().optional(),
+    paymentMethod: z.enum(["card", "fawry", "wallet"]).default("card"),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(422).json({ error: "Invalid checkout data" }); return; }
-  const { planType, voucherCode } = parsed.data;
+  const { planType, voucherCode, paymentMethod } = parsed.data;
+
+  let integrationId: string | undefined;
+  let iframeId: string | undefined;
+  if (paymentMethod === "card") {
+    integrationId = process.env.PAYMOB_CARD_INTEGRATION_ID;
+    iframeId = process.env.PAYMOB_IFRAME_ID;
+  } else if (paymentMethod === "fawry") {
+    integrationId = process.env.PAYMOB_FAWRY_INTEGRATION_ID;
+    iframeId = process.env.PAYMOB_FAWRY_IFRAME_ID;
+  } else if (paymentMethod === "wallet") {
+    integrationId = process.env.PAYMOB_WALLET_INTEGRATION_ID;
+    iframeId = process.env.PAYMOB_WALLET_IFRAME_ID;
+  }
+  if (!integrationId || !iframeId) {
+    const label = paymentMethod === "card" ? "Card" : paymentMethod === "fawry" ? "Fawry" : "Wallet";
+    res.status(422).json({ error: `${label} payments are not yet configured. Please choose another payment method or contact support.` });
+    return;
+  }
 
   const [doctor] = await db.select({ id: doctorsTable.id })
     .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
@@ -270,7 +287,13 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
 router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
   const hmacSecret = process.env.PAYMOB_HMAC_SECRET;
 
-  if (hmacSecret) {
+  if (!hmacSecret) {
+    logger.error("PAYMOB_HMAC_SECRET is not set — refusing to process unauthenticated webhook");
+    res.status(500).json({ error: "Webhook authentication is not configured on this server." });
+    return;
+  }
+
+  {
     const receivedHmac = req.query["hmac"] as string | undefined;
     const obj = (req.body as Record<string, unknown>)?.obj as Record<string, unknown> ?? {};
     const sourceData = obj["source_data"] as Record<string, unknown> ?? {};

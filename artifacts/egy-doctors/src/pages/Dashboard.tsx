@@ -17,7 +17,7 @@ import {
   getPreferences, updatePreferences, type UserPreferences,
   getMyMagazinePosts, createMagazinePost, deleteMagazinePost, type ApiMagazinePost,
   type ApiAssistant, type ApiPatientRecord,
-  getBillingInfo, checkout, startTrial, validateVoucher,
+  getBillingInfo, startTrial, validateVoucher,
   initiatePaymobPayment, type PaymobInitiateResponse,
   type BillingInfo, type VoucherValidation, type PlanType,
 } from "@/lib/api";
@@ -734,6 +734,7 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
   const [success, setSuccess] = useState(false);
   const [paymentModal, setPaymentModal] = useState<PaymobInitiateResponse | null>(null);
   const [paymentGatewayError, setPaymentGatewayError] = useState("");
+  const [selectedMethod, setSelectedMethod] = useState<"card" | "fawry" | "wallet">("card");
 
   const { data, isLoading } = useQuery<BillingInfo>({
     queryKey: ["billingInfo"],
@@ -743,16 +744,6 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
   const trialMut = useMutation({
     mutationFn: startTrial,
     onSuccess: () => { setSuccess(true); qc.invalidateQueries({ queryKey: ["billingInfo"] }); },
-  });
-
-  const checkoutMut = useMutation({
-    mutationFn: checkout,
-    onSuccess: () => {
-      setSuccess(true);
-      setVoucherResult(null);
-      setVoucherInput("");
-      qc.invalidateQueries({ queryKey: ["billingInfo"] });
-    },
   });
 
   const initiateMut = useMutation({
@@ -1005,6 +996,34 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
               </div>
             </div>
 
+            {/* Payment method selector */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">{isRTL ? "طريقة الدفع" : "Payment Method"}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { id: "card", labelEn: "Card / Meeza", labelAr: "بطاقة / ميزة", icon: "💳" },
+                    { id: "fawry", labelEn: "Fawry", labelAr: "فوري", icon: "🏪" },
+                    { id: "wallet", labelEn: "Mobile Wallet", labelAr: "محفظة إلكترونية", icon: "📱" },
+                  ] as const
+                ).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedMethod(m.id)}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-xs font-medium transition-all ${
+                      selectedMethod === m.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    <span className="text-lg">{m.icon}</span>
+                    {isRTL ? m.labelAr : m.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {(initiateMut.isError || paymentGatewayError) && (
               <p className="text-red-500 text-sm">
                 {paymentGatewayError || (initiateMut.error instanceof Error ? initiateMut.error.message : (isRTL ? "حدث خطأ." : "An error occurred."))}
@@ -1015,7 +1034,7 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
               onClick={() => {
                 setSuccess(false);
                 setPaymentGatewayError("");
-                initiateMut.mutate({ planType: selectedPlan, voucherCode: voucherResult ? voucherInput.trim() : undefined });
+                initiateMut.mutate({ planType: selectedPlan, voucherCode: voucherResult ? voucherInput.trim() : undefined, paymentMethod: selectedMethod });
               }}
               disabled={initiateMut.isPending}
               className="w-full gap-2"

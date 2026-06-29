@@ -596,7 +596,7 @@ export function checkout(params: CheckoutParams): Promise<{ success: boolean; st
   return request("/billing/checkout", { method: "POST", body: JSON.stringify(params) });
 }
 
-export interface PaymobInitiateParams { planType: PlanType; voucherCode?: string }
+export interface PaymobInitiateParams { planType: PlanType; voucherCode?: string; paymentMethod?: "card" | "fawry" | "wallet" }
 export interface PaymobInitiateResponse {
   paymentKey: string;
   iframeId: string;
