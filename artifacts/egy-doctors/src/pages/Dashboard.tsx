@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock, RefreshCw, AlertCircle } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -726,12 +726,19 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
 }
 
 function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
+  const qc = useQueryClient();
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [retryModal, setRetryModal] = useState<PaymobInitiateResponse | null>(null);
 
   const { data: payments, isLoading } = useQuery<PaymentRecord[]>({
     queryKey: ["paymentHistory"],
     queryFn: getPaymentHistory,
+  });
+
+  const retryMut = useMutation({
+    mutationFn: (planType: PlanType) => initiatePaymobPayment({ planType }),
+    onSuccess: (data) => setRetryModal(data),
   });
 
   const statusStyle: Record<PaymentRecord["status"], string> = {
@@ -791,12 +798,12 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
                     <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "المبلغ" : "Amount"}</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "كود الخصم" : "Promo Code"}</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "الحالة" : "Status"}</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "إيصال" : "Receipt"}</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "إجراء" : "Action"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payments.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-gray-50/50">
+                    <TableRow key={p.id} className={`hover:bg-gray-50/50 ${p.status === "FAILED" ? "bg-red-50/30" : ""}`}>
                       <TableCell className="text-sm text-gray-700">
                         {new Date(p.createdAt).toLocaleDateString(isRTL ? "ar-EG" : "en-GB", {
                           year: "numeric", month: "short", day: "numeric",
@@ -814,9 +821,24 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyle[p.status]}`}>
-                          {statusLabel[p.status]}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border w-fit ${statusStyle[p.status]}`}>
+                            {p.status === "FAILED" && <AlertCircle className="w-3 h-3" />}
+                            {statusLabel[p.status]}
+                          </span>
+                          {p.status === "FAILED" && (
+                            <p className="text-xs text-red-600 leading-snug max-w-[200px]">
+                              {isRTL
+                                ? "فشلت المعاملة — تحقق من بطاقتك أو جرّب وسيلة دفع أخرى."
+                                : "Payment failed — your card was declined. Try again or use a different method."}
+                            </p>
+                          )}
+                          {p.status === "FAILED" && p.paymobTransactionId && (
+                            <p className="text-[10px] text-gray-400 font-mono">
+                              {isRTL ? "رقم المرجع:" : "Ref:"} {p.paymobTransactionId}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {p.status === "PAID" ? (
@@ -832,6 +854,26 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
                               ? (isRTL ? "جار التحميل..." : "Downloading…")
                               : (isRTL ? "تحميل الإيصال" : "Download Receipt")}
                           </Button>
+                        ) : p.status === "FAILED" ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={retryMut.isPending}
+                              onClick={() => retryMut.mutate(p.planType as PlanType)}
+                              className="text-xs h-7 px-2.5 gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${retryMut.isPending ? "animate-spin" : ""}`} />
+                              {retryMut.isPending
+                                ? (isRTL ? "جارٍ التحضير..." : "Preparing…")
+                                : (isRTL ? "إعادة المحاولة" : "Retry Payment")}
+                            </Button>
+                            {retryMut.isError && (
+                              <p className="text-[10px] text-red-500">
+                                {retryMut.error instanceof Error ? retryMut.error.message : (isRTL ? "حدث خطأ" : "Error")}
+                              </p>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-gray-300 text-xs">—</span>
                         )}
@@ -844,6 +886,44 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
           )}
         </CardContent>
       </Card>
+
+      {retryModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0">
+              <span className="font-semibold text-gray-900">
+                {isRTL ? "إتمام الدفع" : "Complete Payment"}
+              </span>
+              <button
+                onClick={() => setRetryModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none w-7 h-7 flex items-center justify-center"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <iframe
+              src={retryModal.iframeUrl}
+              title={isRTL ? "نافذة الدفع" : "Payment Window"}
+              className="w-full flex-1 border-0"
+              style={{ height: 500 }}
+              allow="payment"
+            />
+            <div className="px-5 py-3 border-t bg-gray-50 text-center flex-shrink-0">
+              <button
+                onClick={() => {
+                  setRetryModal(null);
+                  void qc.invalidateQueries({ queryKey: ["billingInfo"] });
+                  void qc.invalidateQueries({ queryKey: ["paymentHistory"] });
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600 underline"
+              >
+                {isRTL ? "أتممت الدفع؟ اضغط هنا للتحديث" : "Payment completed? Click here to refresh"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
