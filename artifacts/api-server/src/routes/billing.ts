@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import PDFDocument from "pdfkit";
 import { eq, inArray, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { db, doctorsTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
@@ -487,6 +488,101 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
 
   req.log.info({ doctorId: doctor.id, planType, finalPrice, endDate }, "Doctor subscription activated (mock checkout)");
   res.json({ success: true, status: "ACTIVE", plan: planType, endDate: endDate.toISOString(), price: finalPrice, currency: settings.currency });
+});
+
+/* ─── GET /billing/payments/:id/receipt ─── */
+router.get("/billing/payments/:id/receipt", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const paymentId = Number(req.params.id);
+  if (!Number.isInteger(paymentId) || paymentId <= 0) { res.status(400).json({ error: "Invalid payment ID" }); return; }
+
+  const [doctor] = await db.select({ id: doctorsTable.id, nameEn: doctorsTable.nameEn })
+    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
+  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+
+  const [payment] = await db.select({
+    id: paymentsTable.id,
+    doctorId: paymentsTable.doctorId,
+    planType: paymentsTable.planType,
+    amount: paymentsTable.amount,
+    currency: paymentsTable.currency,
+    status: paymentsTable.status,
+    paymobOrderId: paymentsTable.paymobOrderId,
+    paymobTransactionId: paymentsTable.paymobTransactionId,
+    paidAt: paymentsTable.paidAt,
+    createdAt: paymentsTable.createdAt,
+  }).from(paymentsTable)
+    .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.doctorId, doctor.id)))
+    .limit(1);
+
+  if (!payment) { res.status(404).json({ error: "Payment not found" }); return; }
+  if (payment.status !== "PAID") { res.status(400).json({ error: "Receipt is only available for paid transactions" }); return; }
+
+  const planLabels: Record<string, string> = {
+    MONTHS_3: "3-Month Subscription",
+    MONTHS_6: "6-Month Subscription",
+    YEARLY:   "1-Year Subscription",
+  };
+  const planLabel = planLabels[payment.planType] ?? payment.planType;
+  const paymentDate = (payment.paidAt ?? payment.createdAt).toLocaleDateString("en-GB", {
+    year: "numeric", month: "long", day: "numeric",
+  });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="receipt-${payment.id}.pdf"`);
+
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
+  doc.pipe(res);
+
+  const PRIMARY = "#1a6fa8";
+  const LIGHT_GRAY = "#f5f7fa";
+  const MID_GRAY = "#6b7280";
+  const DARK = "#111827";
+
+  doc.rect(0, 0, doc.page.width, 90).fill(PRIMARY);
+  doc.fillColor("#ffffff").fontSize(24).font("Helvetica-Bold").text("EGY Doctors", 50, 28);
+  doc.fillColor("rgba(255,255,255,0.7)").fontSize(11).font("Helvetica").text("Payment Receipt", 50, 58);
+
+  doc.fillColor(DARK).fontSize(13).font("Helvetica-Bold").text("Receipt", 50, 120);
+  doc.fillColor(MID_GRAY).fontSize(10).font("Helvetica")
+    .text(`Receipt #${payment.id}`, 50, 138)
+    .text(`Date: ${paymentDate}`, 50, 152);
+
+  const tableTop = 195;
+  doc.rect(50, tableTop, doc.page.width - 100, 30).fill(LIGHT_GRAY);
+  doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica-Bold")
+    .text("FIELD", 65, tableTop + 10)
+    .text("DETAILS", 300, tableTop + 10);
+
+  const rows: Array<[string, string]> = [
+    ["Doctor Name",    doctor.nameEn],
+    ["Plan",           planLabel],
+    ["Amount",         `${payment.amount.toLocaleString("en-EG")} ${payment.currency}`],
+    ["Payment Date",   paymentDate],
+    ["Order ID",       payment.paymobOrderId ?? "—"],
+    ["Transaction ID", payment.paymobTransactionId ?? "—"],
+    ["Status",         "PAID"],
+  ];
+
+  let rowY = tableTop + 30;
+  rows.forEach(([label, value], i) => {
+    if (i % 2 === 1) doc.rect(50, rowY, doc.page.width - 100, 28).fill("#fafafa");
+    doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica").text(label, 65, rowY + 9);
+    doc.fillColor(DARK).fontSize(9).font("Helvetica").text(value, 300, rowY + 9, { width: doc.page.width - 370 });
+    rowY += 28;
+  });
+
+  doc.rect(50, rowY, doc.page.width - 100, 1).fill("#e5e7eb");
+
+  const footerY = doc.page.height - 70;
+  doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica")
+    .text("Thank you for subscribing to EGY Doctors.", 50, footerY, { align: "center", width: doc.page.width - 100 })
+    .text("This receipt is automatically generated and does not require a signature.", 50, footerY + 14, { align: "center", width: doc.page.width - 100 });
+
+  doc.end();
+
+  req.log.info({ doctorId: doctor.id, paymentId: payment.id }, "Payment receipt downloaded");
 });
 
 export default router;

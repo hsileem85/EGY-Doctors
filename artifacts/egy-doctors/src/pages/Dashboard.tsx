@@ -19,7 +19,7 @@ import {
   type ApiAssistant, type ApiPatientRecord,
   getBillingInfo, startTrial, validateVoucher,
   initiatePaymobPayment, type PaymobInitiateResponse,
-  getPaymentHistory, type PaymentRecord,
+  getPaymentHistory, downloadPaymentReceipt, type PaymentRecord,
   type BillingInfo, type VoucherValidation, type PlanType,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -726,6 +726,9 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
 }
 
 function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
   const { data: payments, isLoading } = useQuery<PaymentRecord[]>({
     queryKey: ["paymentHistory"],
     queryFn: getPaymentHistory,
@@ -750,9 +753,26 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
     return plan;
   };
 
+  async function handleDownloadReceipt(paymentId: number) {
+    setDownloadingId(paymentId);
+    setDownloadError(null);
+    try {
+      await downloadPaymentReceipt(paymentId);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Failed to download receipt");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   return (
     <div className="mt-8">
       <h2 className="text-base font-bold text-gray-900 mb-3">{isRTL ? "سجل المدفوعات" : "Payment History"}</h2>
+      {downloadError && (
+        <div className="mb-3 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {downloadError}
+        </div>
+      )}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {isLoading ? (
@@ -771,6 +791,7 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
                     <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "المبلغ" : "Amount"}</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "كود الخصم" : "Promo Code"}</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "الحالة" : "Status"}</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "إيصال" : "Receipt"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -796,6 +817,24 @@ function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyle[p.status]}`}>
                           {statusLabel[p.status]}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {p.status === "PAID" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={downloadingId === p.id}
+                            onClick={() => handleDownloadReceipt(p.id)}
+                            className="text-xs h-7 px-2.5 gap-1.5"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            {downloadingId === p.id
+                              ? (isRTL ? "جار التحميل..." : "Downloading…")
+                              : (isRTL ? "تحميل الإيصال" : "Download Receipt")}
+                          </Button>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

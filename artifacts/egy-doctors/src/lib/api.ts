@@ -625,6 +625,26 @@ export function getPaymentHistory(): Promise<PaymentRecord[]> {
   return request("/billing/payments");
 }
 
+export async function downloadPaymentReceipt(paymentId: number): Promise<void> {
+  const token = localStorage.getItem("egy_token");
+  const res = await fetch(`${API_BASE}/billing/payments/${paymentId}/receipt`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: res.statusText })) as { error?: string };
+    throw new Error(data.error ?? `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `receipt-${paymentId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /* ─── Admin Platform Settings ─── */
 
 export interface PlatformSettings {
