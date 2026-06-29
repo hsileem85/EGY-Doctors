@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, doctorsTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
@@ -341,69 +341,73 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
 
   if (!paymobOrderId) { res.sendStatus(200); return; }
 
-  const [payment] = await db.select().from(paymentsTable)
-    .where(eq(paymentsTable.paymobOrderId, paymobOrderId)).limit(1);
+  if (success) {
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(paymentsTable)
+        .set({ status: "PAID", paymobTransactionId, paidAt: new Date() })
+        .where(and(eq(paymentsTable.paymobOrderId, paymobOrderId), eq(paymentsTable.status, "PENDING")))
+        .returning();
 
-  if (!payment) {
-    logger.warn({ paymobOrderId }, "No payment record found for webhook order");
-    res.sendStatus(200);
-    return;
-  }
+      if (!updated) {
+        logger.info({ paymobOrderId }, "Paymob webhook already processed (idempotent skip)");
+        return;
+      }
 
-  if (success && payment.status !== "PAID") {
-    const [doctor] = await db.select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
-      .from(doctorsTable).where(eq(doctorsTable.id, payment.doctorId)).limit(1);
+      const [doctor] = await tx
+        .select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
+        .from(doctorsTable)
+        .where(eq(doctorsTable.id, updated.doctorId))
+        .limit(1);
 
-    if (doctor) {
+      if (!doctor) return;
+
       const base = doctor.subscriptionEndDate && doctor.subscriptionEndDate > new Date()
         ? doctor.subscriptionEndDate : new Date();
       const endDate = new Date(base);
-      endDate.setMonth(endDate.getMonth() + planMonths(payment.planType as PlanType));
+      endDate.setMonth(endDate.getMonth() + planMonths(updated.planType as PlanType));
 
-      if (payment.voucherCode) {
-        const [voucher] = await db.select().from(vouchersTable)
-          .where(eq(vouchersTable.code, payment.voucherCode)).limit(1);
+      if (updated.voucherCode) {
+        const [voucher] = await tx
+          .select()
+          .from(vouchersTable)
+          .where(eq(vouchersTable.code, updated.voucherCode))
+          .limit(1);
         if (voucher) {
           if (voucher.additionalFreeDays > 0) {
             endDate.setDate(endDate.getDate() + voucher.additionalFreeDays);
           }
-          await db.update(vouchersTable)
+          await tx
+            .update(vouchersTable)
             .set({ currentUses: voucher.currentUses + 1 })
             .where(eq(vouchersTable.id, voucher.id));
         }
       }
 
-      await db.update(doctorsTable).set({
+      await tx.update(doctorsTable).set({
         subscriptionStatus: "ACTIVE",
-        subscriptionPlan: payment.planType,
+        subscriptionPlan: updated.planType,
         subscriptionEndDate: endDate,
       }).where(eq(doctorsTable.id, doctor.id));
 
-      logger.info({ doctorId: doctor.id, planType: payment.planType, paymobOrderId }, "Subscription activated via Paymob webhook");
-    }
+      logger.info({ doctorId: doctor.id, planType: updated.planType, paymobOrderId }, "Subscription activated via Paymob webhook");
+    });
+  } else {
+    await db
+      .update(paymentsTable)
+      .set({ status: "FAILED", paymobTransactionId })
+      .where(and(eq(paymentsTable.paymobOrderId, paymobOrderId), eq(paymentsTable.status, "PENDING")));
 
-    await db.update(paymentsTable).set({
-      status: "PAID",
-      paymobTransactionId,
-      paidAt: new Date(),
-    }).where(eq(paymentsTable.id, payment.id));
-
-  } else if (!success) {
-    await db.update(paymentsTable).set({
-      status: "FAILED",
-      paymobTransactionId,
-    }).where(eq(paymentsTable.id, payment.id));
-
-    logger.info({ doctorId: payment.doctorId, paymobOrderId }, "Paymob payment failed");
+    logger.info({ paymobOrderId }, "Paymob payment failed");
   }
 
   res.sendStatus(200);
 });
 
-/* ─── POST /billing/checkout (kept for dev/admin use) ─── */
+/* ─── POST /billing/checkout (admin-only — dev/testing use only) ─── */
 router.post("/billing/checkout", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!payload || payload.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
   const schema = z.object({
     planType: z.enum(["MONTHS_3", "MONTHS_6", "YEARLY"]),
