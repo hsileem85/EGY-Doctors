@@ -21,9 +21,9 @@ export function Footer() {
           </p>
         </div>
         <div className="flex gap-6 text-sm text-gray-400">
-          <a href="#" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-privacy">
+          <Link href="/privacy" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-privacy">
             {t.footer.privacy}
-          </a>
+          </Link>
           <a href="#" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-terms">
             {t.footer.terms}
           </a>

@@ -23,6 +23,7 @@ import ContactUs from "@/pages/ContactUs";
 import Admin from "@/pages/Admin";
 import AssistantDashboard from "@/pages/AssistantDashboard";
 import PaymentResult from "@/pages/PaymentResult";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/assistant/dashboard">{() => <ProtectedRoute component={AssistantDashboard} />}</Route>
       <Route path="/billing/payment-result" component={PaymentResult} />
+      <Route path="/privacy" component={PrivacyPolicy} />
       <Route component={NotFound} />
     </Switch>
   );

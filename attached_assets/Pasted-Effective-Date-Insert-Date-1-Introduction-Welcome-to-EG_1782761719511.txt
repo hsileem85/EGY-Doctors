@@ -1,0 +1,46 @@
+Effective Date: [Insert Date]
+
+1. Introduction
+Welcome to EGY Doctors. We are committed to protecting the privacy and security of our users' personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our platform.
+
+2. Information We Collect
+We collect information that identifies, relates to, describes, or could reasonably be linked with you:
+
+Account Information (Doctors): Name, professional title, Medical Syndicate Membership Number, specialty, email address, phone number, and practice location.
+
+Account Information (Patients/Users): Name, email address, phone number, and communication preferences (e.g., WhatsApp, Email).
+
+Interaction Data: Information regarding your interactions on the platform, including doctors you follow, videos/articles you like, comments you post, and content you share.
+
+Financial Information: For doctors utilizing our subscription services, payment details are processed directly by our secure third-party payment gateway (e.g., Paymob). EGY Doctors does not directly store full credit card numbers on our servers.
+
+3. How We Use Your Information
+We use the collected information for the following purposes:
+
+To create, manage, and authenticate your account.
+
+To operate the EGY Doctors Magazine and Doctor Profiles, including publishing videos, articles, and quick tips.
+
+To send automated notifications (via Email, SMS, or WhatsApp) when a followed doctor publishes new content.
+
+To process subscription payments, apply promotional vouchers, and manage free trials for doctors.
+
+To improve platform performance, analyze user engagement, and enhance the overall user experience.
+
+4. Sharing Your Information
+We do not sell your personal information. We may share your data in the following circumstances:
+
+Public Profiles: Information doctors choose to publish (videos, articles, syndicate credentials) and patient interactions (public comments) are visible to other users.
+
+Service Providers: We share necessary data with trusted third parties who assist in operating our platform, such as our payment processors and notification delivery services.
+
+Legal Compliance: We may disclose information if required by law, subpoena, or other legal processes, or to protect the rights and safety of EGY Doctors, our users, or others.
+
+5. Data Security
+We implement robust, industry-standard administrative, technical, and physical security measures to protect your personal information. However, no electronic transmission over the internet or information storage technology can be guaranteed to be 100% secure.
+
+6. Your Rights
+Depending on your jurisdiction, you may have the right to access, correct, update, or request the deletion of your personal data. Users can manage their notification preferences and profile details directly within their account dashboards.
+
+7. Contact Us
+If you have questions or comments about this Privacy Policy, please contact us at: [Insert Support Email / Phone Number].
