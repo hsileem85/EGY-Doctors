@@ -24,9 +24,9 @@ export function Footer() {
           <Link href="/privacy" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-privacy">
             {t.footer.privacy}
           </Link>
-          <a href="#" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-terms">
+          <Link href="/terms" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-terms">
             {t.footer.terms}
-          </a>
+          </Link>
           <Link href="/contact" className="hover:text-[#D4A853] transition-colors" data-testid="link-footer-contact">
             {t.footer.contact}
           </Link>
