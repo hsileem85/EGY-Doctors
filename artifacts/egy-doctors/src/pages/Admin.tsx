@@ -22,6 +22,7 @@ import {
   useListAdminNotifications,
   useMarkAdminNotificationRead,
   useClearAdminNotifications,
+  getListAdminNotificationsQueryKey,
   getListDoctorsQueryKey,
   getListSpecialtiesQueryKey,
   getListCitiesQueryKey,
@@ -105,11 +106,11 @@ function NotificationBell({ lang }: { lang: string }) {
   }, []);
 
   const handleMarkRead = (id: number) => {
-    markRead.mutate({ id }, { onSuccess: () => qc.invalidateQueries({ queryKey: ["listAdminNotifications"] }) });
+    markRead.mutate({ id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminNotificationsQueryKey() }) });
   };
 
   const handleClear = () => {
-    clearAll.mutate(undefined, { onSuccess: () => qc.invalidateQueries({ queryKey: ["listAdminNotifications"] }) });
+    clearAll.mutate(undefined, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminNotificationsQueryKey() }) });
     setOpen(false);
   };
 
