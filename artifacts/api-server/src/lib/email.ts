@@ -4,10 +4,19 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 const connectors = new ReplitConnectors();
 const FROM = "EGY Doctors <noreply@egydoctors.com>";
 
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+type Attachment = { filename: string; content: string };
+
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  attachments?: Attachment[],
+): Promise<void> {
+  const payload: Record<string, unknown> = { from: FROM, to, subject, html };
+  if (attachments?.length) payload.attachments = attachments;
   const response = await connectors.proxy("resend", "/emails", {
     method: "POST",
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) {
     const body = await response.text();
@@ -246,6 +255,73 @@ export async function sendNewPostNotificationEmail(data: NewPostEmailData): Prom
   const content = lang === "ar" ? bodyAr : bodyEn;
   await sendEmail(to, subject,
     `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">${LOGO}${content}${FOOTER}</div>`
+  );
+}
+
+export async function sendReceiptEmail(
+  to: string,
+  receipt: {
+    id: number;
+    planType: string;
+    amount: number;
+    currency: string;
+    paymobOrderId: string | null;
+    paymobTransactionId: string | null;
+    paidAt: Date | null;
+    createdAt: Date;
+  },
+  doctorName: string,
+  pdfBuffer: Buffer,
+): Promise<void> {
+  const planLabels: Record<string, string> = {
+    MONTHS_3: "3-Month Subscription",
+    MONTHS_6: "6-Month Subscription",
+    YEARLY: "1-Year Subscription",
+  };
+  const planLabel = planLabels[receipt.planType] ?? receipt.planType;
+  const paymentDate = (receipt.paidAt ?? receipt.createdAt).toLocaleDateString("en-GB", {
+    year: "numeric", month: "long", day: "numeric",
+  });
+  const amountFormatted = `${receipt.amount.toLocaleString("en-EG")} ${receipt.currency}`;
+
+  const rows = [
+    ["Doctor Name", doctorName],
+    ["Plan", planLabel],
+    ["Amount", amountFormatted],
+    ["Payment Date", paymentDate],
+    ["Order ID", receipt.paymobOrderId ?? "—"],
+    ["Transaction ID", receipt.paymobTransactionId ?? "—"],
+  ]
+    .map(
+      ([label, value]) =>
+        `<tr>
+          <td style="padding:8px 12px;background:#F8FAFC;border:1px solid #E2E8F0;font-weight:600;color:#374151;width:140px;font-size:13px">${label}</td>
+          <td style="padding:8px 12px;border:1px solid #E2E8F0;color:#1E293B;font-size:13px">${value}</td>
+        </tr>`,
+    )
+    .join("");
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
+      ${LOGO}
+      <h2 style="color:#0F172A;font-size:20px;margin-bottom:4px">Payment Receipt #${receipt.id}</h2>
+      <p style="color:#64748B;font-size:13px;margin-bottom:24px">Your subscription payment was successful.</p>
+      <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+        <p style="color:#166534;margin:0;font-size:14px">✅ Your <strong>${planLabel}</strong> subscription is now active.</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:28px">${rows}</table>
+      <p style="color:#475569;font-size:13px;line-height:1.6">
+        Your receipt is attached to this email as a PDF for your records. Thank you for subscribing to EGY Doctors!
+      </p>
+      ${FOOTER}
+    </div>
+  `;
+
+  await sendEmail(
+    to,
+    `Payment Receipt #${receipt.id} — EGY Doctors`,
+    html,
+    [{ filename: `receipt-${receipt.id}.pdf`, content: pdfBuffer.toString("base64") }],
   );
 }
 

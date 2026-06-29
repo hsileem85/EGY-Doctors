@@ -4,8 +4,9 @@ import jwt from "jsonwebtoken";
 import PDFDocument from "pdfkit";
 import { eq, inArray, and, desc, or, ne, gte } from "drizzle-orm";
 import { z } from "zod";
-import { db, doctorsTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
+import { db, doctorsTable, usersTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { sendReceiptEmail } from "../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 const PAYMOB_BASE = "https://accept.paymob.com/api";
@@ -392,6 +393,9 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
   if (!paymobOrderId) { res.sendStatus(200); return; }
 
   if (success) {
+    let paidPayment: typeof paymentsTable.$inferSelect | undefined;
+    let activatedDoctorId: number | undefined;
+
     await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(paymentsTable)
@@ -441,7 +445,36 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
       }).where(eq(doctorsTable.id, doctor.id));
 
       logger.info({ doctorId: doctor.id, planType: updated.planType, paymobOrderId }, "Subscription activated via Paymob webhook");
+
+      paidPayment = updated;
+      activatedDoctorId = doctor.id;
     });
+
+    if (paidPayment && activatedDoctorId) {
+      const payment = paidPayment;
+      const doctorId = activatedDoctorId;
+      (async () => {
+        try {
+          const [row] = await db
+            .select({ email: usersTable.email, nameEn: doctorsTable.nameEn })
+            .from(doctorsTable)
+            .innerJoin(usersTable, eq(usersTable.id, doctorsTable.userId))
+            .where(eq(doctorsTable.id, doctorId))
+            .limit(1);
+
+          if (!row?.email) {
+            logger.warn({ doctorId }, "Doctor has no email — skipping receipt email");
+            return;
+          }
+
+          const pdfBuffer = await generateReceiptBuffer(payment, row.nameEn ?? "Doctor");
+          await sendReceiptEmail(row.email, payment, row.nameEn ?? "Doctor", pdfBuffer);
+          logger.info({ doctorId, paymentId: payment.id }, "Receipt email sent after successful payment");
+        } catch (err) {
+          logger.warn({ err, doctorId, paymentId: payment.id }, "Failed to send receipt email after payment");
+        }
+      })();
+    }
   } else {
     await db
       .update(paymentsTable)
@@ -507,6 +540,86 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
   req.log.info({ doctorId: doctor.id, planType, finalPrice, endDate }, "Doctor subscription activated (mock checkout)");
   res.json({ success: true, status: "ACTIVE", plan: planType, endDate: endDate.toISOString(), price: finalPrice, currency: settings.currency });
 });
+
+/* ─── Receipt PDF buffer helper ─── */
+function generateReceiptBuffer(
+  payment: {
+    id: number;
+    planType: string;
+    amount: number;
+    currency: string;
+    paymobOrderId: string | null;
+    paymobTransactionId: string | null;
+    paidAt: Date | null;
+    createdAt: Date;
+  },
+  doctorName: string,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const planLabels: Record<string, string> = {
+      MONTHS_3: "3-Month Subscription",
+      MONTHS_6: "6-Month Subscription",
+      YEARLY: "1-Year Subscription",
+    };
+    const planLabel = planLabels[payment.planType] ?? payment.planType;
+    const paymentDate = (payment.paidAt ?? payment.createdAt).toLocaleDateString("en-GB", {
+      year: "numeric", month: "long", day: "numeric",
+    });
+
+    const PRIMARY = "#1a6fa8";
+    const LIGHT_GRAY = "#f5f7fa";
+    const MID_GRAY = "#6b7280";
+    const DARK = "#111827";
+
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.rect(0, 0, doc.page.width, 90).fill(PRIMARY);
+    doc.fillColor("#ffffff").fontSize(24).font("Helvetica-Bold").text("EGY Doctors", 50, 28);
+    doc.fillColor("rgba(255,255,255,0.7)").fontSize(11).font("Helvetica").text("Payment Receipt", 50, 58);
+
+    doc.fillColor(DARK).fontSize(13).font("Helvetica-Bold").text("Receipt", 50, 120);
+    doc.fillColor(MID_GRAY).fontSize(10).font("Helvetica")
+      .text(`Receipt #${payment.id}`, 50, 138)
+      .text(`Date: ${paymentDate}`, 50, 152);
+
+    const tableTop = 195;
+    doc.rect(50, tableTop, doc.page.width - 100, 30).fill(LIGHT_GRAY);
+    doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica-Bold")
+      .text("FIELD", 65, tableTop + 10)
+      .text("DETAILS", 300, tableTop + 10);
+
+    const rows: Array<[string, string]> = [
+      ["Doctor Name",    doctorName],
+      ["Plan",           planLabel],
+      ["Amount",         `${payment.amount.toLocaleString("en-EG")} ${payment.currency}`],
+      ["Payment Date",   paymentDate],
+      ["Order ID",       payment.paymobOrderId ?? "—"],
+      ["Transaction ID", payment.paymobTransactionId ?? "—"],
+      ["Status",         "PAID"],
+    ];
+
+    let rowY = tableTop + 30;
+    rows.forEach(([label, value], i) => {
+      if (i % 2 === 1) doc.rect(50, rowY, doc.page.width - 100, 28).fill("#fafafa");
+      doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica").text(label, 65, rowY + 9);
+      doc.fillColor(DARK).fontSize(9).font("Helvetica").text(value, 300, rowY + 9, { width: doc.page.width - 370 });
+      rowY += 28;
+    });
+
+    doc.rect(50, rowY, doc.page.width - 100, 1).fill("#e5e7eb");
+
+    const footerY = doc.page.height - 70;
+    doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica")
+      .text("Thank you for subscribing to EGY Doctors.", 50, footerY, { align: "center", width: doc.page.width - 100 })
+      .text("This receipt is automatically generated and does not require a signature.", 50, footerY + 14, { align: "center", width: doc.page.width - 100 });
+
+    doc.end();
+  });
+}
 
 /* ─── GET /billing/payments/:id/receipt ─── */
 router.get("/billing/payments/:id/receipt", async (req, res): Promise<void> => {
