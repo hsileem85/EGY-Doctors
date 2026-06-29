@@ -18,6 +18,7 @@ import {
   getMyMagazinePosts, createMagazinePost, deleteMagazinePost, type ApiMagazinePost,
   type ApiAssistant, type ApiPatientRecord,
   getBillingInfo, checkout, startTrial, validateVoucher,
+  initiatePaymobPayment, type PaymobInitiateResponse,
   type BillingInfo, type VoucherValidation, type PlanType,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -731,6 +732,8 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
   const [voucherError, setVoucherError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [paymentModal, setPaymentModal] = useState<PaymobInitiateResponse | null>(null);
+  const [paymentGatewayError, setPaymentGatewayError] = useState("");
 
   const { data, isLoading } = useQuery<BillingInfo>({
     queryKey: ["billingInfo"],
@@ -751,6 +754,34 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
       qc.invalidateQueries({ queryKey: ["billingInfo"] });
     },
   });
+
+  const initiateMut = useMutation({
+    mutationFn: initiatePaymobPayment,
+    onSuccess: (data) => {
+      setPaymentGatewayError("");
+      setPaymentModal(data);
+    },
+    onError: (err: Error) => {
+      setPaymentGatewayError(err.message || (isRTL ? "فشل بدء الدفع. حاول مرة أخرى." : "Failed to start payment. Please try again."));
+    },
+  });
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      const data = event.data as { type?: string; success?: boolean } | null;
+      if (data?.type === "PAYMOB_RESULT") {
+        setPaymentModal(null);
+        if (data.success) {
+          setSuccess(true);
+          qc.invalidateQueries({ queryKey: ["billingInfo"] });
+        } else {
+          setPaymentGatewayError(isRTL ? "لم يكتمل الدفع. يرجى المحاولة مرة أخرى." : "Payment was not completed. Please try again.");
+        }
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [qc, isRTL]);
 
   const status = data?.status ?? "INACTIVE";
   const currency = data?.currency ?? "EGP";
@@ -974,26 +1005,68 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
               </div>
             </div>
 
-            {checkoutMut.isError && (
-              <p className="text-red-500 text-sm">{isRTL ? "حدث خطأ. يرجى المحاولة مرة أخرى." : "An error occurred. Please try again."}</p>
+            {(initiateMut.isError || paymentGatewayError) && (
+              <p className="text-red-500 text-sm">
+                {paymentGatewayError || (initiateMut.error instanceof Error ? initiateMut.error.message : (isRTL ? "حدث خطأ." : "An error occurred."))}
+              </p>
             )}
 
             <Button
               onClick={() => {
                 setSuccess(false);
-                checkoutMut.mutate({ planType: selectedPlan, voucherCode: voucherResult ? voucherInput.trim() : undefined });
+                setPaymentGatewayError("");
+                initiateMut.mutate({ planType: selectedPlan, voucherCode: voucherResult ? voucherInput.trim() : undefined });
               }}
-              disabled={checkoutMut.isPending}
+              disabled={initiateMut.isPending}
               className="w-full gap-2"
             >
               <CreditCard className="h-4 w-4" />
-              {checkoutMut.isPending ? (isRTL ? "جارٍ المعالجة..." : "Processing...") : (isRTL ? "اشترك الآن" : "Subscribe Now")}
+              {initiateMut.isPending
+                ? (isRTL ? "جارٍ التحضير..." : "Preparing...")
+                : (isRTL ? "ادفع الآن" : "Pay Now")}
             </Button>
             <p className="text-xs text-gray-400">
-              {isRTL ? "* يتم التنسيق مع الفريق لإتمام الدفع." : "* Payment is coordinated with our team."}
+              {isRTL ? "* ستُحوَّل إلى صفحة الدفع الآمنة." : "* You will be redirected to the secure payment page."}
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {paymentModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0">
+              <span className="font-semibold text-gray-900">
+                {isRTL ? "إتمام الدفع" : "Complete Payment"}
+              </span>
+              <button
+                onClick={() => setPaymentModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none w-7 h-7 flex items-center justify-center"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <iframe
+              src={paymentModal.iframeUrl}
+              title={isRTL ? "نافذة الدفع" : "Payment Window"}
+              className="w-full flex-1 border-0"
+              style={{ height: 500 }}
+              allow="payment"
+            />
+            <div className="px-5 py-3 border-t bg-gray-50 text-center flex-shrink-0">
+              <button
+                onClick={() => {
+                  setPaymentModal(null);
+                  void qc.invalidateQueries({ queryKey: ["billingInfo"] });
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600 underline"
+              >
+                {isRTL ? "أتممت الدفع؟ اضغط هنا للتحديث" : "Payment completed? Click here to refresh"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

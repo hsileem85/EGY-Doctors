@@ -596,6 +596,18 @@ export function checkout(params: CheckoutParams): Promise<{ success: boolean; st
   return request("/billing/checkout", { method: "POST", body: JSON.stringify(params) });
 }
 
+export interface PaymobInitiateParams { planType: PlanType; voucherCode?: string }
+export interface PaymobInitiateResponse {
+  paymentKey: string;
+  iframeId: string;
+  orderId: string;
+  paymentId: number;
+  iframeUrl: string;
+}
+export function initiatePaymobPayment(params: PaymobInitiateParams): Promise<PaymobInitiateResponse> {
+  return request("/billing/paymob/initiate", { method: "POST", body: JSON.stringify(params) });
+}
+
 /* ─── Admin Platform Settings ─── */
 
 export interface PlatformSettings {

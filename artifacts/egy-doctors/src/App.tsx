@@ -22,6 +22,7 @@ import Magazine from "@/pages/Magazine";
 import ContactUs from "@/pages/ContactUs";
 import Admin from "@/pages/Admin";
 import AssistantDashboard from "@/pages/AssistantDashboard";
+import PaymentResult from "@/pages/PaymentResult";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/contact" component={ContactUs} />
       <Route path="/admin" component={Admin} />
       <Route path="/assistant/dashboard">{() => <ProtectedRoute component={AssistantDashboard} />}</Route>
+      <Route path="/billing/payment-result" component={PaymentResult} />
       <Route component={NotFound} />
     </Switch>
   );
