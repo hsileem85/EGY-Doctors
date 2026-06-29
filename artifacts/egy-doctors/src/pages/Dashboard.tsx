@@ -19,6 +19,7 @@ import {
   type ApiAssistant, type ApiPatientRecord,
   getBillingInfo, startTrial, validateVoucher,
   initiatePaymobPayment, type PaymobInitiateResponse,
+  getPaymentHistory, type PaymentRecord,
   type BillingInfo, type VoucherValidation, type PlanType,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -724,6 +725,90 @@ function PublicationsTab({ isRTL }: { isRTL: boolean }) {
   );
 }
 
+function PaymentHistorySection({ isRTL }: { isRTL: boolean }) {
+  const { data: payments, isLoading } = useQuery<PaymentRecord[]>({
+    queryKey: ["paymentHistory"],
+    queryFn: getPaymentHistory,
+  });
+
+  const statusStyle: Record<PaymentRecord["status"], string> = {
+    PAID:    "bg-green-50 text-green-700 border-green-200",
+    PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+    FAILED:  "bg-red-50 text-red-700 border-red-200",
+  };
+  const statusLabel: Record<PaymentRecord["status"], string> = {
+    PAID:    isRTL ? "مدفوع"    : "Paid",
+    PENDING: isRTL ? "قيد الانتظار" : "Pending",
+    FAILED:  isRTL ? "فشل"      : "Failed",
+  };
+
+  const planLabel = (plan: string) => {
+    if (plan === "MONTHS_3") return isRTL ? "3 أشهر"    : "3 Months";
+    if (plan === "MONTHS_6") return isRTL ? "6 أشهر"    : "6 Months";
+    if (plan === "YEARLY")   return isRTL ? "سنة كاملة" : "1 Year";
+    if (plan === "TRIAL")    return isRTL ? "تجريبي"    : "Free Trial";
+    return plan;
+  };
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-base font-bold text-gray-900 mb-3">{isRTL ? "سجل المدفوعات" : "Payment History"}</h2>
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="py-10 text-center text-gray-400 text-sm">{isRTL ? "جار التحميل..." : "Loading..."}</div>
+          ) : !payments || payments.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 text-sm">
+              {isRTL ? "لا توجد مدفوعات بعد." : "No payments yet."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "التاريخ" : "Date"}</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "الخطة" : "Plan"}</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "المبلغ" : "Amount"}</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "كود الخصم" : "Promo Code"}</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500">{isRTL ? "الحالة" : "Status"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((p) => (
+                    <TableRow key={p.id} className="hover:bg-gray-50/50">
+                      <TableCell className="text-sm text-gray-700">
+                        {new Date(p.createdAt).toLocaleDateString(isRTL ? "ar-EG" : "en-GB", {
+                          year: "numeric", month: "short", day: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium text-gray-800">{planLabel(p.planType)}</TableCell>
+                      <TableCell className="text-sm font-semibold text-gray-900">
+                        {p.amount.toLocaleString()} <span className="text-xs font-normal text-gray-500">{p.currency}</span>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {p.voucherCode ? (
+                          <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{p.voucherCode}</span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyle[p.status]}`}>
+                          {statusLabel[p.status]}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function BillingTab({ isRTL }: { isRTL: boolean }) {
   const qc = useQueryClient();
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
@@ -1087,6 +1172,8 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
           </div>
         </div>
       )}
+
+      <PaymentHistorySection isRTL={isRTL} />
     </div>
   );
 }

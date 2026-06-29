@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { db, doctorsTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
@@ -46,6 +46,37 @@ function planPrice(settings: Awaited<ReturnType<typeof getPricingSettings>>, pla
 function planMonths(plan: PlanType) {
   return { MONTHS_3: 3, MONTHS_6: 6, YEARLY: 12 }[plan];
 }
+
+/* ─── GET /billing/payments ─── */
+router.get("/billing/payments", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const [doctor] = await db.select({ id: doctorsTable.id })
+    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
+  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+
+  const payments = await db.select({
+    id: paymentsTable.id,
+    planType: paymentsTable.planType,
+    amount: paymentsTable.amount,
+    currency: paymentsTable.currency,
+    status: paymentsTable.status,
+    voucherCode: paymentsTable.voucherCode,
+    paymobOrderId: paymentsTable.paymobOrderId,
+    paymobTransactionId: paymentsTable.paymobTransactionId,
+    createdAt: paymentsTable.createdAt,
+    paidAt: paymentsTable.paidAt,
+  }).from(paymentsTable)
+    .where(eq(paymentsTable.doctorId, doctor.id))
+    .orderBy(desc(paymentsTable.createdAt));
+
+  res.json(payments.map((p) => ({
+    ...p,
+    createdAt: p.createdAt.toISOString(),
+    paidAt: p.paidAt?.toISOString() ?? null,
+  })));
+});
 
 /* ─── GET /billing/subscription ─── */
 router.get("/billing/subscription", async (req, res): Promise<void> => {

@@ -608,6 +608,23 @@ export function initiatePaymobPayment(params: PaymobInitiateParams): Promise<Pay
   return request("/billing/paymob/initiate", { method: "POST", body: JSON.stringify(params) });
 }
 
+export interface PaymentRecord {
+  id: number;
+  planType: string;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "PAID" | "FAILED";
+  voucherCode: string | null;
+  paymobOrderId: string | null;
+  paymobTransactionId: string | null;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+export function getPaymentHistory(): Promise<PaymentRecord[]> {
+  return request("/billing/payments");
+}
+
 /* ─── Admin Platform Settings ─── */
 
 export interface PlatformSettings {
