@@ -98,13 +98,10 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
           <Link href="/edit-profile">
-            <Button variant="outline" className="gap-2" data-testid="button-go-to-profile-setup">
+            <Button className="gap-2 bg-[#D4A853] text-[#0F172A]" data-testid="button-go-to-profile-setup">
               {isRTL ? "إكمال الملف الشخصي" : "Complete Profile"}
             </Button>
           </Link>
-          <Button className="gap-2 bg-[#D4A853] text-[#0F172A]" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : (isRTL ? "إرسال للمراجعة" : "Submit for Review")}
-          </Button>
           <Button variant="ghost" className="gap-2 text-gray-500" onClick={signOut}>
             <LogOut className="w-4 h-4" />
             {isRTL ? "خروج" : "Sign Out"}

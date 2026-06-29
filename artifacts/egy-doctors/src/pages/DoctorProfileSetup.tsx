@@ -131,6 +131,7 @@ export default function DoctorProfileSetup() {
   const [expandedId, setExpandedId] = useState<string>(() => clinics[0].id);
   const [deletedDbIds, setDeletedDbIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -324,6 +325,75 @@ export default function DoctorProfileSetup() {
     }
   };
 
+  const isProfileComplete = profile.specialty !== "" && clinics.some(c => c.areaId !== "");
+
+  const handleSaveAndSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const selectedSpecialty = apiSpecialties.find(s => s.name === profile.specialty);
+      const firstClinicAreaId = clinics[0]?.areaId ? parseInt(clinics[0].areaId, 10) : undefined;
+      const firstClinicArea = firstClinicAreaId ? apiAreas.find(a => a.id === firstClinicAreaId) : undefined;
+      const firstClinicCity = firstClinicArea ? apiCities.find(c => c.id === firstClinicArea.cityId) : undefined;
+      const firstClinicFee = clinics[0]?.fee ? parseFloat(clinics[0].fee) : undefined;
+
+      await updateDoctorProfile({
+        name: profile.fullName || undefined,
+        bio: profile.bio || undefined,
+        bioAr: profile.bioAr || undefined,
+        image: imagePreview || undefined,
+        specialtyId: selectedSpecialty?.id,
+        cityId: firstClinicCity?.id,
+        areaId: firstClinicAreaId,
+        fee: firstClinicFee,
+        websiteUrl: socialLinks.websiteUrl || null,
+        facebookUrl: socialLinks.facebookUrl || null,
+        instagramUrl: socialLinks.instagramUrl || null,
+        tiktokUrl: socialLinks.tiktokUrl || null,
+        youtubeUrl: socialLinks.youtubeUrl || null,
+        xUrl: socialLinks.xUrl || null,
+      });
+
+      await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
+
+      await Promise.all(clinics.map(clinic => {
+        const numId = parseInt(clinic.id, 10);
+        const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
+        const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
+        const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
+        const data = {
+          name: clinic.name || `Clinic`,
+          address: clinic.address || undefined,
+          phone: clinic.phone || undefined,
+          fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
+          followUpDays: followUpDaysVal && !isNaN(followUpDaysVal) ? followUpDaysVal : undefined,
+          followUpPrice: followUpPriceVal !== undefined && !isNaN(followUpPriceVal) ? followUpPriceVal : undefined,
+          bookingConfirmationMethod: clinic.bookingConfirmationMethod,
+          areaId: areaId && !isNaN(areaId) ? areaId : undefined,
+          lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
+          lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
+        };
+        if (isNaN(numId)) {
+          return apiAddClinic(data);
+        } else {
+          return apiUpdateClinic(numId, data);
+        }
+      }));
+
+      await submitDoctorForReview();
+      await refreshUser();
+      await queryClient.invalidateQueries({ queryKey: ["myDoctorProfile"] });
+      setLocation("/dashboard");
+    } catch {
+      toast({
+        title: isRTL ? "حدث خطأ" : "Error",
+        description: isRTL ? "تعذر إرسال الطلب. يرجى المحاولة مجدداً." : "Failed to submit for review. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isBlocked) return null;
 
   return (
@@ -352,9 +422,21 @@ export default function DoctorProfileSetup() {
                   </Button>
                 </Link>
               )}
-              <Button onClick={handleSave} size="lg" className="w-full md:w-auto" data-testid="button-save-profile" disabled={isSaving}>
+              <Button onClick={handleSave} size="lg" className="w-full md:w-auto" data-testid="button-save-profile" disabled={isSaving || isSubmitting}>
                 {isSaving ? (isRTL ? "جاري الحفظ..." : "Saving...") : isEditMode ? (isRTL ? "حفظ التغييرات" : "Save Changes") : t.profileSetup.savePublish}
               </Button>
+              {!isEditMode && (
+                <Button
+                  onClick={handleSaveAndSubmit}
+                  size="lg"
+                  className="w-full md:w-auto bg-[#D4A853] text-[#0F172A] hover:bg-[#c49943]"
+                  disabled={!isProfileComplete || isSaving || isSubmitting}
+                  title={!isProfileComplete ? (isRTL ? "أكمل التخصص وأضف عيادة واحدة على الأقل أولاً" : "Add your specialty and at least one clinic first") : undefined}
+                  data-testid="button-submit-for-review"
+                >
+                  {isSubmitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : (isRTL ? "إرسال للمراجعة" : "Submit for Review")}
+                </Button>
+              )}
             </div>
           </div>
 
