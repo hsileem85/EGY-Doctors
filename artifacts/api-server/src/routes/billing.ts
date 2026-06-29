@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import PDFDocument from "pdfkit";
-import { eq, inArray, and, desc } from "drizzle-orm";
+import { eq, inArray, and, desc, or, ne, gte } from "drizzle-orm";
 import { z } from "zod";
 import { db, doctorsTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
@@ -57,6 +57,16 @@ router.get("/billing/payments", async (req, res): Promise<void> => {
     .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
   if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
 
+  const [expiryRow] = await db
+    .select({ value: siteSettingsTable.value })
+    .from(siteSettingsTable)
+    .where(eq(siteSettingsTable.key, "pending_payment_expiry_minutes"))
+    .limit(1);
+  const rawExpiry = Number(expiryRow?.value);
+  const expiryMinutes = Number.isFinite(rawExpiry) && rawExpiry > 0 ? rawExpiry : 30;
+
+  const pendingCutoff = new Date(Date.now() - expiryMinutes * 60 * 1000);
+
   const payments = await db.select({
     id: paymentsTable.id,
     planType: paymentsTable.planType,
@@ -69,7 +79,15 @@ router.get("/billing/payments", async (req, res): Promise<void> => {
     createdAt: paymentsTable.createdAt,
     paidAt: paymentsTable.paidAt,
   }).from(paymentsTable)
-    .where(eq(paymentsTable.doctorId, doctor.id))
+    .where(
+      and(
+        eq(paymentsTable.doctorId, doctor.id),
+        or(
+          ne(paymentsTable.status, "PENDING"),
+          gte(paymentsTable.createdAt, pendingCutoff),
+        ),
+      ),
+    )
     .orderBy(desc(paymentsTable.createdAt));
 
   res.json(payments.map((p) => ({
