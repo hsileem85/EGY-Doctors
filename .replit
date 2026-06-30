@@ -58,7 +58,7 @@ externalPort = 3000
 JWT_SECRET = "dc1e5bd9-f7ac-498e-ae7b-9c274c2f1de08c8b384e-48d9-408d-91d6-ad1b74aad01b"
 
 [userenv.development]
-UAT_PAYMENT_BYPASS = "false"
+UAT_PAYMENT_BYPASS = "true"
 
 [userenv.production]
 UAT_PAYMENT_BYPASS = "true"
