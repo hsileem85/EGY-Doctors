@@ -255,6 +255,63 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   const amountCents = Math.round(finalAmount * 100);
   const currency = settings.currency || "EGP";
 
+  /* ── UAT bypass: skip Paymob, activate subscription immediately ── */
+  if (process.env.UAT_PAYMENT_BYPASS === "true") {
+    const uatOrderId = `UAT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    await db.transaction(async (tx) => {
+      await tx.insert(paymentsTable).values({
+        doctorId: doctor.id,
+        paymobOrderId: uatOrderId,
+        planType,
+        amount: finalAmount,
+        currency,
+        voucherCode: appliedVoucherCode,
+        status: "PAID",
+        paidAt: new Date(),
+      });
+
+      const [doc] = await tx
+        .select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
+        .from(doctorsTable).where(eq(doctorsTable.id, doctor.id)).limit(1);
+
+      if (doc) {
+        const base = doc.subscriptionEndDate && doc.subscriptionEndDate > new Date()
+          ? doc.subscriptionEndDate : new Date();
+        const endDate = new Date(base);
+        endDate.setMonth(endDate.getMonth() + planMonths(planType as PlanType));
+
+        if (appliedVoucherCode) {
+          const [voucher] = await tx.select().from(vouchersTable)
+            .where(eq(vouchersTable.code, appliedVoucherCode)).limit(1);
+          if (voucher) {
+            if (voucher.additionalFreeDays > 0) endDate.setDate(endDate.getDate() + voucher.additionalFreeDays);
+            await tx.update(vouchersTable)
+              .set({ currentUses: voucher.currentUses + 1 })
+              .where(eq(vouchersTable.id, voucher.id));
+          }
+        }
+
+        await tx.update(doctorsTable).set({
+          subscriptionStatus: "ACTIVE",
+          subscriptionPlan: planType,
+          subscriptionEndDate: endDate,
+        }).where(eq(doctorsTable.id, doctor.id));
+      }
+    });
+
+    const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`;
+    req.log.info({ doctorId: doctor.id, planType, uatOrderId }, "UAT payment bypass — subscription activated");
+    res.json({
+      paymentKey: "uat-bypass",
+      iframeId: "uat",
+      orderId: uatOrderId,
+      paymentId: 0,
+      iframeUrl: `${origin}/billing/payment-result?success=true&order_id=${uatOrderId}`,
+    });
+    return;
+  }
+
   try {
     const authRes = await fetch(`${PAYMOB_BASE}/auth/tokens`, {
       method: "POST",
