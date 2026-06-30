@@ -195,8 +195,9 @@ router.post("/billing/validate-voucher", async (req, res): Promise<void> => {
 /* ─── POST /billing/paymob/initiate ─── */
 router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   const apiKey = process.env.PAYMOB_API_KEY;
+  const uatBypass = process.env.UAT_PAYMENT_BYPASS === "true";
 
-  if (!apiKey) {
+  if (!apiKey && !uatBypass) {
     res.status(503).json({ error: "Payment gateway not configured. Please contact support." });
     return;
   }
