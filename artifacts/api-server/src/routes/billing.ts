@@ -226,7 +226,7 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
     integrationId = process.env.PAYMOB_WALLET_INTEGRATION_ID;
     iframeId = process.env.PAYMOB_WALLET_IFRAME_ID;
   }
-  if (!integrationId || !iframeId) {
+  if (!uatBypass && (!integrationId || !iframeId)) {
     const label = paymentMethod === "card" ? "Card" : paymentMethod === "fawry" ? "Fawry" : "Wallet";
     res.status(422).json({ error: `${label} payments are not yet configured. Please choose another payment method or contact support.` });
     return;
