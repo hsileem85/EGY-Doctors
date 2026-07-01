@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams } from "wouter";
-import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink, Building2, Hourglass } from "lucide-react";
+import { useParams, Link } from "wouter";
+import { Calendar, Clock, CheckCircle2, ChevronLeft, ArrowLeft, MapPin, ExternalLink, Building2, Hourglass, Lock } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -127,6 +127,38 @@ export default function DoctorProfile() {
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-gray-900">{t.profile.doctorNotFound}</h1>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-20 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-lg p-10 border border-gray-100 text-center max-w-sm w-full">
+            <div className="w-16 h-16 bg-[#D4A853]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#D4A853]/20">
+              <Lock className="h-8 w-8 text-[#D4A853]" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {isRTL ? "يجب تسجيل الدخول أولاً" : "Sign In Required"}
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              {isRTL
+                ? `يرجى تسجيل الدخول لحجز موعد مع ${doctor.name}`
+                : `Please sign in to book an appointment with ${doctor.name}`}
+            </p>
+            <Link href={`/auth?redirect=/doctor/${doctor.id}`}>
+              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#c49a4a] font-semibold mb-3">
+                {isRTL ? "تسجيل الدخول" : "Sign In"}
+              </Button>
+            </Link>
+            <Link href={`/auth?tab=signup`}>
+              <Button variant="outline" className="w-full">
+                {isRTL ? "إنشاء حساب جديد" : "Create an Account"}
+              </Button>
+            </Link>
+          </div>
         </div>
       </Layout>
     );

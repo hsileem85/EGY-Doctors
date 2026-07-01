@@ -27,6 +27,11 @@ function stripArTitle(value: string): string {
   return value.replace(/^د[.\s/]+/, "").trimStart();
 }
 
+/** Allow only Arabic characters, spaces, Arabic punctuation, and digits */
+function arabicOnly(value: string): string {
+  return value.replace(/[^\u0600-\u06FF\s\d\u0660-\u0669،.؟!٪'"،\-]/g, "");
+}
+
 export default function AuthPage() {
   const { dir, lang } = useLanguage();
   const isRTL = dir === "rtl";
@@ -36,7 +41,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
-  const [userType, setUserType] = useState<UserType>("doctor");
+  const [userType, setUserType] = useState<UserType>("patient");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [redirectPath, setRedirectPath] = useState("/dashboard");
@@ -615,7 +620,7 @@ export default function AuthPage() {
                         id="signupNameAr"
                         dir="rtl"
                         value={signupData.fullNameAr}
-                        onChange={(e) => setSignupData({ ...signupData, fullNameAr: stripArTitle(e.target.value) })}
+                        onChange={(e) => setSignupData({ ...signupData, fullNameAr: stripArTitle(arabicOnly(e.target.value)) })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                       />
                     </div>

@@ -338,6 +338,10 @@ export function updateAppointmentStatus(id: number, status: ApiAppointment["stat
   return request(`/appointments/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
 }
 
+export function updateAppointment(id: number, data: { appointmentDate?: string; appointmentTime?: string }): Promise<ApiAppointment> {
+  return request(`/appointments/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
 export function deleteClinic(id: number): Promise<void> {
   return request(`/doctor/clinics/${id}`, { method: "DELETE" });
 }

@@ -150,6 +150,34 @@ router.get("/appointments", async (req, res): Promise<void> => {
   })));
 });
 
+/* ─── PATCH /appointments/:id ─── (update date/time) */
+router.patch("/appointments/:id", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const Schema = z.object({
+    appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
+    appointmentTime: z.string().min(1).optional(),
+  });
+  const parsed = Schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+
+  const update: Record<string, unknown> = {};
+  if (parsed.data.appointmentDate) update.appointmentDate = parsed.data.appointmentDate;
+  if (parsed.data.appointmentTime) update.appointmentTime = parsed.data.appointmentTime;
+
+  if (Object.keys(update).length === 0) { res.status(400).json({ error: "Nothing to update" }); return; }
+
+  const [row] = await db.update(appointmentsTable)
+    .set(update)
+    .where(eq(appointmentsTable.id, id))
+    .returning();
+
+  if (!row) { res.status(404).json({ error: "Appointment not found" }); return; }
+  res.json(serializeRow(row));
+});
+
 /* ─── PATCH /appointments/:id/status ─── */
 router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

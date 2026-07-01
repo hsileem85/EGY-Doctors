@@ -542,7 +542,10 @@ export default function DoctorProfileSetup() {
                       </Label>
                       <Textarea
                         value={profile.bioAr}
-                        onChange={e => { if (e.target.value.length <= 500) setProfile(p => ({ ...p, bioAr: e.target.value })); }}
+                        onChange={e => {
+                          const filtered = e.target.value.replace(/[^\u0600-\u06FF\s\d\u0660-\u0669،.؟!٪'"،\-\n]/g, "");
+                          if (filtered.length <= 500) setProfile(p => ({ ...p, bioAr: filtered }));
+                        }}
                         placeholder={isRTL ? "نبذة عنك..." : "About me (Arabic)..."}
                         className="min-h-[120px] resize-y"
                         dir="rtl"

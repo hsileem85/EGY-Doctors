@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare } from "lucide-react";
+import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAppointments, getPreferences, updatePreferences, type UserPreferences } from "@/lib/api";
+import { getAppointments, getPreferences, updatePreferences, updateAppointmentStatus, updateAppointment, type UserPreferences, type ApiAppointment } from "@/lib/api";
 
 type View = "appointments" | "preferences";
 
@@ -17,10 +19,14 @@ export default function PatientDashboard() {
   const { user, signOut } = useAuth();
   const isRTL = dir === "rtl";
   const [activeView, setActiveView] = useState<View>("appointments");
+  const qc = useQueryClient();
+
+  const [editApt, setEditApt] = useState<ApiAppointment | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
 
   const firstName = user?.name?.split(" ")[0] ?? (isRTL ? "مريض" : "Patient");
 
-  // Apply site language from user preferences on load
   useEffect(() => {
     if (user?.siteLanguage) setLang(user.siteLanguage);
   }, [user?.siteLanguage]);
@@ -29,6 +35,20 @@ export default function PatientDashboard() {
     queryKey: ["patient-appointments", user?.id],
     queryFn: () => getAppointments({ patientUserId: user!.id }),
     enabled: !!user?.id,
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: (id: number) => updateAppointmentStatus(id, "cancelled"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["patient-appointments", user?.id] }),
+  });
+
+  const editMut = useMutation({
+    mutationFn: ({ id, date, time }: { id: number; date: string; time: string }) =>
+      updateAppointment(id, { appointmentDate: date, appointmentTime: time }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patient-appointments", user?.id] });
+      setEditApt(null);
+    },
   });
 
   const today = new Date().toISOString().split("T")[0];
@@ -166,22 +186,45 @@ export default function PatientDashboard() {
                       ) : (
                         <div className="space-y-3">
                           {upcoming.map((apt) => (
-                            <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                              <div>
-                                <p className="font-medium text-sm">{apt.doctorName ?? `Doctor #${apt.doctorId}`}</p>
-                                <p className="text-xs text-gray-500">
-                                  {(isRTL ? apt.specialtyAr : apt.specialty) ?? ""}
-                                  {apt.specialty || apt.specialtyAr ? " · " : ""}
-                                  {apt.appointmentDate} · {apt.appointmentTime}
-                                </p>
+                            <div key={apt.id} className="p-3 rounded-lg bg-gray-50 space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-medium text-sm">{apt.doctorName ?? `Doctor #${apt.doctorId}`}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {(isRTL ? apt.specialtyAr : apt.specialty) ?? ""}
+                                    {apt.specialty || apt.specialtyAr ? " · " : ""}
+                                    {apt.appointmentDate} · {apt.appointmentTime}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5 capitalize shrink-0">
+                                  {apt.status === "confirmed"
+                                    ? (isRTL ? "مؤكد" : "Confirmed")
+                                    : apt.status === "pending"
+                                    ? (isRTL ? "في الانتظار" : "Pending")
+                                    : apt.status}
+                                </Badge>
                               </div>
-                              <Badge variant="outline" className="text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5 capitalize">
-                                {apt.status === "confirmed"
-                                  ? (isRTL ? "مؤكد" : "Confirmed")
-                                  : apt.status === "pending"
-                                  ? (isRTL ? "في الانتظار" : "Pending")
-                                  : apt.status}
-                              </Badge>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => { setEditApt(apt); setEditDate(apt.appointmentDate); setEditTime(apt.appointmentTime); }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                  {isRTL ? "تعديل" : "Edit"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                  disabled={cancelMut.isPending}
+                                  onClick={() => cancelMut.mutate(apt.id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                  {isRTL ? "إلغاء" : "Cancel"}
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -240,6 +283,49 @@ export default function PatientDashboard() {
           </div>
         </main>
       </div>
+      {/* Edit Appointment Dialog */}
+      <Dialog open={!!editApt} onOpenChange={(open) => { if (!open) setEditApt(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{isRTL ? "تعديل الموعد" : "Edit Appointment"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{isRTL ? "التاريخ" : "Date"}</Label>
+              <Input
+                type="date"
+                value={editDate}
+                min={today}
+                onChange={e => setEditDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">{isRTL ? "الوقت" : "Time"}</Label>
+              <Input
+                type="time"
+                value={editTime.includes(":") && !editTime.includes("AM") && !editTime.includes("PM") ? editTime : ""}
+                onChange={e => setEditTime(e.target.value)}
+                placeholder={editTime}
+              />
+              {editTime && (editTime.includes("AM") || editTime.includes("PM")) && (
+                <p className="text-xs text-gray-500">{isRTL ? "الوقت الحالي: " : "Current: "}{editTime}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditApt(null)}>
+              {isRTL ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button
+              disabled={!editDate || !editTime || editMut.isPending}
+              onClick={() => editApt && editMut.mutate({ id: editApt.id, date: editDate, time: editTime })}
+              className="bg-[#D4A853] text-[#0F172A] hover:bg-[#c49a4a]"
+            >
+              {editMut.isPending ? (isRTL ? "جاري الحفظ..." : "Saving...") : (isRTL ? "حفظ" : "Save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
