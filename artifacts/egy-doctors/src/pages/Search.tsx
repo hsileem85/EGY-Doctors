@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearch } from "wouter";
-import { Filter, Search as SearchIcon } from "lucide-react";
+import { Filter, Search as SearchIcon, X, SlidersHorizontal } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { DoctorCard } from "@/components/DoctorCard";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export default function Search() {
   const [selectedCities, setSelectedCities] = useState<string[]>(
     initialCity ? [initialCity] : []
   );
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const { data: allDoctors = [], isLoading: loadingDoctors } = useQuery({
     queryKey: ["doctors"],
@@ -69,7 +70,8 @@ export default function Search() {
     });
   }, [searchQuery, selectedSpecialties, selectedCities, allDoctors]);
 
-  const hasActiveFilters = selectedSpecialties.length > 0 || selectedCities.length > 0;
+  const activeFilterCount = selectedSpecialties.length + selectedCities.length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   const clearFilters = () => {
     setSelectedSpecialties([]);
@@ -77,117 +79,167 @@ export default function Search() {
     setSearchQuery("");
   };
 
+  const filterPanel = (
+    <div className="bg-white rounded-xl border p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="flex items-center gap-2 text-gray-900 font-bold">
+          <Filter className="h-5 w-5" />
+          <h2>{t.search.filters}</h2>
+        </div>
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="text-xs text-primary hover:text-primary/80 font-semibold flex items-center gap-1"
+          >
+            <X className="h-3 w-3" />
+            {t.search.clearFilters}
+          </button>
+        )}
+      </div>
+
+      {specialties.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">
+            {t.search.specialty}
+          </h3>
+          <div className="space-y-2.5">
+            {specialties.map(s => (
+              <div key={s.id} className="flex items-center gap-2">
+                <Checkbox
+                  id={`spec-${s.id}`}
+                  checked={selectedSpecialties.includes(s.name)}
+                  onCheckedChange={() => toggleSpecialty(s.name)}
+                  data-testid={`checkbox-specialty-${s.name}`}
+                />
+                <Label htmlFor={`spec-${s.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                  {t.specialties[s.name] ?? s.name}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {cities.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">
+            {t.search.location}
+          </h3>
+          <div className="space-y-2.5">
+            {cities.map(c => (
+              <div key={c.id} className="flex items-center gap-2">
+                <Checkbox
+                  id={`city-${c.id}`}
+                  checked={selectedCities.includes(c.name)}
+                  onCheckedChange={() => toggleCity(c.name)}
+                  data-testid={`checkbox-location-${c.name}`}
+                />
+                <Label htmlFor={`city-${c.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                  {t.governorates[c.name] ?? t.locations[c.name] ?? c.name}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Layout>
+      {/* Sticky search bar */}
       <div className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="relative max-w-2xl">
-            <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              placeholder={t.search.placeholder}
-              className="ps-12 h-12 rounded-full bg-gray-50 border-transparent focus:bg-white focus:border-primary focus:ring-primary shadow-sm"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              data-testid="input-search-doctors"
-            />
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-2xl">
+              <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                placeholder={t.search.placeholder}
+                className="ps-12 h-11 rounded-full bg-gray-50 border-transparent focus:bg-white focus:border-primary focus:ring-primary shadow-sm"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                data-testid="input-search-doctors"
+              />
+            </div>
+            {/* Mobile filter toggle */}
+            <button
+              onClick={() => setShowMobileFilters(v => !v)}
+              className={`md:hidden flex items-center gap-1.5 h-11 px-4 rounded-full border text-sm font-semibold transition-colors shrink-0 ${
+                showMobileFilters || hasActiveFilters
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {t.search.filters}
+              {activeFilterCount > 0 && (
+                <span className="ml-0.5 w-5 h-5 rounded-full bg-white text-primary text-[11px] font-black flex items-center justify-center leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      {/* Mobile filter drawer */}
+      {showMobileFilters && (
+        <div className="md:hidden container mx-auto px-4 pt-4 pb-2">
+          {filterPanel}
+          <div className="mt-3 flex gap-2">
+            <Button
+              className="flex-1 h-10 bg-primary text-white"
+              onClick={() => setShowMobileFilters(false)}
+            >
+              {`Show ${filteredDoctors.length} results`}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row gap-6">
-          <aside className="w-full md:w-52 flex-shrink-0">
-            <div className="bg-white rounded-xl border p-6 sticky top-40 shadow-sm">
-              <div className="flex items-center gap-2 mb-6 text-gray-900 font-bold">
-                <Filter className="h-5 w-5" />
-                <h2>{t.search.filters}</h2>
-              </div>
-
-              {/* Specialty filter */}
-              {specialties.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
-                    {t.search.specialty}
-                  </h3>
-                  <div className="space-y-3">
-                    {specialties.map(s => (
-                      <div key={s.id} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`spec-${s.id}`}
-                          checked={selectedSpecialties.includes(s.name)}
-                          onCheckedChange={() => toggleSpecialty(s.name)}
-                          data-testid={`checkbox-specialty-${s.name}`}
-                        />
-                        <Label htmlFor={`spec-${s.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                          {t.specialties[s.name] ?? s.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* City filter */}
-              {cities.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
-                    {t.search.location}
-                  </h3>
-                  <div className="space-y-3">
-                    {cities.map(c => (
-                      <div key={c.id} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`city-${c.id}`}
-                          checked={selectedCities.includes(c.name)}
-                          onCheckedChange={() => toggleCity(c.name)}
-                          data-testid={`checkbox-location-${c.name}`}
-                        />
-                        <Label htmlFor={`city-${c.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                          {t.governorates[c.name] ?? t.locations[c.name] ?? c.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  className="w-full mt-2 text-primary hover:text-primary/80 hover:bg-primary/5"
-                  onClick={clearFilters}
-                >
-                  {t.search.clearFilters}
-                </Button>
-              )}
+          {/* Desktop sidebar */}
+          <aside className="hidden md:block w-52 flex-shrink-0">
+            <div className="sticky top-[72px]">
+              {filterPanel}
             </div>
           </aside>
 
-          <main className="flex-1">
-            <div className="mb-6 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">
+          <main className="flex-1 min-w-0">
+            <div className="mb-4 flex justify-between items-center">
+              <h2 className="text-base sm:text-xl font-bold text-gray-900">
                 {loadingDoctors
-                  ? (t.search.doctorsFound(0))
+                  ? t.search.doctorsFound(0)
                   : t.search.doctorsFound(filteredDoctors.length)}
               </h2>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="hidden md:flex items-center gap-1 text-xs text-primary font-semibold hover:text-primary/80"
+                >
+                  <X className="h-3 w-3" />
+                  {t.search.clearFilters}
+                </button>
+              )}
             </div>
 
             {loadingDoctors ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="bg-white rounded-xl border p-5 animate-pulse h-48" />
                 ))}
               </div>
             ) : filteredDoctors.length > 0 ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {filteredDoctors.map(doctor => (
                   <DoctorCard key={doctor.id} doctor={doctor} showSlots={true} />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-white rounded-xl border border-dashed">
+              <div className="text-center py-16 bg-white rounded-xl border border-dashed">
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{t.search.noFound}</h3>
-                <p className="text-gray-500 max-w-md mx-auto">{t.search.noFoundDesc}</p>
+                <p className="text-gray-500 max-w-md mx-auto text-sm">{t.search.noFoundDesc}</p>
                 <Button variant="outline" className="mt-6" onClick={clearFilters}>
                   {t.search.clearAllFilters}
                 </Button>

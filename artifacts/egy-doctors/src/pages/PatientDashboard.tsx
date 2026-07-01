@@ -111,8 +111,26 @@ export default function PatientDashboard() {
           </div>
         </aside>
 
+        {/* Mobile tab bar */}
+        <div className="md:hidden w-full fixed bottom-0 left-0 z-40 bg-white border-t border-gray-200 flex">
+          {navItems.map(item => (
+            <button
+              key={item.view}
+              onClick={() => setActiveView(item.view)}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 text-xs font-semibold transition-colors ${
+                activeView === item.view
+                  ? "text-primary"
+                  : "text-gray-500"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+
         {/* Main Content */}
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1 p-4 pb-24 md:pb-8 md:p-8">
           <div className="max-w-5xl mx-auto">
 
             {/* ── Appointments View ── */}
