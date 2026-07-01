@@ -163,29 +163,17 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
       <div className="mt-auto pt-3 border-t border-gray-100">
         {showSlots ? (
           <div className="flex items-center justify-end gap-2">
-            {pricing.multipleClinicPrices ? (
-              <Link href={`/profile/${doctor.id}`} className="flex-1">
-                <Button
-                  size="sm"
-                  className="w-full h-9 bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90"
-                  data-testid={`link-doctor-book-${doctor.id}`}
-                >
-                  {isRTL ? "عرض الملف" : "View Profile"}
-                </Button>
-              </Link>
-            ) : (
-              <Link href={`/doctor/${doctor.id}`} className="flex-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-9 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
-                  data-testid={`link-doctor-book-${doctor.id}`}
-                >
-                  <Calendar className="h-4 w-4 mr-1.5" />
-                  {isRTL ? "الحجز" : "Book"}
-                </Button>
-              </Link>
-            )}
+            <Link href={`/doctor/${doctor.id}`} className="flex-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-9 border-[#D4A853]/30 text-[#D4A853] hover:bg-[#D4A853]/10 hover:border-[#D4A853]"
+                data-testid={`link-doctor-book-${doctor.id}`}
+              >
+                <Calendar className="h-4 w-4 mr-1.5" />
+                {isRTL ? "الحجز" : "Book"}
+              </Button>
+            </Link>
             <Link href={`/profile/${doctor.id}`} className="flex-1">
               <Button
                 variant="outline"
