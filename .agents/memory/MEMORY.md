@@ -2,3 +2,4 @@
 - [API server build gotchas](api-server-build.md) — zod must be in api-server dependencies; getDoctors() must be wrapped in arrow fn for useQuery queryFn.
 - [Seed script](seed-script.md) — 12 doctors, 16 specialties, 8 cities, 15 areas seeded; run with pnpm --filter @workspace/scripts run seed.
 - [Bilingual schema migration](bilingual-schema.md) — doctors/clinics use name/bio as Arabic; lookup tables use name_ar; drizzle-kit needs TTY for renames so use raw SQL instead.
+- [Affiliated doctors pattern](affiliated-doctors.md) — medical centers own doctor records via affiliatedCenterId FK; system users created with sys_${centerId}_${hex} phone + bcrypt hash of random bytes; subscription filter bypassed with `affiliatedCenterId IS NOT NULL`.

@@ -1,0 +1,35 @@
+Please refactor the Medical Center workflow, dashboard, and database architecture. I will not provide mockup images, so please follow these detailed structural and UI instructions strictly.
+
+The goal is to allow a Medical Center to manage its general profile, and then add multiple "Affiliated Doctors" (which act as the center's clinics). Each doctor has their own specialty, fee, and schedule, but they all share the center's main physical location.
+
+Please execute the following full-stack implementation:
+
+### 1. Database Schema Updates
+* **MedicalCenter Model:** Ensure it has fields for general data: `logoUrl`, `name`, `bioEnglish`, `bioArabic`, `website`, `facebook`, `instagram`, `mainAddress`, `latitude`, `longitude`, `isApproved` (Boolean, default: false), and `hasVezeetaProfile` (Boolean, default: false - Admin only).
+* **Unified Doctor Model:** ALL doctors must live in the existing `Doctor` model. Add a nullable foreign key: `affiliatedCenterId` (linking to the MedicalCenter).
+* **Schedule/Fee Context:** Ensure the system allows these affiliated doctors to have their own consultation fee and weekly schedule linked to their profile.
+
+### 2. Medical Center Dashboard - "General Profile" Tab
+* Create an "Edit Profile" page for the Medical Center with the following UI sections (using clean Tailwind CSS cards):
+  * **Center Info Card:** Avatar/Logo upload, Center Name, and Center Type (e.g., Poly Clinic, Hospital).
+  * **Biography Card:** Two textareas for English and Arabic descriptions of the center.
+  * **Social & Web Card:** Input fields for Website, Facebook, and Instagram URLs.
+  * **Main Location Card:** Input for text Address, and a Map component (Latitude/Longitude) representing the physical building of the center.
+* **Approval Guard:** If `isApproved` is false, they can edit and save this profile, but display a persistent warning banner: "Your center is pending admin approval and is not visible to patients."
+
+### 3. Medical Center Dashboard - "Manage Doctors & Clinics" Tab
+* Create a second tab specifically for adding the center's doctors.
+* **The "Add Doctor" Form UI:** When the center clicks "Add Doctor", open a form with the following fields:
+  * Full Name (Text input).
+  * Specialty (Dropdown select).
+  * Consultation Fee in EGP (Number input).
+  * Weekly Schedule Builder: A UI allowing them to check specific days (Saturday-Friday) and set the "From" and "To" hours for this specific doctor.
+* **Backend Logic:** When this form is submitted, the backend MUST create a new record in the main `Doctor` table, set `affiliatedCenterId` to the logged-in Medical Center's ID, and save the provided fee and schedule for that doctor.
+
+### 4. Admin Dashboard Updates
+* **Pending Centers Table:** Add a view for Admins to see centers where `isApproved` is false. Include an "Approve" button.
+* **Vezeeta Flag:** In the Admin's edit modal for any Medical Center, include a checkbox for "Has Vezeeta Profile". This maps to the database field and is strictly for admin reporting purposes (invisible to the center and the public).
+
+### 5. Public Search & Doctor Cards (Frontend)
+* In the public search results, affiliated doctors should appear exactly like independent doctors using the same beautiful card component.
+* **Affiliation Badge:** Update the Doctor Card component: conditionally check if `doctor.affiliatedCenterId` exists. If true, dynamically fetch the parent center's name and render a prominent badge or subtitle on the card stating: "Doctor at [Medical Center Name]".

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Save, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Building2, Save, ArrowLeft, CheckCircle2, Globe, Facebook, Instagram, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,11 +38,17 @@ interface FormState {
   bio: string;
   bioAr: string;
   commercialRegistrationNumber: string;
+  website: string;
+  facebook: string;
+  instagram: string;
+  lat: string;
+  lng: string;
 }
 
 const EMPTY: FormState = {
   name: "", nameAr: "", type: "clinic", subType: "",
   phone: "", address: "", bio: "", bioAr: "", commercialRegistrationNumber: "",
+  website: "", facebook: "", instagram: "", lat: "", lng: "",
 };
 
 export default function MedicalCenterProfile() {
@@ -72,6 +78,11 @@ export default function MedicalCenterProfile() {
           bio:    p.bio    ?? "",
           bioAr:  p.bioAr  ?? "",
           commercialRegistrationNumber: p.commercialRegistrationNumber ?? "",
+          website:   p.website  ?? "",
+          facebook:  p.facebook ?? "",
+          instagram: p.instagram ?? "",
+          lat: p.lat?.toString() ?? "",
+          lng: p.lng?.toString() ?? "",
         });
       })
       .catch(() => {})
@@ -94,6 +105,11 @@ export default function MedicalCenterProfile() {
         bio:    form.bio || undefined,
         bioAr:  form.bioAr || undefined,
         commercialRegistrationNumber: form.commercialRegistrationNumber || undefined,
+        website:   form.website   || null,
+        facebook:  form.facebook  || null,
+        instagram: form.instagram || null,
+        lat: form.lat ? parseFloat(form.lat) : null,
+        lng: form.lng ? parseFloat(form.lng) : null,
       });
       toast({
         title: isRTL ? "تم الحفظ!" : "Profile Saved!",
@@ -114,7 +130,7 @@ export default function MedicalCenterProfile() {
 
   const t = {
     title:    isRTL ? "إعداد ملف المركز" : "Center Profile Setup",
-    subtitle: isRTL ? "حدث معلومات مركزك واحفظها." : "Update your center information and save changes.",
+    subtitle: isRTL ? "حدد معلومات مركزك واحفظها." : "Update your center information and save changes.",
     back:     isRTL ? "العودة للوحة" : "Back to Dashboard",
     save:     isRTL ? "حفظ التغييرات" : "Save Changes",
   };
@@ -253,6 +269,47 @@ export default function MedicalCenterProfile() {
               </CardContent>
             </Card>
 
+            {/* Location Coordinates */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  {isRTL ? "الإحداثيات الجغرافية" : "Location Coordinates"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-xs text-gray-500">
+                  {isRTL
+                    ? "أضف إحداثيات GPS لعرض موقعك بدقة على الخريطة."
+                    : "Add GPS coordinates to display your location accurately on the map."}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{isRTL ? "خط العرض (Latitude)" : "Latitude"}</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder="e.g. 30.0444"
+                      value={form.lat}
+                      onChange={(e) => f("lat", e.target.value)}
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{isRTL ? "خط الطول (Longitude)" : "Longitude"}</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder="e.g. 31.2357"
+                      value={form.lng}
+                      onChange={(e) => f("lng", e.target.value)}
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Bio */}
             <Card>
               <CardHeader className="pb-3">
@@ -266,6 +323,57 @@ export default function MedicalCenterProfile() {
                 <div className="space-y-2">
                   <Label>{isRTL ? "وصف بالعربية" : "Description (Arabic)"}</Label>
                   <Textarea rows={3} value={form.bioAr} onChange={(e) => f("bioAr", e.target.value)} dir="rtl" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Social & Web */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-primary" />
+                  {isRTL ? "الموقع والتواصل الاجتماعي" : "Website & Social Media"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Globe className="h-3.5 w-3.5 text-gray-400" />
+                    {isRTL ? "الموقع الإلكتروني" : "Website"}
+                  </Label>
+                  <Input
+                    type="url"
+                    placeholder="https://example.com"
+                    value={form.website}
+                    onChange={(e) => f("website", e.target.value)}
+                    dir="ltr"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Facebook className="h-3.5 w-3.5 text-blue-500" />
+                    {isRTL ? "صفحة فيسبوك" : "Facebook Page"}
+                  </Label>
+                  <Input
+                    type="url"
+                    placeholder="https://facebook.com/yourcenter"
+                    value={form.facebook}
+                    onChange={(e) => f("facebook", e.target.value)}
+                    dir="ltr"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Instagram className="h-3.5 w-3.5 text-pink-500" />
+                    {isRTL ? "حساب إنستغرام" : "Instagram"}
+                  </Label>
+                  <Input
+                    type="url"
+                    placeholder="https://instagram.com/yourcenter"
+                    value={form.instagram}
+                    onChange={(e) => f("instagram", e.target.value)}
+                    dir="ltr"
+                  />
                 </div>
               </CardContent>
             </Card>

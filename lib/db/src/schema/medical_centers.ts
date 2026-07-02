@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
 import { subscriptionStatusEnum } from "./doctors";
 
 export const centerSubTypeEnum = ["POLY_CLINIC", "HOSPITAL", "LAB", "SCAN_CENTER"] as const;
@@ -18,6 +18,11 @@ export const medicalCentersTable = pgTable("medical_centers", {
   bio: text("bio"),
   bioAr: text("bio_ar"),
   isActive: boolean("is_active").notNull().default(true),
+  website: text("website"),
+  facebook: text("facebook"),
+  instagram: text("instagram"),
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
   isApproved: boolean("is_approved").notNull().default(false),
   hasVezeetaProfile: boolean("has_vezeeta_profile").notNull().default(false),
   subscriptionStatus: text("subscription_status", { enum: subscriptionStatusEnum }).notNull().default("INACTIVE"),

@@ -87,6 +87,21 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             {specialty}
           </p>
 
+          {/* Affiliated center badge */}
+          {doctor.affiliatedCenter && (
+            <div className="mt-1">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-[18px] text-blue-600 border-blue-200 bg-blue-50 gap-0.5 font-medium"
+              >
+                <Building2 className="h-2.5 w-2.5 shrink-0" />
+                {isRTL
+                  ? (doctor.affiliatedCenter.nameAr ?? doctor.affiliatedCenter.name)
+                  : doctor.affiliatedCenter.name}
+              </Badge>
+            </div>
+          )}
+
           {/* Poly clinic affiliation badge */}
           {doctor.polyClinic && (
             <div className="mt-1">

@@ -84,6 +84,7 @@ export interface ApiDoctor {
   xUrl?: string | null;
   isFollowing?: boolean;
   polyClinic?: { id: number; name: string; nameAr: string | null } | null;
+  affiliatedCenter?: { id: number; name: string; nameAr: string | null } | null;
 }
 
 export interface ApiSpecialty {
@@ -722,6 +723,11 @@ export interface MedicalCenterProfile {
   bioAr: string | null;
   commercialRegistrationNumber: string | null;
   image: string | null;
+  website: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  lat: number | null;
+  lng: number | null;
   isApproved: boolean;
   hasVezeetaProfile: boolean;
   subscriptionStatus: string;
@@ -731,8 +737,59 @@ export function getMedicalCenterProfile(): Promise<MedicalCenterProfile> {
   return request("/medical-centers/profile");
 }
 
-export function updateMedicalCenterProfile(data: Partial<Pick<MedicalCenterProfile, "name" | "nameAr" | "type" | "subType" | "phone" | "address" | "bio" | "bioAr" | "commercialRegistrationNumber" | "image">>): Promise<MedicalCenterProfile> {
+export function updateMedicalCenterProfile(
+  data: Partial<Pick<MedicalCenterProfile,
+    "name" | "nameAr" | "type" | "subType" | "phone" | "address" |
+    "bio" | "bioAr" | "commercialRegistrationNumber" | "image" |
+    "website" | "facebook" | "instagram" | "lat" | "lng"
+  >>,
+): Promise<MedicalCenterProfile> {
   return request("/medical-centers/profile", { method: "PUT", body: JSON.stringify(data) });
+}
+
+/* ─── Affiliated Doctors ─── */
+
+export interface AffiliatedDoctor {
+  id: number;
+  name: string;
+  nameAr: string;
+  specialtyId: number | null;
+  specialtyName: string | null;
+  specialtyNameAr: string | null;
+  fee: number | null;
+  schedule: Record<string, { from: string; to: string }> | null;
+  isActive: boolean;
+}
+
+export function getAffiliatedDoctors(): Promise<AffiliatedDoctor[]> {
+  return request("/medical-centers/affiliated-doctors");
+}
+
+export function createAffiliatedDoctor(data: {
+  name: string;
+  nameAr?: string;
+  specialtyId?: number | null;
+  fee?: number | null;
+  schedule?: Record<string, { from: string; to: string }> | null;
+}): Promise<AffiliatedDoctor> {
+  return request("/medical-centers/affiliated-doctors", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateAffiliatedDoctor(
+  id: number,
+  data: Partial<{
+    name: string;
+    nameAr: string;
+    specialtyId: number | null;
+    fee: number | null;
+    schedule: Record<string, { from: string; to: string }> | null;
+  }>,
+): Promise<AffiliatedDoctor> {
+  return request(`/medical-centers/affiliated-doctors/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteAffiliatedDoctor(id: number): Promise<void> {
+  return request(`/medical-centers/affiliated-doctors/${id}`, { method: "DELETE" });
 }
 
 /* ─── Center Clinics ─── */

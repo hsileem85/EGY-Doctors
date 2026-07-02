@@ -1,9 +1,11 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import {
-  db, medicalCentersTable, centerClinicsTable, usersTable,
+  db, medicalCentersTable, centerClinicsTable, usersTable, doctorsTable, specialtiesTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -40,6 +42,11 @@ const ProfileBody = z.object({
   bioAr: z.string().optional(),
   commercialRegistrationNumber: z.string().optional(),
   image: z.string().optional(),
+  website: z.string().optional().nullable(),
+  facebook: z.string().optional().nullable(),
+  instagram: z.string().optional().nullable(),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
 });
 
 /* ── GET /medical-centers/profile ── */
@@ -175,6 +182,171 @@ router.delete("/medical-centers/:id/clinics/:clinicId", requireCenter, async (re
   }
 
   await db.delete(centerClinicsTable).where(eq(centerClinicsTable.id, clinicId));
+  res.status(204).send();
+});
+
+/* ════════════════════════════════════════════════════
+   Affiliated Doctors — managed by Medical Center
+════════════════════════════════════════════════════ */
+
+const AffiliatedDoctorBody = z.object({
+  name: z.string().min(1),
+  nameAr: z.string().optional().default(""),
+  specialtyId: z.number().int().optional().nullable(),
+  fee: z.number().int().min(0).optional().nullable(),
+  schedule: z.record(z.object({ from: z.string(), to: z.string() })).optional().nullable(),
+});
+
+async function getCenterForUser(userId: number): Promise<{ id: number } | null> {
+  const [center] = await db
+    .select({ id: medicalCentersTable.id })
+    .from(medicalCentersTable)
+    .where(eq(medicalCentersTable.userId, userId))
+    .limit(1);
+  return center ?? null;
+}
+
+/* ── GET /medical-centers/affiliated-doctors ── */
+router.get("/medical-centers/affiliated-doctors", requireCenter, async (req, res): Promise<void> => {
+  const center = await getCenterForUser((req as AuthedRequest).userId);
+  if (!center) { res.status(404).json({ error: "Center not found" }); return; }
+
+  const rows = await db
+    .select({
+      id: doctorsTable.id,
+      name: doctorsTable.nameEn,
+      nameAr: doctorsTable.name,
+      specialtyId: doctorsTable.specialtyId,
+      specialtyName: specialtiesTable.name,
+      specialtyNameAr: specialtiesTable.nameAr,
+      fee: doctorsTable.fee,
+      schedule: doctorsTable.schedule,
+      isActive: doctorsTable.isActive,
+    })
+    .from(doctorsTable)
+    .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .where(eq(doctorsTable.affiliatedCenterId, center.id));
+
+  res.json(rows.map(d => ({
+    ...d,
+    schedule: d.schedule ? (JSON.parse(d.schedule) as Record<string, { from: string; to: string }>) : null,
+  })));
+});
+
+/* ── POST /medical-centers/affiliated-doctors ── */
+router.post("/medical-centers/affiliated-doctors", requireCenter, async (req, res): Promise<void> => {
+  const center = await getCenterForUser((req as AuthedRequest).userId);
+  if (!center) { res.status(404).json({ error: "Center not found" }); return; }
+
+  const parsed = AffiliatedDoctorBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const d = parsed.data;
+
+  const systemPhone = `sys_${center.id}_${crypto.randomBytes(4).toString("hex")}`;
+  const systemHash = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+
+  const [user] = await db.insert(usersTable).values({
+    name: d.name,
+    phone: systemPhone,
+    passwordHash: systemHash,
+    role: "doctor",
+  }).returning({ id: usersTable.id });
+
+  const [doctor] = await db.insert(doctorsTable).values({
+    userId: user.id,
+    nameEn: d.name,
+    name: d.nameAr || null,
+    specialtyId: d.specialtyId ?? null,
+    fee: d.fee ?? null,
+    schedule: d.schedule ? JSON.stringify(d.schedule) : null,
+    affiliatedCenterId: center.id,
+    accountStatus: "approved",
+    isActive: true,
+  }).returning();
+
+  logger.info({ centerId: center.id, doctorId: doctor.id }, "Affiliated doctor created");
+  res.status(201).json({
+    id: doctor.id,
+    name: doctor.nameEn,
+    nameAr: doctor.name ?? "",
+    specialtyId: doctor.specialtyId,
+    specialtyName: null,
+    specialtyNameAr: null,
+    fee: doctor.fee,
+    schedule: d.schedule ?? null,
+    isActive: doctor.isActive,
+  });
+});
+
+/* ── PUT /medical-centers/affiliated-doctors/:id ── */
+router.put("/medical-centers/affiliated-doctors/:id", requireCenter, async (req, res): Promise<void> => {
+  const center = await getCenterForUser((req as AuthedRequest).userId);
+  if (!center) { res.status(404).json({ error: "Center not found" }); return; }
+
+  const doctorId = parseInt(req.params.id as string, 10);
+  if (isNaN(doctorId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [existing] = await db
+    .select({ id: doctorsTable.id, affiliatedCenterId: doctorsTable.affiliatedCenterId })
+    .from(doctorsTable)
+    .where(eq(doctorsTable.id, doctorId))
+    .limit(1);
+  if (!existing || existing.affiliatedCenterId !== center.id) {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
+
+  const parsed = AffiliatedDoctorBody.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const d = parsed.data;
+
+  const [doctor] = await db
+    .update(doctorsTable)
+    .set({
+      ...(d.name !== undefined ? { nameEn: d.name } : {}),
+      ...(d.nameAr !== undefined ? { name: d.nameAr || null } : {}),
+      ...(d.specialtyId !== undefined ? { specialtyId: d.specialtyId ?? null } : {}),
+      ...(d.fee !== undefined ? { fee: d.fee ?? null } : {}),
+      ...(d.schedule !== undefined ? { schedule: d.schedule ? JSON.stringify(d.schedule) : null } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(doctorsTable.id, doctorId))
+    .returning();
+
+  res.json({
+    id: doctor.id,
+    name: doctor.nameEn,
+    nameAr: doctor.name ?? "",
+    specialtyId: doctor.specialtyId,
+    specialtyName: null,
+    specialtyNameAr: null,
+    fee: doctor.fee,
+    schedule: d.schedule ?? null,
+    isActive: doctor.isActive,
+  });
+});
+
+/* ── DELETE /medical-centers/affiliated-doctors/:id ── */
+router.delete("/medical-centers/affiliated-doctors/:id", requireCenter, async (req, res): Promise<void> => {
+  const center = await getCenterForUser((req as AuthedRequest).userId);
+  if (!center) { res.status(404).json({ error: "Center not found" }); return; }
+
+  const doctorId = parseInt(req.params.id as string, 10);
+  if (isNaN(doctorId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [doc] = await db
+    .select({ id: doctorsTable.id, userId: doctorsTable.userId, affiliatedCenterId: doctorsTable.affiliatedCenterId })
+    .from(doctorsTable)
+    .where(eq(doctorsTable.id, doctorId))
+    .limit(1);
+
+  if (!doc || doc.affiliatedCenterId !== center.id) {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
+
+  await db.delete(doctorsTable).where(eq(doctorsTable.id, doctorId));
+  await db.delete(usersTable).where(eq(usersTable.id, doc.userId));
+
+  logger.info({ centerId: center.id, doctorId }, "Affiliated doctor deleted");
   res.status(204).send();
 });
 

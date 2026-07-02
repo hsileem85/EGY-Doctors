@@ -48,7 +48,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
   const conditions = [
     eq(doctorsTable.accountStatus, "approved"),
     eq(doctorsTable.isActive, true),
-    sql`(${doctorsTable.subscriptionStatus} = 'TRIAL' OR (${doctorsTable.subscriptionStatus} = 'ACTIVE' AND (${doctorsTable.subscriptionEndDate} IS NULL OR ${doctorsTable.subscriptionEndDate} > NOW())))`,
+    sql`(${doctorsTable.affiliatedCenterId} IS NOT NULL OR ${doctorsTable.subscriptionStatus} = 'TRIAL' OR (${doctorsTable.subscriptionStatus} = 'ACTIVE' AND (${doctorsTable.subscriptionEndDate} IS NULL OR ${doctorsTable.subscriptionEndDate} > NOW())))`,
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));
@@ -69,10 +69,14 @@ router.get("/doctors", async (req, res): Promise<void> => {
     specialtyNameAr: specialtiesTable.nameAr,
     cityName: citiesTable.name,
     cityNameAr: citiesTable.nameAr,
+    affiliatedCenterId: doctorsTable.affiliatedCenterId,
+    affiliatedCenterName: medicalCentersTable.name,
+    affiliatedCenterNameAr: medicalCentersTable.nameAr,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
     .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
+    .leftJoin(medicalCentersTable, eq(doctorsTable.affiliatedCenterId, medicalCentersTable.id))
     .where(and(...conditions));
 
   if (q) {
@@ -195,6 +199,9 @@ router.get("/doctors", async (req, res): Promise<void> => {
       clinics: doctorClinics,
       reviewList: [],
       polyClinic: polyClinicByDoctor.get(r.id) ?? null,
+      affiliatedCenter: r.affiliatedCenterId && r.affiliatedCenterName
+        ? { id: r.affiliatedCenterId, name: r.affiliatedCenterName, nameAr: r.affiliatedCenterNameAr ?? null }
+        : null,
     };
   });
 
@@ -259,11 +266,15 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     tiktokUrl: doctorsTable.tiktokUrl,
     youtubeUrl: doctorsTable.youtubeUrl,
     xUrl: doctorsTable.xUrl,
+    affiliatedCenterId: doctorsTable.affiliatedCenterId,
+    affiliatedCenterName: medicalCentersTable.name,
+    affiliatedCenterNameAr: medicalCentersTable.nameAr,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
     .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
     .leftJoin(areasTable, eq(doctorsTable.areaId, areasTable.id))
+    .leftJoin(medicalCentersTable, eq(doctorsTable.affiliatedCenterId, medicalCentersTable.id))
     .where(eq(doctorsTable.id, id))
     .limit(1);
 
@@ -355,6 +366,9 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     xUrl: row.xUrl ?? null,
     isFollowing,
     polyClinic,
+    affiliatedCenter: row.affiliatedCenterId && row.affiliatedCenterName
+      ? { id: row.affiliatedCenterId, name: row.affiliatedCenterName, nameAr: row.affiliatedCenterNameAr ?? null }
+      : null,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",
