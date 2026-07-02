@@ -79,6 +79,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
     affiliatedCenterLat: medicalCentersTable.lat,
     affiliatedCenterLng: medicalCentersTable.lng,
     affiliatedCenterCityName: centerCitiesTable.name,
+    affiliatedCenterServices: medicalCentersTable.services,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
@@ -217,6 +218,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
             lat: r.affiliatedCenterLat ?? null,
             lng: r.affiliatedCenterLng ?? null,
             cityName: r.affiliatedCenterCityName ?? null,
+            services: r.affiliatedCenterServices ?? [],
           }
         : null,
     };
@@ -291,6 +293,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     affiliatedCenterLat: medicalCentersTable.lat,
     affiliatedCenterLng: medicalCentersTable.lng,
     affiliatedCenterCityName: centerCitiesTable.name,
+    affiliatedCenterServices: medicalCentersTable.services,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
@@ -399,6 +402,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
           lat: row.affiliatedCenterLat ?? null,
           lng: row.affiliatedCenterLng ?? null,
           cityName: row.affiliatedCenterCityName ?? null,
+          services: row.affiliatedCenterServices ?? [],
         }
       : null,
     clinics: enrichedClinics.map((c) => ({

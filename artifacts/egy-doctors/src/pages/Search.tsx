@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
-import { Filter, Search as SearchIcon, X, SlidersHorizontal, Building2 } from "lucide-react";
+import { Filter, Search as SearchIcon, X, SlidersHorizontal, Building2, MapPin, Users, ChevronRight } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { DoctorCard } from "@/components/DoctorCard";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, getCities } from "@/lib/api";
+import {
+  getDoctors, getSpecialties, getCities, getMedicalCentersDirectory,
+  CENTER_SERVICE_OPTIONS, type CenterServiceType, type MedicalCenterDirectoryEntry,
+} from "@/lib/api";
 
 export default function Search() {
   const { t, dir } = useLanguage();
@@ -21,6 +24,7 @@ export default function Search() {
   const initialQuery = searchParams.get("q") || "";
   const initialSpecialty = searchParams.get("specialty") || "";
   const initialCity = searchParams.get("city") || "";
+  const initialServices = searchParams.get("services") || "";
   const medicalCenterId = searchParams.get("medicalCenterId");
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -29,6 +33,11 @@ export default function Search() {
   );
   const [selectedCities, setSelectedCities] = useState<string[]>(
     initialCity ? [initialCity] : []
+  );
+  const [selectedServices, setSelectedServices] = useState<CenterServiceType[]>(
+    initialServices
+      ? (initialServices.split(",").filter(Boolean) as CenterServiceType[])
+      : []
   );
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -47,11 +56,27 @@ export default function Search() {
     queryFn: getCities,
   });
 
+  const { data: medicalCenters = [] } = useQuery<MedicalCenterDirectoryEntry[]>({
+    queryKey: ["medicalCentersDirectory"],
+    queryFn: () => getMedicalCentersDirectory(),
+  });
+
   const toggleSpecialty = (s: string) =>
     setSelectedSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
   const toggleCity = (c: string) =>
     setSelectedCities(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+
+  const toggleService = (s: CenterServiceType) => {
+    setSelectedServices(prev => {
+      const next = prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s];
+      const params = new URLSearchParams(searchString);
+      if (next.length > 0) params.set("services", next.join(","));
+      else params.delete("services");
+      setLocation(`/search?${params.toString()}`, { replace: true });
+      return next;
+    });
+  };
 
   const medicalCenterName = useMemo(() => {
     if (!medicalCenterId) return null;
@@ -78,17 +103,45 @@ export default function Search() {
       const matchMedicalCenter =
         !medicalCenterId || doctor.affiliatedCenter?.id === Number(medicalCenterId);
 
-      return matchSearch && matchSpecialty && matchCity && matchMedicalCenter;
-    });
-  }, [searchQuery, selectedSpecialties, selectedCities, medicalCenterId, allDoctors]);
+      const matchService =
+        selectedServices.length === 0 ||
+        (doctor.affiliatedCenter?.services ?? []).some(s => selectedServices.includes(s));
 
-  const activeFilterCount = selectedSpecialties.length + selectedCities.length;
+      return matchSearch && matchSpecialty && matchCity && matchMedicalCenter && matchService;
+    });
+  }, [searchQuery, selectedSpecialties, selectedCities, selectedServices, medicalCenterId, allDoctors]);
+
+  const filteredMedicalCenters = useMemo(() => {
+    return medicalCenters.filter(center => {
+      const matchSearch =
+        searchQuery === "" ||
+        center.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchCity =
+        selectedCities.length === 0 ||
+        selectedCities.some(c => (center.cityName ?? "").toLowerCase().includes(c.toLowerCase()));
+
+      const matchService =
+        selectedServices.length === 0 ||
+        (center.services ?? []).some(s => selectedServices.includes(s));
+
+      const matchMedicalCenter = !medicalCenterId || center.id === Number(medicalCenterId);
+
+      return matchSearch && matchCity && matchService && matchMedicalCenter;
+    });
+  }, [searchQuery, selectedCities, selectedServices, medicalCenterId, medicalCenters]);
+
+  const activeFilterCount = selectedSpecialties.length + selectedCities.length + selectedServices.length;
   const hasActiveFilters = activeFilterCount > 0;
 
   const clearFilters = () => {
     setSelectedSpecialties([]);
     setSelectedCities([]);
+    setSelectedServices([]);
     setSearchQuery("");
+    const params = new URLSearchParams(searchString);
+    params.delete("services");
+    setLocation(`/search?${params.toString()}`, { replace: true });
   };
 
   const filterPanel = (
@@ -154,6 +207,27 @@ export default function Search() {
           </div>
         </div>
       )}
+
+      <div className="mb-2">
+        <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">
+          {isRTL ? "الخدمات" : "Services"}
+        </h3>
+        <div className="space-y-2.5">
+          {CENTER_SERVICE_OPTIONS.map(opt => (
+            <div key={opt.value} className="flex items-center gap-2">
+              <Checkbox
+                id={`service-${opt.value}`}
+                checked={selectedServices.includes(opt.value)}
+                onCheckedChange={() => toggleService(opt.value)}
+                data-testid={`checkbox-service-${opt.value}`}
+              />
+              <Label htmlFor={`service-${opt.value}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                {isRTL ? opt.labelAr : opt.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
@@ -203,7 +277,7 @@ export default function Search() {
               className="flex-1 h-10 bg-primary text-white"
               onClick={() => setShowMobileFilters(false)}
             >
-              {`Show ${filteredDoctors.length} results`}
+              {`Show ${filteredDoctors.length + filteredMedicalCenters.length} results`}
             </Button>
           </div>
         </div>
@@ -273,6 +347,88 @@ export default function Search() {
                 <Button variant="outline" className="mt-6" onClick={clearFilters}>
                   {t.search.clearAllFilters}
                 </Button>
+              </div>
+            )}
+
+            {filteredMedicalCenters.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-base sm:text-xl font-bold text-gray-900 mb-4">
+                  {isRTL
+                    ? `المراكز الطبية (${filteredMedicalCenters.length})`
+                    : `Medical Centers (${filteredMedicalCenters.length})`}
+                </h2>
+                <div className="space-y-3">
+                  {filteredMedicalCenters.map(center => (
+                    <div
+                      key={center.id}
+                      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 w-full p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center border"
+                    >
+                      <div className="shrink-0">
+                        {center.image ? (
+                          <img
+                            src={center.image}
+                            alt={center.name}
+                            className="w-14 h-14 rounded-xl object-cover shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-sm bg-primary/10">
+                            <Building2 className="w-6 h-6 text-primary" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-bold text-gray-900 truncate">
+                          {isRTL && center.nameAr ? center.nameAr : center.name}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                          {center.cityName && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {isRTL && center.cityNameAr ? center.cityNameAr : center.cityName}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {center.doctorsCount} {isRTL ? "طبيب" : center.doctorsCount === 1 ? "doctor" : "doctors"}
+                          </span>
+                        </div>
+
+                        {center.services && center.services.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {center.services.map(svc => {
+                              const opt = CENTER_SERVICE_OPTIONS.find(o => o.value === svc);
+                              if (!opt) return null;
+                              return (
+                                <span
+                                  key={svc}
+                                  className={`inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
+                                    selectedServices.includes(svc)
+                                      ? "text-primary bg-primary/10 border-primary/30"
+                                      : "text-gray-600 bg-gray-100 border-gray-200"
+                                  }`}
+                                >
+                                  {isRTL ? opt.labelAr : opt.label}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="shrink-0">
+                        <Button
+                          variant="outline"
+                          className="px-5 py-2 rounded-xl border-gray-300 text-gray-600 font-semibold text-xs hover:bg-white transition-colors bg-transparent h-auto"
+                          onClick={() => setLocation(`/search?medicalCenterId=${center.id}`)}
+                        >
+                          {isRTL ? "عرض الأطباء" : "View Doctors"}
+                          <ChevronRight className="w-3 h-3 ms-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </main>

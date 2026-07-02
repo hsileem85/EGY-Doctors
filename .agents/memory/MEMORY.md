@@ -4,3 +4,4 @@
 - [Bilingual schema migration](bilingual-schema.md) — doctors/clinics use name/bio as Arabic; lookup tables use name_ar; drizzle-kit needs TTY for renames so use raw SQL instead.
 - [Affiliated doctors pattern](affiliated-doctors.md) — medical centers own doctor records via affiliatedCenterId FK; system users created with sys_${centerId}_${hex} phone + bcrypt hash of random bytes; subscription filter bypassed with `affiliatedCenterId IS NOT NULL`.
 - [drizzle-kit push blocked by unrelated prompt](db-push-tty-blocked.md) — unrelated ambiguous rename prompts block additive schema pushes; apply simple additive columns via raw SQL instead.
+- [Dev workflows sometimes missing](dev-workflows-missing.md) — if restart_workflow fails with RUN_COMMAND_NOT_FOUND, recreate workflows from artifact.toml ports/env vars instead of assuming the app is broken.

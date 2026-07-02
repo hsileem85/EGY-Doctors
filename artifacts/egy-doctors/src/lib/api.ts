@@ -93,6 +93,7 @@ export interface ApiDoctor {
     lat?: number | null;
     lng?: number | null;
     cityName?: string | null;
+    services?: CenterServiceType[] | null;
   } | null;
 }
 
