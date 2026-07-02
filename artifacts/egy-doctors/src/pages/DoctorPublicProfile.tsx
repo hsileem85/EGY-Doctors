@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle, Send, Globe, UserPlus, UserCheck } from "lucide-react";
+import { ArrowLeft, Stethoscope, MapPin, Star, Phone, Award, BookOpen, Calendar, CheckCircle2, User, MessageCircle, Send, Globe, UserPlus, UserCheck, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 function whatsappUrl(phone: string) {
@@ -161,6 +161,16 @@ export default function DoctorPublicProfile() {
                   <Stethoscope className="h-4 w-4" />
                   {specialty}
                 </p>
+
+                {/* Poly clinic affiliation */}
+                {doctor.polyClinic && (
+                  <p className="text-violet-300 text-sm flex items-center gap-2 mb-3">
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    {isRTL
+                      ? `جزء من ${doctor.polyClinic.nameAr ?? doctor.polyClinic.name}`
+                      : `Part of ${doctor.polyClinic.name}`}
+                  </p>
+                )}
 
                 {/* Social links row */}
                 {(doctor.websiteUrl || doctor.facebookUrl || doctor.instagramUrl || doctor.tiktokUrl || doctor.youtubeUrl || doctor.xUrl) && (

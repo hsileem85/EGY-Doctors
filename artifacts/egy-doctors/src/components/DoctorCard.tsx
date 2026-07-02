@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { MapPin, Stethoscope, Star, Calendar, Phone } from "lucide-react";
+import { MapPin, Stethoscope, Star, Calendar, Phone, Building2 } from "lucide-react";
 import { type ApiDoctor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +86,21 @@ export function DoctorCard({ doctor, showSlots = false }: DoctorCardProps) {
             <Stethoscope className="h-3.5 w-3.5" />
             {specialty}
           </p>
+
+          {/* Poly clinic affiliation badge */}
+          {doctor.polyClinic && (
+            <div className="mt-1">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-[18px] text-violet-600 border-violet-200 bg-violet-50 gap-0.5 font-medium"
+              >
+                <Building2 className="h-2.5 w-2.5 shrink-0" />
+                {isRTL
+                  ? (doctor.polyClinic.nameAr ?? doctor.polyClinic.name)
+                  : doctor.polyClinic.name}
+              </Badge>
+            </div>
+          )}
 
           {/* Clinic pills — one per clinic */}
           {doctor.clinics.length > 0 && (

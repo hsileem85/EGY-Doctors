@@ -5,7 +5,7 @@ import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
   clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable,
-  doctorFollowsTable,
+  doctorFollowsTable, centerClinicsTable, medicalCentersTable,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -115,6 +115,29 @@ router.get("/doctors", async (req, res): Promise<void> => {
     clinicsByDoctor.get(c.doctorId)!.push(c);
   }
 
+  // Batch-fetch poly clinic membership for all doctors
+  const polyClinicByDoctor = new Map<number, { id: number; name: string; nameAr: string | null }>();
+  if (doctorIds.length > 0) {
+    const pcRows = await db
+      .select({
+        doctorId: centerClinicsTable.doctorId,
+        centerId: medicalCentersTable.id,
+        centerName: medicalCentersTable.name,
+        centerNameAr: medicalCentersTable.nameAr,
+      })
+      .from(centerClinicsTable)
+      .innerJoin(medicalCentersTable, eq(centerClinicsTable.medicalCenterId, medicalCentersTable.id))
+      .where(and(
+        inArray(centerClinicsTable.doctorId, doctorIds),
+        eq(medicalCentersTable.subType, "POLY_CLINIC"),
+      ));
+    for (const r of pcRows) {
+      if (r.doctorId !== null && !polyClinicByDoctor.has(r.doctorId)) {
+        polyClinicByDoctor.set(r.doctorId, { id: r.centerId, name: r.centerName, nameAr: r.centerNameAr ?? null });
+      }
+    }
+  }
+
   const response = rows.map((r) => {
     const doctorClinics = (clinicsByDoctor.get(r.id) ?? []).map((c) => ({
       id: c.id,
@@ -171,6 +194,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
       distanceKm,
       clinics: doctorClinics,
       reviewList: [],
+      polyClinic: polyClinicByDoctor.get(r.id) ?? null,
     };
   });
 
@@ -271,6 +295,22 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     .where(eq(reviewsTable.doctorId, id))
     .orderBy(reviewsTable.createdAt);
 
+  // Fetch poly clinic membership for this doctor
+  const [pcRow] = await db
+    .select({
+      centerId: medicalCentersTable.id,
+      centerName: medicalCentersTable.name,
+      centerNameAr: medicalCentersTable.nameAr,
+    })
+    .from(centerClinicsTable)
+    .innerJoin(medicalCentersTable, eq(centerClinicsTable.medicalCenterId, medicalCentersTable.id))
+    .where(and(
+      eq(centerClinicsTable.doctorId, id),
+      eq(medicalCentersTable.subType, "POLY_CLINIC"),
+    ))
+    .limit(1);
+  const polyClinic = pcRow ? { id: pcRow.centerId, name: pcRow.centerName, nameAr: pcRow.centerNameAr ?? null } : null;
+
   /* isFollowing — only meaningful when caller is authenticated */
   let isFollowing = false;
   if (callerId !== null) {
@@ -314,6 +354,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     youtubeUrl: row.youtubeUrl ?? null,
     xUrl: row.xUrl ?? null,
     isFollowing,
+    polyClinic,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",

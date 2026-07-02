@@ -83,6 +83,7 @@ export interface ApiDoctor {
   youtubeUrl?: string | null;
   xUrl?: string | null;
   isFollowing?: boolean;
+  polyClinic?: { id: number; name: string; nameAr: string | null } | null;
 }
 
 export interface ApiSpecialty {
