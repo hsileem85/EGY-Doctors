@@ -88,9 +88,30 @@ export default function DoctorProfile() {
     enabled: !!id,
   });
 
+  const virtualClinic = useMemo((): ApiClinic | null => {
+    if (!doctor || doctor.clinics.length > 0 || !doctor.affiliatedCenter) return null;
+    const ac = doctor.affiliatedCenter;
+    return {
+      id: -1,
+      name: ac.name,
+      nameAr: ac.nameAr ?? undefined,
+      address: ac.address ?? "",
+      mapUrl: ac.lat && ac.lng
+        ? `https://www.google.com/maps/dir/?api=1&destination=${ac.lat},${ac.lng}`
+        : "",
+      phone: ac.phone ?? "",
+      fee: doctor.fee,
+      location: ac.cityName ?? doctor.cityName ?? "",
+      areaName: ac.cityName ?? "",
+      lat: ac.lat ?? null,
+      lng: ac.lng ?? null,
+      bookingConfirmationMethod: null,
+    };
+  }, [doctor]);
+
   const autoClinic = useMemo(
-    () => (doctor?.clinics.length === 1 ? doctor.clinics[0] : null),
-    [doctor]
+    () => (virtualClinic ?? (doctor?.clinics.length === 1 ? doctor.clinics[0] : null)),
+    [doctor, virtualClinic]
   );
 
   const [bookingStep, setBookingStep] = useState<"clinic" | "calendar" | "slots" | "form" | "success">("clinic");
@@ -186,7 +207,7 @@ export default function DoctorProfile() {
     try {
       await bookAppointment({
         doctorId: doctor.id,
-        clinicId: selectedClinic.id,
+        clinicId: selectedClinic.id > 0 ? selectedClinic.id : undefined,
         patientUserId: user?.id,
         appointmentDate: selectedDate,
         appointmentTime: selectedTime,

@@ -306,10 +306,68 @@ export default function DoctorPublicProfile() {
                     <h2 className="text-lg font-bold text-gray-900">
                       {isRTL ? "العيادات" : "Clinics"}
                     </h2>
-                    <span className="ml-auto text-xs text-gray-400 font-medium">
-                      {doctor.clinics.length} {isRTL ? "فرع" : doctor.clinics.length === 1 ? "branch" : "branches"}
-                    </span>
+                    {doctor.clinics.length > 0 && (
+                      <span className="ml-auto text-xs text-gray-400 font-medium">
+                        {doctor.clinics.length} {isRTL ? "فرع" : doctor.clinics.length === 1 ? "branch" : "branches"}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Affiliated center shown as the clinic when no individual clinics */}
+                  {doctor.clinics.length === 0 && doctor.affiliatedCenter && (
+                    <div className="rounded-xl border border-blue-100 bg-blue-50/40 overflow-hidden">
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                          <Building2 className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900">
+                            {isRTL
+                              ? (doctor.affiliatedCenter.nameAr ?? doctor.affiliatedCenter.name)
+                              : doctor.affiliatedCenter.name}
+                          </p>
+                          {(doctor.affiliatedCenter.address || doctor.affiliatedCenter.cityName) && (
+                            <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              {[doctor.affiliatedCenter.address, doctor.affiliatedCenter.cityName].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          {doctor.affiliatedCenter.phone && (
+                            <div className="flex items-center flex-wrap gap-3 mt-1.5">
+                              <a
+                                href={`tel:${doctor.affiliatedCenter.phone}`}
+                                className="inline-flex items-center gap-1.5 text-sm text-[#D4A853] hover:text-[#c49a4a] font-medium transition-colors"
+                              >
+                                <Phone className="h-3.5 w-3.5 shrink-0" />
+                                {doctor.affiliatedCenter.phone}
+                              </a>
+                              <a
+                                href={whatsappUrl(doctor.affiliatedCenter.phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-[#25D366] hover:text-[#1ebe59] font-medium transition-colors"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                                WhatsApp
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        {doctor.affiliatedCenter.lat && doctor.affiliatedCenter.lng && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${doctor.affiliatedCenter.lat},${doctor.affiliatedCenter.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-[#D4A853] hover:text-[#c49a4a] bg-[#D4A853]/8 hover:bg-[#D4A853]/15 border border-[#D4A853]/20 hover:border-[#D4A853]/40 rounded-lg px-3 py-1.5 transition-colors"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            {isRTL ? "الخريطة" : "Map"}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-3">
                     {doctor.clinics.map((clinic) => (
                       <div key={clinic.id} className="rounded-xl border border-gray-200 overflow-hidden">

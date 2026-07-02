@@ -84,7 +84,16 @@ export interface ApiDoctor {
   xUrl?: string | null;
   isFollowing?: boolean;
   polyClinic?: { id: number; name: string; nameAr: string | null } | null;
-  affiliatedCenter?: { id: number; name: string; nameAr: string | null } | null;
+  affiliatedCenter?: {
+    id: number;
+    name: string;
+    nameAr: string | null;
+    phone?: string | null;
+    address?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+    cityName?: string | null;
+  } | null;
 }
 
 export interface ApiSpecialty {

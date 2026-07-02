@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, inArray, avg, count, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
@@ -11,6 +12,7 @@ import {
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
 const router: IRouter = Router();
+const centerCitiesTable = alias(citiesTable, "center_cities");
 
 function makeImage(name: string) {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F172A&color=D4A853&size=200`;
@@ -72,11 +74,17 @@ router.get("/doctors", async (req, res): Promise<void> => {
     affiliatedCenterId: doctorsTable.affiliatedCenterId,
     affiliatedCenterName: medicalCentersTable.name,
     affiliatedCenterNameAr: medicalCentersTable.nameAr,
+    affiliatedCenterPhone: medicalCentersTable.phone,
+    affiliatedCenterAddress: medicalCentersTable.address,
+    affiliatedCenterLat: medicalCentersTable.lat,
+    affiliatedCenterLng: medicalCentersTable.lng,
+    affiliatedCenterCityName: centerCitiesTable.name,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
     .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
     .leftJoin(medicalCentersTable, eq(doctorsTable.affiliatedCenterId, medicalCentersTable.id))
+    .leftJoin(centerCitiesTable, eq(medicalCentersTable.cityId, centerCitiesTable.id))
     .where(and(...conditions));
 
   if (q) {
@@ -200,7 +208,16 @@ router.get("/doctors", async (req, res): Promise<void> => {
       reviewList: [],
       polyClinic: polyClinicByDoctor.get(r.id) ?? null,
       affiliatedCenter: r.affiliatedCenterId && r.affiliatedCenterName
-        ? { id: r.affiliatedCenterId, name: r.affiliatedCenterName, nameAr: r.affiliatedCenterNameAr ?? null }
+        ? {
+            id: r.affiliatedCenterId,
+            name: r.affiliatedCenterName,
+            nameAr: r.affiliatedCenterNameAr ?? null,
+            phone: r.affiliatedCenterPhone ?? null,
+            address: r.affiliatedCenterAddress ?? null,
+            lat: r.affiliatedCenterLat ?? null,
+            lng: r.affiliatedCenterLng ?? null,
+            cityName: r.affiliatedCenterCityName ?? null,
+          }
         : null,
     };
   });
@@ -269,12 +286,18 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     affiliatedCenterId: doctorsTable.affiliatedCenterId,
     affiliatedCenterName: medicalCentersTable.name,
     affiliatedCenterNameAr: medicalCentersTable.nameAr,
+    affiliatedCenterPhone: medicalCentersTable.phone,
+    affiliatedCenterAddress: medicalCentersTable.address,
+    affiliatedCenterLat: medicalCentersTable.lat,
+    affiliatedCenterLng: medicalCentersTable.lng,
+    affiliatedCenterCityName: centerCitiesTable.name,
   })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
     .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
     .leftJoin(areasTable, eq(doctorsTable.areaId, areasTable.id))
     .leftJoin(medicalCentersTable, eq(doctorsTable.affiliatedCenterId, medicalCentersTable.id))
+    .leftJoin(centerCitiesTable, eq(medicalCentersTable.cityId, centerCitiesTable.id))
     .where(eq(doctorsTable.id, id))
     .limit(1);
 
@@ -367,7 +390,16 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     isFollowing,
     polyClinic,
     affiliatedCenter: row.affiliatedCenterId && row.affiliatedCenterName
-      ? { id: row.affiliatedCenterId, name: row.affiliatedCenterName, nameAr: row.affiliatedCenterNameAr ?? null }
+      ? {
+          id: row.affiliatedCenterId,
+          name: row.affiliatedCenterName,
+          nameAr: row.affiliatedCenterNameAr ?? null,
+          phone: row.affiliatedCenterPhone ?? null,
+          address: row.affiliatedCenterAddress ?? null,
+          lat: row.affiliatedCenterLat ?? null,
+          lng: row.affiliatedCenterLng ?? null,
+          cityName: row.affiliatedCenterCityName ?? null,
+        }
       : null,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
