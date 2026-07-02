@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, type ApiDoctor, type MedicalCenterDirectoryEntry } from "@/lib/api";
+import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, CENTER_SERVICE_OPTIONS, type ApiDoctor, type MedicalCenterDirectoryEntry } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
 type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
@@ -709,6 +709,23 @@ export default function Home() {
                               {isRTL && sp.nameAr ? sp.nameAr : sp.name}
                             </span>
                           ))}
+                        </div>
+                      )}
+
+                      {center.services && center.services.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {center.services.map((svc) => {
+                            const opt = CENTER_SERVICE_OPTIONS.find((o) => o.value === svc);
+                            if (!opt) return null;
+                            return (
+                              <span
+                                key={svc}
+                                className="inline-block text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5"
+                              >
+                                {isRTL ? opt.labelAr : opt.label}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

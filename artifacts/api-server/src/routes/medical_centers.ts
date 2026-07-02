@@ -6,7 +6,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, medicalCentersTable, centerClinicsTable, usersTable, doctorsTable, specialtiesTable,
-  clinicsTable, citiesTable,
+  clinicsTable, citiesTable, centerServiceEnum,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -48,6 +48,7 @@ const ProfileBody = z.object({
   instagram: z.string().optional().nullable(),
   lat: z.number().optional().nullable(),
   lng: z.number().optional().nullable(),
+  services: z.array(z.enum(centerServiceEnum)).optional(),
 });
 
 /* ── GET /medical-centers/profile ── */
@@ -408,6 +409,7 @@ router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
       phone: medicalCentersTable.phone,
       cityName: citiesTable.name,
       cityNameAr: citiesTable.nameAr,
+      services: medicalCentersTable.services,
     })
     .from(medicalCentersTable)
     .leftJoin(citiesTable, eq(medicalCentersTable.cityId, citiesTable.id))
@@ -461,6 +463,7 @@ router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
       specialties,
       doctors: doctors.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr })),
       doctorsCount: doctors.length,
+      services: c.services ?? [],
     };
   }));
 });

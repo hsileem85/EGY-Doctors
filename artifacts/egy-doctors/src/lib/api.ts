@@ -719,6 +719,31 @@ export function deleteAdminVoucher(id: number): Promise<{ message: string }> {
 
 export type CenterSubType = "POLY_CLINIC" | "HOSPITAL" | "LAB" | "SCAN_CENTER";
 
+export type CenterServiceType =
+  | "LAB"
+  | "SCAN"
+  | "DENTAL"
+  | "EYE"
+  | "PHYSICAL_THERAPY"
+  | "PHARMACY"
+  | "X_RAY"
+  | "EMERGENCY"
+  | "MATERNITY"
+  | "GENERAL_CHECKUP";
+
+export const CENTER_SERVICE_OPTIONS: { value: CenterServiceType; label: string; labelAr: string }[] = [
+  { value: "LAB", label: "Lab", labelAr: "معمل تحاليل" },
+  { value: "SCAN", label: "Scan", labelAr: "أشعة تصويرية" },
+  { value: "DENTAL", label: "Dental", labelAr: "أسنان" },
+  { value: "EYE", label: "Eye", labelAr: "عيون" },
+  { value: "PHYSICAL_THERAPY", label: "Physical Therapy", labelAr: "علاج طبيعي" },
+  { value: "PHARMACY", label: "Pharmacy", labelAr: "صيدلية" },
+  { value: "X_RAY", label: "X-Ray", labelAr: "أشعة سينية" },
+  { value: "EMERGENCY", label: "Emergency", labelAr: "طوارئ" },
+  { value: "MATERNITY", label: "Maternity", labelAr: "ولادة" },
+  { value: "GENERAL_CHECKUP", label: "General Checkup", labelAr: "فحص عام" },
+];
+
 export interface MedicalCenterProfile {
   id: number;
   userId: number;
@@ -737,6 +762,7 @@ export interface MedicalCenterProfile {
   instagram: string | null;
   lat: number | null;
   lng: number | null;
+  services: CenterServiceType[] | null;
   isApproved: boolean;
   hasVezeetaProfile: boolean;
   subscriptionStatus: string;
@@ -750,7 +776,7 @@ export function updateMedicalCenterProfile(
   data: Partial<Pick<MedicalCenterProfile,
     "name" | "nameAr" | "type" | "subType" | "phone" | "address" |
     "bio" | "bioAr" | "commercialRegistrationNumber" | "image" |
-    "website" | "facebook" | "instagram" | "lat" | "lng"
+    "website" | "facebook" | "instagram" | "lat" | "lng" | "services"
   >>,
 ): Promise<MedicalCenterProfile> {
   return request("/medical-centers/profile", { method: "PUT", body: JSON.stringify(data) });
@@ -819,6 +845,7 @@ export interface MedicalCenterDirectoryEntry {
   specialties: { name: string | null; nameAr: string | null }[];
   doctors: { id: number; name: string; nameAr: string | null }[];
   doctorsCount: number;
+  services: CenterServiceType[];
 }
 
 export function getMedicalCentersDirectory(): Promise<MedicalCenterDirectoryEntry[]> {

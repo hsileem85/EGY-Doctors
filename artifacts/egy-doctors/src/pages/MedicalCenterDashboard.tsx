@@ -830,6 +830,11 @@ export default function MedicalCenterDashboard() {
     retry: false,
   });
 
+  const { data: affiliatedDoctors = [] } = useQuery<AffiliatedDoctor[]>({
+    queryKey: ["affiliatedDoctors"],
+    queryFn: getAffiliatedDoctors,
+  });
+
   const t = {
     title:              isRTL ? "لوحة تحكم المركز الطبي" : "Medical Center Dashboard",
     welcome:            isRTL ? "مرحباً بك، هنا نظرة عامة على أداء مركزك." : "Welcome back. Here's an overview of your center.",
@@ -960,9 +965,9 @@ export default function MedicalCenterDashboard() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                   {[
-                    { icon: <Users className="h-5 w-5 text-blue-500" />,         bg: "bg-blue-50",       label: t.doctors,      value: "—" },
+                    { icon: <Users className="h-5 w-5 text-blue-500" />,         bg: "bg-blue-50",       label: t.doctors,      value: affiliatedDoctors.length.toString() },
                     { icon: <FileText className="h-5 w-5 text-[#D4A853]" />,     bg: "bg-[#D4A853]/10",  label: t.appointments, value: "—" },
-                    { icon: <Stethoscope className="h-5 w-5 text-amber-500" />,  bg: "bg-amber-50",      label: t.services,     value: "—" },
+                    { icon: <Stethoscope className="h-5 w-5 text-amber-500" />,  bg: "bg-amber-50",      label: t.services,     value: (centerProfile?.services?.length ?? 0).toString() },
                     { icon: <Users className="h-5 w-5 text-purple-500" />,       bg: "bg-purple-50",     label: t.patients,     value: "—" },
                   ].map((s, i) => (
                     <Card key={i}>
@@ -970,7 +975,7 @@ export default function MedicalCenterDashboard() {
                         <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}>{s.icon}</div>
                         <div>
                           <p className="text-sm text-gray-500">{s.label}</p>
-                          <p className="text-xl font-bold text-gray-400">{s.value}</p>
+                          <p className={`text-xl font-bold ${s.value === "—" ? "text-gray-400" : "text-gray-900"}`}>{s.value}</p>
                         </div>
                       </CardContent>
                     </Card>

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { getMedicalCenterProfile, updateMedicalCenterProfile, type MedicalCenterProfile, type CenterSubType } from "@/lib/api";
+import { getMedicalCenterProfile, updateMedicalCenterProfile, CENTER_SERVICE_OPTIONS, type MedicalCenterProfile, type CenterSubType, type CenterServiceType } from "@/lib/api";
 
 const subTypeLabels: Record<CenterSubType, { en: string; ar: string }> = {
   POLY_CLINIC: { en: "Poly Clinic",   ar: "عيادة متعددة التخصصات" },
@@ -43,12 +43,13 @@ interface FormState {
   instagram: string;
   lat: string;
   lng: string;
+  services: CenterServiceType[];
 }
 
 const EMPTY: FormState = {
   name: "", nameAr: "", type: "clinic", subType: "",
   phone: "", address: "", bio: "", bioAr: "", commercialRegistrationNumber: "",
-  website: "", facebook: "", instagram: "", lat: "", lng: "",
+  website: "", facebook: "", instagram: "", lat: "", lng: "", services: [],
 };
 
 export default function MedicalCenterProfile() {
@@ -84,6 +85,7 @@ export default function MedicalCenterProfile() {
           instagram: p.instagram ?? "",
           lat: p.lat?.toString() ?? "",
           lng: p.lng?.toString() ?? "",
+          services: p.services ?? [],
         });
       })
       .catch(() => {})
@@ -111,6 +113,7 @@ export default function MedicalCenterProfile() {
         instagram: form.instagram || null,
         lat: form.lat ? parseFloat(form.lat) : null,
         lng: form.lng ? parseFloat(form.lng) : null,
+        services: form.services,
       });
       toast({
         title: isRTL ? "تم الحفظ!" : "Profile Saved!",
@@ -353,6 +356,46 @@ export default function MedicalCenterProfile() {
                     {isRTL ? "معاينة الموقع على الخريطة" : "Preview on map"}
                   </a>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Services */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">{isRTL ? "الخدمات المتوفرة" : "Available Services"}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-gray-500 mb-3">
+                  {isRTL
+                    ? "اختر الخدمات التي يقدمها مركزك. ستظهر للمرضى في صفحة البحث والرئيسية."
+                    : "Select the services your center offers. These are shown publicly on search and home pages."}
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {CENTER_SERVICE_OPTIONS.map((opt) => {
+                    const selected = form.services.includes(opt.value);
+                    return (
+                      <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() =>
+                          f(
+                            "services",
+                            selected
+                              ? form.services.filter((s) => s !== opt.value)
+                              : [...form.services, opt.value],
+                          )
+                        }
+                        className={`text-sm font-medium rounded-lg px-3 py-2 border transition-colors text-start ${
+                          selected
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {isRTL ? opt.labelAr : opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
