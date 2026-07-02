@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, CENTER_SERVICE_OPTIONS, type ApiDoctor, type MedicalCenterDirectoryEntry } from "@/lib/api";
+import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, CENTER_SERVICE_OPTIONS, type ApiDoctor, type MedicalCenterDirectoryEntry, type CenterServiceType } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
 type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
@@ -57,6 +57,7 @@ export default function Home() {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [nearMeActive, setNearMeActive] = useState(false);
   const [locationToast, setLocationToast] = useState<string | null>(null);
+  const [centerServiceFilters, setCenterServiceFilters] = useState<Set<CenterServiceType>>(new Set());
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
 
@@ -68,6 +69,19 @@ export default function Home() {
   });
   const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";
   const citiesValue = stats ? stats.citiesWithClinics.toLocaleString() : "—";
+
+  const filteredMedicalCenters = useMemo(() => {
+    if (centerServiceFilters.size === 0) return medicalCenters;
+    return medicalCenters.filter((c) => c.services?.some((s) => centerServiceFilters.has(s)));
+  }, [medicalCenters, centerServiceFilters]);
+
+  function toggleCenterServiceFilter(value: CenterServiceType) {
+    setCenterServiceFilters((prev) => {
+      const next = new Set(prev);
+      next.has(value) ? next.delete(value) : next.add(value);
+      return next;
+    });
+  }
 
   function showToast(msg: string) {
     setLocationToast(msg);
@@ -658,8 +672,45 @@ export default function Home() {
                 </h1>
               </div>
 
+              <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                <span className="text-xs font-semibold text-gray-500 me-1">
+                  {isRTL ? "فلترة حسب الخدمة:" : "Filter by service:"}
+                </span>
+                {CENTER_SERVICE_OPTIONS.map((opt) => {
+                  const active = centerServiceFilters.has(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleCenterServiceFilter(opt.value)}
+                      className={`text-xs font-semibold rounded-full px-3 py-1 border transition-colors ${
+                        active
+                          ? "bg-[#0F172A] text-white border-[#0F172A]"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {isRTL ? opt.labelAr : opt.label}
+                    </button>
+                  );
+                })}
+                {centerServiceFilters.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCenterServiceFilters(new Set())}
+                    className="text-xs font-semibold text-[#8B6914] underline ms-1"
+                  >
+                    {isRTL ? "مسح الفلتر" : "Clear filter"}
+                  </button>
+                )}
+              </div>
+
+              {filteredMedicalCenters.length === 0 ? (
+                <p className="text-sm text-gray-500 py-6 text-center">
+                  {isRTL ? "لا توجد مراكز طبية تقدم هذه الخدمة" : "No medical centers offer this service"}
+                </p>
+              ) : (
               <div className="space-y-3">
-                {medicalCenters.map((center) => (
+                {filteredMedicalCenters.map((center) => (
                   <div
                     key={center.id}
                     className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 w-full p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center"
@@ -746,6 +797,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
         </main>
