@@ -683,9 +683,11 @@ export default function Home() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-extrabold text-slate-900 truncate">
-                        {isRTL && center.nameAr ? center.nameAr : center.name}
-                      </h3>
+                      <Link href={`/medical-center/${center.id}`}>
+                        <h3 className="text-base font-extrabold text-slate-900 truncate hover:text-[#D4A853] transition-colors cursor-pointer">
+                          {isRTL && center.nameAr ? center.nameAr : center.name}
+                        </h3>
+                      </Link>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
                         {center.cityName && (
                           <span className="flex items-center gap-1">

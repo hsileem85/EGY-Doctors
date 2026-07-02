@@ -18,6 +18,7 @@ import PatientDashboard from "@/pages/PatientDashboard";
 import PatientEMR from "@/pages/PatientEMR";
 import MedicalCenterDashboard from "@/pages/MedicalCenterDashboard";
 import MedicalCenterProfile from "@/pages/MedicalCenterProfile";
+import MedicalCenterPublicProfile from "@/pages/MedicalCenterPublicProfile";
 import Magazine from "@/pages/Magazine";
 import ContactUs from "@/pages/ContactUs";
 import Admin from "@/pages/Admin";
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/patient/emr">{() => <ProtectedRoute component={PatientEMR} />}</Route>
       <Route path="/medical-center/dashboard">{() => <ProtectedRoute component={MedicalCenterDashboard} />}</Route>
       <Route path="/medical-center/profile-setup">{() => <ProtectedRoute component={MedicalCenterProfile} />}</Route>
+      <Route path="/medical-center/:id" component={MedicalCenterPublicProfile} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/contact" component={ContactUs} />
       <Route path="/admin" component={Admin} />

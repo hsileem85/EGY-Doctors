@@ -468,4 +468,66 @@ router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
   }));
 });
 
+/* ── GET /medical-centers/:id — public profile ── */
+router.get("/medical-centers/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [center] = await db
+    .select({
+      id: medicalCentersTable.id,
+      name: medicalCentersTable.name,
+      nameAr: medicalCentersTable.nameAr,
+      type: medicalCentersTable.type,
+      subType: medicalCentersTable.subType,
+      image: medicalCentersTable.image,
+      bio: medicalCentersTable.bio,
+      bioAr: medicalCentersTable.bioAr,
+      address: medicalCentersTable.address,
+      phone: medicalCentersTable.phone,
+      website: medicalCentersTable.website,
+      facebook: medicalCentersTable.facebook,
+      instagram: medicalCentersTable.instagram,
+      lat: medicalCentersTable.lat,
+      lng: medicalCentersTable.lng,
+      cityName: citiesTable.name,
+      cityNameAr: citiesTable.nameAr,
+      services: medicalCentersTable.services,
+      isApproved: medicalCentersTable.isApproved,
+    })
+    .from(medicalCentersTable)
+    .leftJoin(citiesTable, eq(medicalCentersTable.cityId, citiesTable.id))
+    .where(eq(medicalCentersTable.id, id))
+    .limit(1);
+
+  if (!center || !center.isApproved) { res.status(404).json({ error: "Medical center not found" }); return; }
+
+  const doctors = await db
+    .select({
+      id: doctorsTable.id,
+      name: doctorsTable.nameEn,
+      nameAr: doctorsTable.name,
+      specialtyName: specialtiesTable.name,
+      specialtyNameAr: specialtiesTable.nameAr,
+    })
+    .from(doctorsTable)
+    .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .where(and(eq(doctorsTable.affiliatedCenterId, center.id), eq(doctorsTable.isActive, true)));
+
+  const specialties = Array.from(new Map(
+    doctors
+      .filter(d => d.specialtyName)
+      .map(d => [d.specialtyName, { name: d.specialtyName, nameAr: d.specialtyNameAr }]),
+  ).values());
+
+  const { isApproved: _isApproved, ...rest } = center;
+  res.json({
+    ...rest,
+    specialties,
+    doctors: doctors.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr })),
+    doctorsCount: doctors.length,
+    services: center.services ?? [],
+  });
+});
+
 export default router;

@@ -852,6 +852,34 @@ export function getMedicalCentersDirectory(): Promise<MedicalCenterDirectoryEntr
   return request("/medical-centers/directory");
 }
 
+export interface MedicalCenterPublicProfile {
+  id: number;
+  name: string;
+  nameAr: string | null;
+  type: string;
+  subType: CenterSubType | null;
+  image: string | null;
+  bio: string | null;
+  bioAr: string | null;
+  address: string | null;
+  phone: string | null;
+  website: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  lat: number | null;
+  lng: number | null;
+  cityName: string | null;
+  cityNameAr: string | null;
+  specialties: { name: string | null; nameAr: string | null }[];
+  doctors: { id: number; name: string; nameAr: string | null }[];
+  doctorsCount: number;
+  services: CenterServiceType[];
+}
+
+export function getMedicalCenterPublicProfile(id: number): Promise<MedicalCenterPublicProfile> {
+  return request(`/medical-centers/${id}`);
+}
+
 /* ─── Admin Medical Centers ─── */
 
 export interface AdminMedicalCenter {
