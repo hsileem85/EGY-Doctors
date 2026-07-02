@@ -31,6 +31,7 @@ export const doctorsTable = pgTable("doctors", {
   youtubeUrl: text("youtube_url"),
   xUrl: text("x_url"),
   isActive: boolean("is_active").notNull().default(true),
+  hasVezeetaProfile: boolean("has_vezeeta_profile").notNull().default(false),
   subscriptionStatus: text("subscription_status", { enum: subscriptionStatusEnum }).notNull().default("INACTIVE"),
   subscriptionPlan: text("subscription_plan").notNull().default("SEMI_ANNUAL"),
   subscriptionEndDate: timestamp("subscription_end_date", { withTimezone: true }),

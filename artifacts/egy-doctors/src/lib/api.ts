@@ -205,6 +205,10 @@ export function toggleDoctorActive(id: number): Promise<{ isActive: boolean }> {
   return request(`/admin/doctors/${id}/toggle-active`, { method: "PATCH" });
 }
 
+export function toggleDoctorVezeeta(id: number): Promise<{ hasVezeetaProfile: boolean }> {
+  return request(`/admin/doctors/${id}/toggle-vezeeta`, { method: "PATCH" });
+}
+
 export interface AdminClinic {
   id: number;
   name: string | null;

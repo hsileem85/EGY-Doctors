@@ -105,6 +105,7 @@ async function listDoctorsWithDetails() {
       reviews: doctorsTable.reviews,
       accountStatus: doctorsTable.accountStatus,
       isActive: doctorsTable.isActive,
+      hasVezeetaProfile: doctorsTable.hasVezeetaProfile,
       createdAt: doctorsTable.createdAt,
       updatedAt: doctorsTable.updatedAt,
     })
@@ -233,6 +234,31 @@ router.get("/admin/doctors/:id/clinics", async (req, res): Promise<void> => {
     .where(eq(clinicsTable.doctorId, id));
 
   res.json(rows);
+});
+
+/* ─── PATCH /admin/doctors/:id/toggle-vezeeta ─── */
+router.patch("/admin/doctors/:id/toggle-vezeeta", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [current] = await db.select({ hasVezeetaProfile: doctorsTable.hasVezeetaProfile }).from(doctorsTable).where(eq(doctorsTable.id, id));
+  if (!current) {
+    res.status(404).json({ error: "Doctor not found" });
+    return;
+  }
+
+  const [doctor] = await db
+    .update(doctorsTable)
+    .set({ hasVezeetaProfile: !current.hasVezeetaProfile })
+    .where(eq(doctorsTable.id, id))
+    .returning();
+
+  req.log.info({ doctorId: id, hasVezeetaProfile: doctor.hasVezeetaProfile }, "Doctor Vezeeta profile toggled");
+  res.json(stringifyRow(doctor));
 });
 
 /* ─── PATCH /admin/doctors/:id/toggle-active ─── */

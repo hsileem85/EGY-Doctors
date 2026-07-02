@@ -77,7 +77,7 @@ import {
   Save,
   DollarSign,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -1138,6 +1138,11 @@ function DoctorsSection({ lang }: { lang: string }) {
     onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ["doctors"] }); },
   });
 
+  const toggleVezeeta = useMutation({
+    mutationFn: (id: number) => toggleDoctorVezeeta(id),
+    onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ["doctors"] }); },
+  });
+
   const handleApprove = (id: number) => {
     approve.mutate({ id }, { onSuccess: invalidate });
   };
@@ -1296,6 +1301,17 @@ function DoctorsSection({ lang }: { lang: string }) {
                                 : <Check className="w-3.5 h-3.5" />}
                             </Button>
                           )}
+                          {/* Vezeeta profile toggle */}
+                          <Button
+                            size="sm"
+                            variant={(doctor as unknown as Record<string, unknown>).hasVezeetaProfile ? "default" : "outline"}
+                            className={`h-7 text-xs gap-1 ${(doctor as unknown as Record<string, unknown>).hasVezeetaProfile ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-gray-500 hover:text-blue-600 hover:border-blue-300"}`}
+                            onClick={() => toggleVezeeta.mutate(doctor.id)}
+                            disabled={toggleVezeeta.isPending}
+                            title={isAr ? "تبديل حالة Vezeeta" : "Toggle Vezeeta profile"}
+                          >
+                            V
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
