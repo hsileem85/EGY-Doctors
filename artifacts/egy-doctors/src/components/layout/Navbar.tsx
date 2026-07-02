@@ -134,6 +134,24 @@ export function Navbar() {
                     {lang === "ar" ? "لوحة التحكم" : "Dashboard"}
                   </DropdownMenuItem>
                 )}
+                {user.role === "medical_center" && (
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853] mt-1"
+                    onClick={() => setLocation("/medical-center/dashboard")}
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-[#D4A853]" />
+                    {lang === "ar" ? "لوحة التحكم" : "Dashboard"}
+                  </DropdownMenuItem>
+                )}
+                {user.role === "medical_center" && (
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853]"
+                    onClick={() => setLocation("/medical-center/profile-setup")}
+                  >
+                    <UserCog className="h-4 w-4 text-[#D4A853]" />
+                    {lang === "ar" ? "تعديل الملف الشخصي" : "Edit Profile"}
+                  </DropdownMenuItem>
+                )}
                 {user.role === "doctor" && (
                   <DropdownMenuItem
                     className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853]"

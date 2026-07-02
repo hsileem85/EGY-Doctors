@@ -699,3 +699,93 @@ export function updateAdminVoucher(id: number, data: Partial<Pick<AdminVoucher, 
 export function deleteAdminVoucher(id: number): Promise<{ message: string }> {
   return request(`/admin/vouchers/${id}`, { method: "DELETE" });
 }
+
+/* ─── Medical Center Profile ─── */
+
+export type CenterSubType = "POLY_CLINIC" | "HOSPITAL" | "LAB" | "SCAN_CENTER";
+
+export interface MedicalCenterProfile {
+  id: number;
+  userId: number;
+  name: string;
+  nameAr: string | null;
+  type: string;
+  subType: CenterSubType | null;
+  phone: string | null;
+  address: string | null;
+  bio: string | null;
+  bioAr: string | null;
+  commercialRegistrationNumber: string | null;
+  image: string | null;
+  isApproved: boolean;
+  hasVezeetaProfile: boolean;
+  subscriptionStatus: string;
+}
+
+export function getMedicalCenterProfile(): Promise<MedicalCenterProfile> {
+  return request("/medical-centers/profile");
+}
+
+export function updateMedicalCenterProfile(data: Partial<Pick<MedicalCenterProfile, "name" | "nameAr" | "type" | "subType" | "phone" | "address" | "bio" | "bioAr" | "commercialRegistrationNumber" | "image">>): Promise<MedicalCenterProfile> {
+  return request("/medical-centers/profile", { method: "PUT", body: JSON.stringify(data) });
+}
+
+/* ─── Center Clinics ─── */
+
+export interface CenterClinic {
+  id: number;
+  medicalCenterId: number;
+  name: string;
+  specialty: string | null;
+  doctorId: number | null;
+  createdAt: string;
+}
+
+export function getCenterClinics(centerId: number): Promise<CenterClinic[]> {
+  return request(`/medical-centers/${centerId}/clinics`);
+}
+
+export function createCenterClinic(centerId: number, data: { name: string; specialty?: string; doctorId?: number | null }): Promise<CenterClinic> {
+  return request(`/medical-centers/${centerId}/clinics`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateCenterClinic(centerId: number, clinicId: number, data: { name?: string; specialty?: string; doctorId?: number | null }): Promise<CenterClinic> {
+  return request(`/medical-centers/${centerId}/clinics/${clinicId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteCenterClinic(centerId: number, clinicId: number): Promise<void> {
+  return request(`/medical-centers/${centerId}/clinics/${clinicId}`, { method: "DELETE" });
+}
+
+/* ─── Admin Medical Centers ─── */
+
+export interface AdminMedicalCenter {
+  id: number;
+  userId: number;
+  name: string;
+  nameAr: string | null;
+  type: string;
+  subType: CenterSubType | null;
+  phone: string | null;
+  address: string | null;
+  bio: string | null;
+  isActive: boolean;
+  isApproved: boolean;
+  hasVezeetaProfile: boolean;
+  subscriptionStatus: string;
+  createdAt: string;
+  email: string | null;
+  userPhone: string | null;
+}
+
+export function getAdminMedicalCenters(): Promise<AdminMedicalCenter[]> {
+  return request("/admin/medical-centers");
+}
+
+export function approveCenter(id: number): Promise<AdminMedicalCenter> {
+  return request(`/admin/medical-centers/${id}/approve`, { method: "PATCH" });
+}
+
+export function toggleCenterVezeeta(id: number): Promise<AdminMedicalCenter> {
+  return request(`/admin/medical-centers/${id}/toggle-vezeeta`, { method: "PATCH" });
+}

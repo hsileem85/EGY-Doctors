@@ -8,6 +8,7 @@ import listingsRouter from "./listings";
 import appointmentsRouter from "./appointments";
 import magazineRouter from "./magazine";
 import billingRouter from "./billing";
+import medicalCentersRouter from "./medical_centers";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(listingsRouter);
 router.use(appointmentsRouter);
 router.use(magazineRouter);
 router.use(billingRouter);
+router.use(medicalCentersRouter);
 
 export default router;

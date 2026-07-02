@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Building2, Upload, Save, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Building2, Save, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,88 +11,134 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { getMedicalCenterProfile, updateMedicalCenterProfile, type MedicalCenterProfile, type CenterSubType } from "@/lib/api";
 
-type MedicalSubtype = "hospital" | "clinic" | "polyclinic" | "lab" | "scan";
-type Day = "Saturday" | "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday";
-
-const medicalSubtypeLabels = {
-  en: { hospital: "Hospital", clinic: "Clinic", polyclinic: "Poly Clinic", lab: "Lab", scan: "Scan Center" },
-  ar: { hospital: "مستشفى", clinic: "عيادة", polyclinic: "عيادة متعددة", lab: "معمل", scan: "مركز أشعة" },
+const subTypeLabels: Record<CenterSubType, { en: string; ar: string }> = {
+  POLY_CLINIC: { en: "Poly Clinic",   ar: "عيادة متعددة التخصصات" },
+  HOSPITAL:    { en: "Hospital",       ar: "مستشفى" },
+  LAB:         { en: "Lab",            ar: "معمل تحاليل" },
+  SCAN_CENTER: { en: "Scan Center",   ar: "مركز أشعة" },
 };
 
-const defaultSchedule: Record<Day, { active: boolean; from: string; to: string }> = {
-  Saturday: { active: true, from: "09:00", to: "17:00" },
-  Sunday: { active: false, from: "09:00", to: "17:00" },
-  Monday: { active: true, from: "09:00", to: "17:00" },
-  Tuesday: { active: true, from: "09:00", to: "17:00" },
-  Wednesday: { active: true, from: "09:00", to: "17:00" },
-  Thursday: { active: true, from: "09:00", to: "17:00" },
-  Friday: { active: false, from: "09:00", to: "17:00" },
+const typeLabels: Record<string, { en: string; ar: string }> = {
+  hospital:    { en: "Hospital",   ar: "مستشفى" },
+  clinic:      { en: "Clinic",     ar: "عيادة" },
+  polyclinic:  { en: "Poly Clinic", ar: "عيادة متعددة" },
+  lab:         { en: "Lab",        ar: "معمل" },
+  scan:        { en: "Scan Center", ar: "مركز أشعة" },
+};
+
+interface FormState {
+  name: string;
+  nameAr: string;
+  type: string;
+  subType: CenterSubType | "";
+  phone: string;
+  address: string;
+  bio: string;
+  bioAr: string;
+  commercialRegistrationNumber: string;
+}
+
+const EMPTY: FormState = {
+  name: "", nameAr: "", type: "clinic", subType: "",
+  phone: "", address: "", bio: "", bioAr: "", commercialRegistrationNumber: "",
 };
 
 export default function MedicalCenterProfile() {
   const { dir, lang } = useLanguage();
   const isRTL = dir === "rtl";
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
 
-  const [formData, setFormData] = useState({
-    name: "Alfa Scan Radiology",
-    type: "scan" as MedicalSubtype,
-    email: "info@alfascan.com",
-    phone: "+20 2 1234 5678",
-    location: "Cairo",
-    address: "123 Nile Corniche, Downtown Cairo",
-    about: "Leading radiology center providing advanced diagnostic imaging services with state-of-the-art equipment.",
-    services: "MRI, CT Scan, X-Ray, Ultrasound, Mammography",
-  });
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [centerId, setCenterId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [notApproved, setNotApproved] = useState(false);
 
-  const [schedule, setSchedule] = useState(defaultSchedule);
+  useEffect(() => {
+    getMedicalCenterProfile()
+      .then((p: MedicalCenterProfile) => {
+        setCenterId(p.id);
+        setNotApproved(!p.isApproved);
+        setForm({
+          name:   p.name   ?? "",
+          nameAr: p.nameAr ?? "",
+          type:   p.type   ?? "clinic",
+          subType: (p.subType as CenterSubType) ?? "",
+          phone:  p.phone  ?? "",
+          address: p.address ?? "",
+          bio:    p.bio    ?? "",
+          bioAr:  p.bioAr  ?? "",
+          commercialRegistrationNumber: p.commercialRegistrationNumber ?? "",
+        });
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  const handleSave = () => {
-    toast({
-      title: isRTL ? "تم حفظ الملف!" : "Profile Saved!",
-      description: isRTL ? "تم حفظ تغييرات ملف مركزك بنجاح." : "Your center profile changes have been saved successfully.",
-      className: "bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20",
-    });
-    setTimeout(() => setLocation("/medical-center/dashboard"), 1500);
-  };
+  const f = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleScheduleChange = (day: Day, field: "active" | "from" | "to", value: boolean | string) => {
-    setSchedule((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
-  };
+  async function handleSave() {
+    setIsSaving(true);
+    try {
+      await updateMedicalCenterProfile({
+        name:   form.name,
+        nameAr: form.nameAr || undefined,
+        type:   form.type,
+        subType: (form.subType as CenterSubType) || undefined,
+        phone:  form.phone || undefined,
+        address: form.address || undefined,
+        bio:    form.bio || undefined,
+        bioAr:  form.bioAr || undefined,
+        commercialRegistrationNumber: form.commercialRegistrationNumber || undefined,
+      });
+      toast({
+        title: isRTL ? "تم الحفظ!" : "Profile Saved!",
+        description: isRTL ? "تم حفظ بيانات مركزك بنجاح." : "Your center profile has been saved.",
+        className: "bg-green-50 text-green-800 border-green-200",
+      });
+      setTimeout(() => setLocation("/medical-center/dashboard"), 1200);
+    } catch (err) {
+      toast({
+        title: isRTL ? "خطأ في الحفظ" : "Save failed",
+        description: err instanceof Error ? err.message : (isRTL ? "حاول مرة أخرى" : "Please try again"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   const t = {
-    title: isRTL ? "إعداد ملف المركز" : "Center Profile Setup",
+    title:    isRTL ? "إعداد ملف المركز" : "Center Profile Setup",
     subtitle: isRTL ? "حدث معلومات مركزك واحفظها." : "Update your center information and save changes.",
-    back: isRTL ? "العودة للوحة" : "Back to Dashboard",
-    save: isRTL ? "حفظ التغييرات" : "Save Changes",
-    basicInfo: isRTL ? "المعلومات الأساسية" : "Basic Information",
-    centerName: isRTL ? "اسم المركز" : "Center Name",
-    centerType: isRTL ? "نوع المركز" : "Center Type",
-    email: isRTL ? "البريد الإلكتروني" : "Email",
-    phone: isRTL ? "رقم الهاتف" : "Phone",
-    location: isRTL ? "الموقع" : "Location",
-    address: isRTL ? "العنوان" : "Address",
-    about: isRTL ? "نبذة عامة" : "About",
-    services: isRTL ? "الخدمات (مفصولة بفواصل)" : "Services (comma separated)",
-    schedule: isRTL ? "المنتظار" : "Weekly Schedule",
-    uploadLogo: isRTL ? "رفع الشعار" : "Upload Logo",
-    days: isRTL
-      ? { Saturday: "السبت", Sunday: "الأحد", Monday: "الاثنين", Tuesday: "الثلاثاء", Wednesday: "الأربعاء", Thursday: "الخميس", Friday: "الجمعة" }
-      : { Saturday: "Saturday", Sunday: "Sunday", Monday: "Monday", Tuesday: "Tuesday", Wednesday: "Wednesday", Thursday: "Thursday", Friday: "Friday" },
+    back:     isRTL ? "العودة للوحة" : "Back to Dashboard",
+    save:     isRTL ? "حفظ التغييرات" : "Save Changes",
   };
 
-  const locations = ["Cairo", "Alexandria", "Giza", "Mansoura", "Tanta", "Zagazig", "Ismailia", "Suez", "Port Said", "Luxor", "Aswan", "Sharm El Sheikh"];
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="min-h-[calc(100vh-4rem)] bg-gray-50/50">
-        <div className="max-w-4xl mx-auto p-4 md:p-8">
+      <div className="min-h-[calc(100vh-4rem)] bg-gray-50/50" dir={dir}>
+        <div className="max-w-3xl mx-auto p-4 md:p-8">
+
+          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
-              <p className="text-gray-500">{t.subtitle}</p>
+              <p className="text-gray-500 text-sm">{t.subtitle}</p>
             </div>
             <div className="flex gap-2">
               <Link href="/medical-center/dashboard">
@@ -101,185 +147,128 @@ export default function MedicalCenterProfile() {
                   {t.back}
                 </Button>
               </Link>
-              <Button onClick={handleSave} className="gap-1">
+              <Button onClick={handleSave} disabled={isSaving} className="gap-1">
                 <Save className="h-4 w-4" />
-                {t.save}
+                {isSaving ? (isRTL ? "جارٍ الحفظ..." : "Saving...") : t.save}
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Left: Logo upload */}
+          {/* Pending approval banner */}
+          {notApproved && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+              <div className="text-amber-500 mt-0.5">⏳</div>
+              <div>
+                <p className="font-semibold text-amber-800 text-sm">
+                  {isRTL ? "ملفك قيد المراجعة" : "Your profile is pending approval"}
+                </p>
+                <p className="text-amber-600 text-xs mt-0.5">
+                  {isRTL
+                    ? "سيتم مراجعة بياناتك من قِبل الفريق وسنُعلمك بالنتيجة."
+                    : "Our team will review your information and notify you shortly."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {centerId && (
+            <div className="mb-4 flex items-center gap-2 text-xs text-gray-400">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              {isRTL ? `رقم المركز: ${centerId}` : `Center ID: ${centerId}`}
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {/* Logo placeholder */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold">{t.uploadLogo}</CardTitle>
+                <CardTitle className="text-base font-semibold">{isRTL ? "شعار المركز" : "Center Logo"}</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col items-center">
-                <div className="w-24 h-24 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mb-3 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+              <CardContent className="flex flex-col items-center py-2">
+                <div className="w-24 h-24 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mb-2">
                   <Building2 className="h-8 w-8 text-gray-400" />
                 </div>
-                <p className="text-xs text-gray-500 text-center">{isRTL ? "انقر لرفع صورة" : "Click to upload image"}</p>
+                <p className="text-xs text-gray-500">{isRTL ? "رفع الصورة (قريباً)" : "Image upload coming soon"}</p>
               </CardContent>
             </Card>
 
-            {/* Right: Form */}
-            <div className="md:col-span-2 space-y-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">{t.basicInfo}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="centerName">{t.centerName}</Label>
-                      <Input
-                        id="centerName"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="centerType">{t.centerType}</Label>
-                      <Select
-                        value={formData.type}
-                        onValueChange={(v) => setFormData({ ...formData, type: v as MedicalSubtype })}
-                      >
-                        <SelectTrigger id="centerType">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(["hospital", "clinic", "polyclinic", "lab", "scan"] as MedicalSubtype[]).map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {medicalSubtypeLabels[lang][s]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="centerEmail">{t.email}</Label>
-                      <Input
-                        id="centerEmail"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="centerPhone">{t.phone}</Label>
-                      <Input
-                        id="centerPhone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="centerLocation">{t.location}</Label>
-                      <Select
-                        value={formData.location}
-                        onValueChange={(v) => setFormData({ ...formData, location: v })}
-                      >
-                        <SelectTrigger id="centerLocation">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map((l) => (
-                            <SelectItem key={l} value={l}>{l}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="centerAddress">{t.address}</Label>
-                      <Input
-                        id="centerAddress"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
+            {/* Basic Info */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">{isRTL ? "المعلومات الأساسية" : "Basic Information"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="centerAbout">{t.about}</Label>
-                    <Textarea
-                      id="centerAbout"
-                      rows={3}
-                      value={formData.about}
-                      onChange={(e) => setFormData({ ...formData, about: e.target.value })}
-                    />
+                    <Label>{isRTL ? "اسم المركز (إنجليزي)" : "Center Name (English)"}</Label>
+                    <Input value={form.name} onChange={(e) => f("name", e.target.value)} />
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="centerServices">{t.services}</Label>
-                    <Input
-                      id="centerServices"
-                      value={formData.services}
-                      onChange={(e) => setFormData({ ...formData, services: e.target.value })}
-                      placeholder="MRI, CT Scan, X-Ray..."
-                    />
+                    <Label>{isRTL ? "اسم المركز (عربي)" : "Center Name (Arabic)"}</Label>
+                    <Input value={form.nameAr} onChange={(e) => f("nameAr", e.target.value)} dir="rtl" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Weekly Schedule */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">{t.schedule}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {(Object.keys(schedule) as Day[]).map((day) => (
-                    <div
-                      key={day}
-                      className={`flex items-center gap-3 p-3 rounded-lg border ${
-                        schedule[day].active ? "border-primary/20 bg-primary/5" : "border-gray-100 bg-gray-50/50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={schedule[day].active}
-                        onChange={(e) => handleScheduleChange(day, "active", e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <span className={`text-sm font-medium w-24 ${schedule[day].active ? "text-gray-900" : "text-gray-400"}`}>
-                        {t.days[day]}
-                      </span>
-                      <select
-                        value={schedule[day].from}
-                        onChange={(e) => handleScheduleChange(day, "from", e.target.value)}
-                        disabled={!schedule[day].active}
-                        className="text-sm border rounded-md px-2 py-1 disabled:opacity-40"
-                      >
-                        {Array.from({ length: 24 }).map((_, i) => (
-                          <option key={i} value={`${String(i).padStart(2, "0")}:00`}>
-                            {String(i).padStart(2, "0")}:00
-                          </option>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{isRTL ? "نوع المنشأة" : "Facility Type"}</Label>
+                    <Select value={form.type} onValueChange={(v) => f("type", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(typeLabels).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{isRTL ? v.ar : v.en}</SelectItem>
                         ))}
-                      </select>
-                      <span className="text-gray-400">-</span>
-                      <select
-                        value={schedule[day].to}
-                        onChange={(e) => handleScheduleChange(day, "to", e.target.value)}
-                        disabled={!schedule[day].active}
-                        className="text-sm border rounded-md px-2 py-1 disabled:opacity-40"
-                      >
-                        {Array.from({ length: 24 }).map((_, i) => (
-                          <option key={i} value={`${String(i).padStart(2, "0")}:00`}>
-                            {String(i).padStart(2, "0")}:00
-                          </option>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{isRTL ? "التصنيف الفرعي" : "Sub-Type"}</Label>
+                    <Select value={form.subType || "none"} onValueChange={(v) => f("subType", v === "none" ? "" : v as CenterSubType)}>
+                      <SelectTrigger><SelectValue placeholder={isRTL ? "اختر..." : "Select..."} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{isRTL ? "لا يوجد" : "None"}</SelectItem>
+                        {(Object.entries(subTypeLabels) as [CenterSubType, { en: string; ar: string }][]).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{isRTL ? v.ar : v.en}</SelectItem>
                         ))}
-                      </select>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{isRTL ? "رقم الهاتف" : "Phone"}</Label>
+                    <Input type="tel" value={form.phone} onChange={(e) => f("phone", e.target.value)} dir="ltr" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{isRTL ? "رقم السجل التجاري" : "Commercial Registration No."}</Label>
+                    <Input value={form.commercialRegistrationNumber} onChange={(e) => f("commercialRegistrationNumber", e.target.value)} dir="ltr" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{isRTL ? "العنوان" : "Address"}</Label>
+                  <Input value={form.address} onChange={(e) => f("address", e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bio */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">{isRTL ? "نبذة عن المركز" : "About the Center"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{isRTL ? "وصف بالإنجليزية" : "Description (English)"}</Label>
+                  <Textarea rows={3} value={form.bio} onChange={(e) => f("bio", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{isRTL ? "وصف بالعربية" : "Description (Arabic)"}</Label>
+                  <Textarea rows={3} value={form.bioAr} onChange={(e) => f("bioAr", e.target.value)} dir="rtl" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

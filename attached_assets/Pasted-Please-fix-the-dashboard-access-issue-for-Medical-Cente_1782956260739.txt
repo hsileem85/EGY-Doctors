@@ -1,0 +1,29 @@
+Please fix the dashboard access issue for Medical Centers and upgrade the Medical Center architecture to support "Poly Clinics", Admin approvals, and reporting flags. Currently, Medical Centers cannot access their dashboard or profile due to routing/middleware restrictions.
+
+Please implement the following full-stack updates:
+
+### 1. Database Schema Updates
+* **MedicalCenter Model:** Add the following fields:
+    - `subType`: String or Enum (e.g., 'POLY_CLINIC', 'HOSPITAL', 'LAB', 'SCAN_CENTER').
+    - `isApproved`: Boolean (Default: `false`).
+    - `hasVezeetaProfile`: Boolean (Default: `false` - Strictly for Admin reporting).
+* **CenterClinic Model (NEW):** Create a 1-to-Many relationship for Poly Clinics. 
+    - `id`: Unique identifier.
+    - `medicalCenterId`: Foreign key linking to the parent Medical Center.
+    - `name`: String (e.g., "Dental Clinic").
+    - `specialty`: String.
+    - `doctorId`: Foreign key (Optional, linking a specific registered doctor to this sub-clinic).
+
+### 2. Backend Routing & Middleware Fixes
+* **Fix Dashboard Access:** Update the authentication middleware (e.g., `requireAuth` or role guards) to explicitly allow users with the `MEDICAL_CENTER` role to access `/dashboard/medical-center` and `/api/medical-centers/profile`.
+* **Approval Guard:** Add logic ensuring that if a Medical Center's `isApproved` status is `false`, they can log in to view their pending status but are completely hidden from the public search and cannot publish to the Magazine.
+* **Poly Clinic APIs:** Create CRUD endpoints (`GET, POST, PUT, DELETE /api/medical-centers/:id/clinics`) allowing a Poly Clinic to manage its internal sub-clinics.
+
+### 3. Medical Center Dashboard UI
+* **Profile Parity:** Ensure the Medical Center profile editor matches the high-quality layout of the Doctor profile (Avatar upload, cover photo, bio, location, contact info) while preserving facility-specific fields (Commercial Registration) instead of Medical Syndicate Number.
+* **Poly Clinic Management Tab:** In the Medical Center Dashboard, conditionally render a new tab called "Manage Clinics" ONLY if the center's `subType` equals `POLY_CLINIC`.
+* **Clinics UI:** Inside this tab, build a form allowing the center to dynamically add, edit, or remove individual clinics, specifying the "Specialty" and optionally assigning a registered "Doctor" for each.
+
+### 4. Admin Dashboard UI
+* **Approval Workflow:** In the Admin Dashboard, create a "Pending Centers" view. Display a datatable of Medical Centers awaiting approval, featuring a primary "Approve" button that updates `isApproved` to `true`.
+* **Reporting Flag:** Inside the Admin's view/edit modal for any Medical Center, add a simple checkbox labeled "Has Vezeeta Profile". This maps to the `hasVezeetaProfile` database field and should only be visible/editable by the Admin for internal reporting purposes.

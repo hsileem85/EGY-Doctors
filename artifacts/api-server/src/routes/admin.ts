@@ -3,7 +3,7 @@ import { eq, max, inArray, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -679,6 +679,61 @@ router.put("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
 
   req.log.info(d, "Platform settings updated (split pricing)");
   res.json({ message: "Settings saved." });
+});
+
+/* ─── Medical Centers (Admin) ─── */
+
+router.get("/admin/medical-centers", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      id: medicalCentersTable.id,
+      userId: medicalCentersTable.userId,
+      name: medicalCentersTable.name,
+      nameAr: medicalCentersTable.nameAr,
+      type: medicalCentersTable.type,
+      subType: medicalCentersTable.subType,
+      phone: medicalCentersTable.phone,
+      address: medicalCentersTable.address,
+      bio: medicalCentersTable.bio,
+      isActive: medicalCentersTable.isActive,
+      isApproved: medicalCentersTable.isApproved,
+      hasVezeetaProfile: medicalCentersTable.hasVezeetaProfile,
+      subscriptionStatus: medicalCentersTable.subscriptionStatus,
+      createdAt: medicalCentersTable.createdAt,
+      email: usersTable.email,
+      userPhone: usersTable.phone,
+    })
+    .from(medicalCentersTable)
+    .leftJoin(usersTable, eq(medicalCentersTable.userId, usersTable.id))
+    .orderBy(desc(medicalCentersTable.createdAt));
+  res.json(stringifyDates(rows));
+});
+
+router.patch("/admin/medical-centers/:id/approve", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [center] = await db
+    .update(medicalCentersTable)
+    .set({ isApproved: true })
+    .where(eq(medicalCentersTable.id, id))
+    .returning();
+  if (!center) { res.status(404).json({ error: "Center not found" }); return; }
+  req.log.info({ centerId: id }, "Medical center approved");
+  res.json(stringifyRow(center));
+});
+
+router.patch("/admin/medical-centers/:id/toggle-vezeeta", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [current] = await db.select({ hasVezeetaProfile: medicalCentersTable.hasVezeetaProfile })
+    .from(medicalCentersTable).where(eq(medicalCentersTable.id, id)).limit(1);
+  if (!current) { res.status(404).json({ error: "Center not found" }); return; }
+  const [updated] = await db
+    .update(medicalCentersTable)
+    .set({ hasVezeetaProfile: !current.hasVezeetaProfile })
+    .where(eq(medicalCentersTable.id, id))
+    .returning();
+  res.json(stringifyRow(updated));
 });
 
 /* ─── GET /admin/vouchers ─── */

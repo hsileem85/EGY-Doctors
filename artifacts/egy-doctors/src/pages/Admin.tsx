@@ -77,7 +77,7 @@ import {
   Save,
   DollarSign,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -324,6 +324,7 @@ function AdminLoginGate() {
 
 const tabs = [
   { id: "doctors", label: "Doctors", labelAr: "الأطباء", icon: Users },
+  { id: "centers", label: "Centers", labelAr: "المراكز الطبية", icon: Building2 },
   { id: "users", label: "Users", labelAr: "المستخدمون", icon: KeyRound },
   { id: "specialties", label: "Specialties", labelAr: "التخصصات", icon: Stethoscope },
   { id: "cities", label: "Cities", labelAr: "المحافظات", icon: MapPinHouse },
@@ -410,6 +411,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {activeTab === "doctors" && <DoctorsSection lang={lang} />}
+        {activeTab === "centers" && <CentersSection lang={lang} />}
         {activeTab === "users" && <UsersSection lang={lang} />}
         {activeTab === "specialties" && <SpecialtiesSection lang={lang} />}
         {activeTab === "cities" && <CitiesSection lang={lang} />}
@@ -1762,6 +1764,155 @@ function AreasSection({ lang }: { lang: string }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ─── CentersSection ─── */
+const SUB_TYPE_LABELS: Record<string, string> = {
+  POLY_CLINIC: "Poly Clinic",
+  HOSPITAL: "Hospital",
+  LAB: "Lab",
+  SCAN_CENTER: "Scan Center",
+};
+
+function CentersSection({ lang }: { lang: string }) {
+  const isRTL = lang === "ar";
+  const qc = useQueryClient();
+
+  const { data: centers = [], isLoading } = useQuery<AdminMedicalCenter[]>({
+    queryKey: ["adminMedicalCenters"],
+    queryFn: getAdminMedicalCenters,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: number) => approveCenter(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminMedicalCenters"] }),
+  });
+
+  const vezeetaMutation = useMutation({
+    mutationFn: (id: number) => toggleCenterVezeeta(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminMedicalCenters"] }),
+  });
+
+  const pending = centers.filter((c) => !c.isApproved);
+  const approved = centers.filter((c) => c.isApproved);
+
+  const renderRow = (c: AdminMedicalCenter) => (
+    <TableRow key={c.id}>
+      <TableCell>
+        <div>
+          <p className="font-medium text-sm">{c.name}{c.nameAr ? ` / ${c.nameAr}` : ""}</p>
+          <p className="text-xs text-gray-400">{c.email ?? c.userPhone ?? "—"}</p>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs">{c.type}</span>
+          {c.subType && <span className="text-xs text-gray-400">{SUB_TYPE_LABELS[c.subType] ?? c.subType}</span>}
+        </div>
+      </TableCell>
+      <TableCell>
+        {c.isApproved
+          ? <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">{isRTL ? "معتمد" : "Approved"}</Badge>
+          : <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">{isRTL ? "قيد المراجعة" : "Pending"}</Badge>
+        }
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline" className="text-xs">{c.subscriptionStatus}</Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          {!c.isApproved && (
+            <Button
+              size="sm"
+              className="h-7 text-xs bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-1"
+              onClick={() => approveMutation.mutate(c.id)}
+              disabled={approveMutation.isPending}
+            >
+              <Check className="h-3 w-3" />
+              {isRTL ? "اعتماد" : "Approve"}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant={c.hasVezeetaProfile ? "default" : "outline"}
+            className={`h-7 text-xs gap-1 ${c.hasVezeetaProfile ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-gray-600"}`}
+            onClick={() => vezeetaMutation.mutate(c.id)}
+            disabled={vezeetaMutation.isPending}
+            title={isRTL ? "تبديل حالة Vezeeta" : "Toggle Vezeeta profile"}
+          >
+            <Globe className="h-3 w-3" />
+            Vezeeta
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">{isRTL ? "المراكز الطبية" : "Medical Centers"}</h2>
+        <Badge variant="outline" className="text-xs">{isRTL ? `${centers.length} مركز` : `${centers.length} total`}</Badge>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-16"><div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+      ) : centers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border text-center">
+          <Building2 className="h-12 w-12 text-gray-300 mb-4" />
+          <p className="text-gray-500 text-sm">{isRTL ? "لا توجد مراكز طبية مسجلة بعد." : "No medical centers registered yet."}</p>
+        </div>
+      ) : (
+        <>
+          {pending.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-amber-700 mb-2 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {isRTL ? `قيد المراجعة (${pending.length})` : `Pending Approval (${pending.length})`}
+              </h3>
+              <div className="bg-white rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRTL ? "الاسم" : "Name"}</TableHead>
+                      <TableHead>{isRTL ? "النوع" : "Type"}</TableHead>
+                      <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
+                      <TableHead>{isRTL ? "الاشتراك" : "Subscription"}</TableHead>
+                      <TableHead>{isRTL ? "إجراءات" : "Actions"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>{pending.map(renderRow)}</TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {approved.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-2">
+                <Check className="h-4 w-4" />
+                {isRTL ? `معتمدة (${approved.length})` : `Approved (${approved.length})`}
+              </h3>
+              <div className="bg-white rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRTL ? "الاسم" : "Name"}</TableHead>
+                      <TableHead>{isRTL ? "النوع" : "Type"}</TableHead>
+                      <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
+                      <TableHead>{isRTL ? "الاشتراك" : "Subscription"}</TableHead>
+                      <TableHead>{isRTL ? "إجراءات" : "Actions"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>{approved.map(renderRow)}</TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

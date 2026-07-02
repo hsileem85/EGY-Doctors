@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import {
-  Building2, Users, CalendarDays, Stethoscope, TrendingUp, FileText,
+  Building2, Users, TrendingUp, FileText,
   Settings, Plus, CreditCard, Newspaper, LogOut, BookOpen,
+  Stethoscope, Pencil, Trash2, Check, X,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,36 +14,23 @@ import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getBillingInfo, startTrial, validateVoucher, initiatePaymobPayment,
+  getMedicalCenterProfile, getCenterClinics, createCenterClinic, updateCenterClinic, deleteCenterClinic,
   type BillingInfo, type VoucherValidation, type PlanType, type PaymobInitiateResponse,
+  type MedicalCenterProfile, type CenterClinic,
 } from "@/lib/api";
 
-type CenterTab = "overview" | "billing" | "publications";
+type CenterTab = "overview" | "billing" | "publications" | "clinics";
 
-const center = {
-  name: "Alfa Scan Radiology",
-  type: "scan",
-  location: "Cairo",
-  doctors: 12,
-  appointments: 48,
-  patients: 320,
-  services: ["MRI", "CT Scan", "X-Ray", "Ultrasound", "Mammography"],
-};
-
-const upcomingAppointments = [
-  { id: 1, patient: "Amira Hassan",  service: "Chest X-Ray",       doctor: "Dr. Khaled Samir", date: "2026-05-28", time: "10:00", status: "confirmed" },
-  { id: 2, patient: "Mohamed Ali",   service: "MRI Brain",          doctor: "Dr. Nadia Fathy",  date: "2026-05-28", time: "11:30", status: "pending"   },
-  { id: 3, patient: "Samar Youssef", service: "Ultrasound Abdomen", doctor: "Dr. Khaled Samir", date: "2026-05-29", time: "09:00", status: "confirmed" },
-];
-
-const doctors = [
-  { id: 1, name: "Dr. Khaled Samir", specialty: "Radiology", patients: 145 },
-  { id: 2, name: "Dr. Nadia Fathy",  specialty: "Radiology", patients: 98  },
-  { id: 3, name: "Dr. Omar Tarek",   specialty: "Radiology", patients: 112 },
-];
-
-const typeLabels = {
-  en: { hospital: "Hospital", clinic: "Clinic", polyclinic: "Poly Clinic", lab: "Lab", scan: "Scan Center" },
-  ar: { hospital: "مستشفى",  clinic: "عيادة",  polyclinic: "عيادة متعددة", lab: "معمل", scan: "مركز أشعة" },
+const typeLabels: Record<string, { en: string; ar: string }> = {
+  hospital:    { en: "Hospital",   ar: "مستشفى" },
+  clinic:      { en: "Clinic",     ar: "عيادة" },
+  polyclinic:  { en: "Poly Clinic", ar: "عيادة متعددة" },
+  lab:         { en: "Lab",        ar: "معمل" },
+  scan:        { en: "Scan Center", ar: "مركز أشعة" },
+  POLY_CLINIC: { en: "Poly Clinic", ar: "عيادة متعددة التخصصات" },
+  HOSPITAL:    { en: "Hospital",   ar: "مستشفى" },
+  LAB:         { en: "Lab",        ar: "معمل تحاليل" },
+  SCAN_CENTER: { en: "Scan Center", ar: "مركز أشعة" },
 };
 
 /* ────────────────────────────────────────────────────────────────────
@@ -427,6 +415,110 @@ function CenterPublicationsTab({ isRTL }: { isRTL: boolean }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────
+   Clinics Management Tab (POLY_CLINIC only)
+──────────────────────────────────────────────────────────────────── */
+function ClinicsManagementTab({ centerId, isRTL }: { centerId: number; isRTL: boolean }) {
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [newSpecialty, setNewSpecialty] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSpecialty, setEditSpecialty] = useState("");
+
+  const { data: clinics = [], isLoading } = useQuery<CenterClinic[]>({
+    queryKey: ["centerClinics", centerId],
+    queryFn: () => getCenterClinics(centerId),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: () => createCenterClinic(centerId, { name: newName.trim(), specialty: newSpecialty.trim() || undefined }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["centerClinics", centerId] }); setNewName(""); setNewSpecialty(""); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (id: number) => updateCenterClinic(centerId, id, { name: editName.trim(), specialty: editSpecialty.trim() || undefined }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["centerClinics", centerId] }); setEditId(null); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteCenterClinic(centerId, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["centerClinics", centerId] }),
+  });
+
+  const startEdit = (c: CenterClinic) => { setEditId(c.id); setEditName(c.name); setEditSpecialty(c.specialty ?? ""); };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{isRTL ? "إدارة العيادات" : "Manage Clinics"}</h1>
+        <p className="text-gray-500 text-sm mt-1">{isRTL ? "أضف وعدّل عيادات المركز المتعدد التخصصات" : "Add and manage specialty clinics for this poly clinic"}</p>
+      </div>
+
+      {/* Add new */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-col sm:flex-row gap-3">
+        <input
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder={isRTL ? "اسم العيادة..." : "Clinic name..."}
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <input
+          className="w-44 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder={isRTL ? "التخصص (اختياري)" : "Specialty (optional)"}
+          value={newSpecialty}
+          onChange={(e) => setNewSpecialty(e.target.value)}
+        />
+        <Button
+          className="gap-1.5 bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] shrink-0"
+          onClick={() => newName.trim() && addMutation.mutate()}
+          disabled={!newName.trim() || addMutation.isPending}
+        >
+          <Plus className="h-4 w-4" />
+          {isRTL ? "إضافة" : "Add"}
+        </Button>
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : clinics.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 text-center">
+          <Stethoscope className="h-12 w-12 text-gray-300 mb-4" />
+          <h3 className="font-semibold text-gray-700">{isRTL ? "لا توجد عيادات بعد" : "No clinics yet"}</h3>
+          <p className="text-sm text-gray-500 mt-1">{isRTL ? "أضف أول عيادة من الأعلى" : "Add your first clinic above"}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {clinics.map((clinic) => (
+            <div key={clinic.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
+              {editId === clinic.id ? (
+                <>
+                  <input className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm" value={editName} onChange={(e) => setEditName(e.target.value)} />
+                  <input className="w-40 border border-gray-200 rounded-lg px-3 py-1.5 text-sm" value={editSpecialty} onChange={(e) => setEditSpecialty(e.target.value)} />
+                  <Button size="icon" variant="ghost" onClick={() => updateMutation.mutate(clinic.id)} disabled={updateMutation.isPending}><Check className="h-4 w-4 text-green-600" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => setEditId(null)}><X className="h-4 w-4 text-gray-400" /></Button>
+                </>
+              ) : (
+                <>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{clinic.name}</p>
+                    {clinic.specialty && <p className="text-xs text-gray-500">{clinic.specialty}</p>}
+                  </div>
+                  <Button size="icon" variant="ghost" onClick={() => startEdit(clinic)}><Pencil className="h-4 w-4 text-gray-400" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(clinic.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-400" /></Button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
    Main Dashboard
 ──────────────────────────────────────────────────────────────────── */
 export default function MedicalCenterDashboard() {
@@ -440,6 +532,12 @@ export default function MedicalCenterDashboard() {
     queryFn: getBillingInfo,
   });
   const isSubscribed = billingInfo?.status === "ACTIVE" || billingInfo?.status === "TRIAL";
+
+  const { data: centerProfile } = useQuery<MedicalCenterProfile>({
+    queryKey: ["medicalCenterProfile"],
+    queryFn: getMedicalCenterProfile,
+    retry: false,
+  });
 
   const t = {
     title:              isRTL ? "لوحة تحكم المركز الطبي" : "Medical Center Dashboard",
@@ -461,6 +559,9 @@ export default function MedicalCenterDashboard() {
     { id: "overview",     icon: <TrendingUp className="h-4 w-4" />,  label: isRTL ? "نظرة عامة" : "Overview"      },
     { id: "billing",      icon: <CreditCard className="h-4 w-4" />,  label: isRTL ? "الاشتراك"  : "Billing"       },
     { id: "publications", icon: <Newspaper className="h-4 w-4" />,   label: isRTL ? "المنشورات" : "Publications"  },
+    ...(centerProfile?.subType === "POLY_CLINIC"
+      ? [{ id: "clinics" as CenterTab, icon: <Stethoscope className="h-4 w-4" />, label: isRTL ? "إدارة العيادات" : "Clinics" }]
+      : []),
   ];
 
   return (
@@ -474,8 +575,8 @@ export default function MedicalCenterDashboard() {
                 <Building2 className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm">{center.name}</h3>
-                <p className="text-xs text-gray-500">{typeLabels[lang][center.type as keyof typeof typeLabels.en]}</p>
+                <h3 className="font-bold text-sm">{centerProfile?.name ?? "Medical Center"}</h3>
+                <p className="text-xs text-gray-500">{centerProfile?.type ? (typeLabels[centerProfile.type]?.[lang as "en" | "ar"] ?? centerProfile.type) : "—"}</p>
               </div>
             </div>
 
@@ -565,20 +666,31 @@ export default function MedicalCenterDashboard() {
                   </div>
                 )}
 
+                {/* Approval banner */}
+                {centerProfile && !centerProfile.isApproved && (
+                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                    <div className="text-amber-500 mt-0.5">⏳</div>
+                    <div>
+                      <p className="font-semibold text-amber-800 text-sm">{isRTL ? "ملفك قيد المراجعة" : "Profile pending approval"}</p>
+                      <p className="text-amber-600 text-xs mt-0.5">{isRTL ? "سيتم مراجعة بياناتك وسنُعلمك بالنتيجة." : "Our team will review your information shortly."}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                   {[
-                    { icon: <Users className="h-5 w-5 text-blue-500" />,    bg: "bg-blue-50",           label: t.doctors,      value: center.doctors      },
-                    { icon: <CalendarDays className="h-5 w-5 text-[#D4A853]" />, bg: "bg-[#D4A853]/10",label: t.appointments, value: center.appointments },
-                    { icon: <Stethoscope className="h-5 w-5 text-amber-500" />, bg: "bg-amber-50",      label: t.services,     value: center.services.length },
-                    { icon: <Users className="h-5 w-5 text-purple-500" />,  bg: "bg-purple-50",         label: t.patients,     value: center.patients     },
+                    { icon: <Users className="h-5 w-5 text-blue-500" />,         bg: "bg-blue-50",       label: t.doctors,      value: "—" },
+                    { icon: <FileText className="h-5 w-5 text-[#D4A853]" />,     bg: "bg-[#D4A853]/10",  label: t.appointments, value: "—" },
+                    { icon: <Stethoscope className="h-5 w-5 text-amber-500" />,  bg: "bg-amber-50",      label: t.services,     value: "—" },
+                    { icon: <Users className="h-5 w-5 text-purple-500" />,       bg: "bg-purple-50",     label: t.patients,     value: "—" },
                   ].map((s, i) => (
                     <Card key={i}>
                       <CardContent className="p-4 flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}>{s.icon}</div>
                         <div>
                           <p className="text-sm text-gray-500">{s.label}</p>
-                          <p className="text-xl font-bold">{s.value}</p>
+                          <p className="text-xl font-bold text-gray-400">{s.value}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -586,88 +698,54 @@ export default function MedicalCenterDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Upcoming Appointments */}
+                  {/* Upcoming Appointments placeholder */}
                   <Card>
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <CardHeader className="pb-3">
                       <CardTitle className="text-base font-semibold flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-primary" />
+                        <FileText className="h-4 w-4 text-primary" />
                         {t.upcomingAppts}
                       </CardTitle>
-                      <Badge variant="outline" className="text-primary border-primary/20">{upcomingAppointments.length}</Badge>
                     </CardHeader>
                     <CardContent>
-                      {upcomingAppointments.length === 0 ? (
-                        <p className="text-sm text-gray-500 py-4 text-center">{t.noAppointments}</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {upcomingAppointments.map((apt) => (
-                            <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                              <div>
-                                <p className="font-medium text-sm">{apt.patient}</p>
-                                <p className="text-xs text-gray-500">{apt.service} · {apt.doctor} · {apt.date} {apt.time}</p>
-                              </div>
-                              <Badge variant="outline" className={
-                                apt.status === "confirmed"
-                                  ? "text-[#D4A853] border-[#D4A853]/20 bg-[#D4A853]/5"
-                                  : "text-amber-700 border-amber-200 bg-amber-50"
-                              }>
-                                {apt.status === "confirmed" ? t.confirmed : t.pending}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <p className="text-sm text-gray-400 py-4 text-center">{t.noAppointments}</p>
                     </CardContent>
                   </Card>
 
-                  {/* Doctors */}
+                  {/* Doctors placeholder */}
                   <Card>
                     <CardHeader className="pb-3 flex flex-row items-center justify-between">
                       <CardTitle className="text-base font-semibold flex items-center gap-2">
                         <Users className="h-4 w-4 text-primary" />
                         {t.ourDoctors}
                       </CardTitle>
-                      <Button variant="ghost" size="sm" className="text-primary h-7 gap-1">
+                      <Button variant="ghost" size="sm" className="text-primary h-7 gap-1" disabled>
                         <Plus className="h-3.5 w-3.5" />
                         {t.addDoctor}
                       </Button>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
-                        {doctors.map((doc) => (
-                          <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                              {doc.name.charAt(4)}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{doc.name}</p>
-                              <p className="text-xs text-gray-500">{doc.specialty} · {doc.patients} {isRTL ? "مريض" : "patients"}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-sm text-gray-400 py-4 text-center">{isRTL ? "لا يوجد أطباء مرتبطون بعد." : "No linked doctors yet."}</p>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Services */}
-                <Card className="mt-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                      <Stethoscope className="h-4 w-4 text-primary" />
-                      {t.serviceList}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {center.services.map((svc) => (
-                        <Badge key={svc} variant="outline" className="text-gray-700 border-gray-200 bg-gray-50 px-3 py-1">
-                          {svc}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Profile quick-link */}
+                {centerProfile && (
+                  <Card className="mt-6">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-semibold text-sm">{centerProfile.name}</p>
+                          <p className="text-xs text-gray-500">{centerProfile.address ?? (isRTL ? "لم يُحدد العنوان بعد" : "No address set yet")}</p>
+                        </div>
+                      </div>
+                      <Link href="/medical-center/profile-setup">
+                        <Button size="sm" variant="outline">{isRTL ? "تعديل الملف" : "Edit Profile"}</Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
 
@@ -679,6 +757,11 @@ export default function MedicalCenterDashboard() {
               isSubscribed
                 ? <CenterPublicationsTab isRTL={isRTL} />
                 : <PublicationsPaywall isRTL={isRTL} onGoToBilling={() => setActiveTab("billing")} />
+            )}
+
+            {/* ── Clinics Tab (POLY_CLINIC only) ── */}
+            {activeTab === "clinics" && centerProfile?.id && (
+              <ClinicsManagementTab centerId={centerProfile.id} isRTL={isRTL} />
             )}
           </div>
         </main>
