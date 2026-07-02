@@ -31,3 +31,12 @@ Affiliated doctors always appear regardless of subscription status.
 Only days with `enabled: true` in the frontend form are written; absent keys mean "day off".
 
 **Why:** Keeps the doctor table as the single source of truth without a separate schedule join table, and avoids touching the existing doctor/patient workflow.
+
+## Clinic sync on create/update/delete
+Creating an affiliated doctor also inserts a real `clinics` row (nameEn/address/phone/lat/lng copied from the center, fee from the doctor form) so the doctor's public profile shows a real clinic instead of falling back to a "virtual clinic" placeholder. Updating the doctor's name/fee syncs the linked clinic; deleting the doctor also deletes its linked clinic row first.
+
+## Two unrelated "clinic" concepts — don't conflate
+`clinics` (per-doctor, real bookable location) is a completely different table from `center_clinics` (a poly-clinic center's internal specialty-clinic list, used only for an independent doctor's "polyClinic" badge). A dashboard feature that manages `center_clinics` CRUD is unrelated to affiliated-doctor clinic creation — removing one does not affect the other.
+
+## Public directory endpoint
+`GET /medical-centers/directory` (public, read-only) returns approved centers joined with city name plus aggregated affiliated-doctor names/specialties/count — used to list registered centers on the Home page.

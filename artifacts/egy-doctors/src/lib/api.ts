@@ -801,31 +801,28 @@ export function deleteAffiliatedDoctor(id: number): Promise<void> {
   return request(`/medical-centers/affiliated-doctors/${id}`, { method: "DELETE" });
 }
 
-/* ─── Center Clinics ─── */
+/* ─── Medical Centers Directory (Home page section) ─── */
 
-export interface CenterClinic {
+export interface MedicalCenterDirectoryEntry {
   id: number;
-  medicalCenterId: number;
   name: string;
-  specialty: string | null;
-  doctorId: number | null;
-  createdAt: string;
+  nameAr: string | null;
+  type: string;
+  subType: CenterSubType | null;
+  image: string | null;
+  bio: string | null;
+  bioAr: string | null;
+  address: string | null;
+  phone: string | null;
+  cityName: string | null;
+  cityNameAr: string | null;
+  specialties: { name: string | null; nameAr: string | null }[];
+  doctors: { id: number; name: string; nameAr: string | null }[];
+  doctorsCount: number;
 }
 
-export function getCenterClinics(centerId: number): Promise<CenterClinic[]> {
-  return request(`/medical-centers/${centerId}/clinics`);
-}
-
-export function createCenterClinic(centerId: number, data: { name: string; specialty?: string; doctorId?: number | null }): Promise<CenterClinic> {
-  return request(`/medical-centers/${centerId}/clinics`, { method: "POST", body: JSON.stringify(data) });
-}
-
-export function updateCenterClinic(centerId: number, clinicId: number, data: { name?: string; specialty?: string; doctorId?: number | null }): Promise<CenterClinic> {
-  return request(`/medical-centers/${centerId}/clinics/${clinicId}`, { method: "PUT", body: JSON.stringify(data) });
-}
-
-export function deleteCenterClinic(centerId: number, clinicId: number): Promise<void> {
-  return request(`/medical-centers/${centerId}/clinics/${clinicId}`, { method: "DELETE" });
+export function getMedicalCentersDirectory(): Promise<MedicalCenterDirectoryEntry[]> {
+  return request("/medical-centers/directory");
 }
 
 /* ─── Admin Medical Centers ─── */

@@ -3,6 +3,7 @@ import {
   Building2, Users, TrendingUp, FileText,
   Settings, Plus, CreditCard, Newspaper, LogOut, BookOpen,
   Stethoscope, Pencil, Trash2, Check, X, UserPlus,
+  Globe, Bell, Mail, MessageSquare as Sms,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,14 +19,14 @@ import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getBillingInfo, startTrial, validateVoucher, initiatePaymobPayment,
-  getMedicalCenterProfile, getCenterClinics, createCenterClinic, updateCenterClinic, deleteCenterClinic,
+  getMedicalCenterProfile,
   getAffiliatedDoctors, createAffiliatedDoctor, updateAffiliatedDoctor, deleteAffiliatedDoctor,
-  getSpecialties,
+  getSpecialties, getPreferences, updatePreferences,
   type BillingInfo, type VoucherValidation, type PlanType, type PaymobInitiateResponse,
-  type MedicalCenterProfile, type CenterClinic, type AffiliatedDoctor, type ApiSpecialty,
+  type MedicalCenterProfile, type AffiliatedDoctor, type ApiSpecialty, type UserPreferences,
 } from "@/lib/api";
 
-type CenterTab = "overview" | "billing" | "publications" | "clinics" | "doctors";
+type CenterTab = "overview" | "billing" | "publications" | "doctors" | "preferences";
 
 const typeLabels: Record<string, { en: string; ar: string }> = {
   hospital:    { en: "Hospital",   ar: "مستشفى" },
@@ -421,105 +422,133 @@ function CenterPublicationsTab({ isRTL }: { isRTL: boolean }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   Clinics Management Tab (POLY_CLINIC only)
+   Preferences Tab — mirrors the Doctors dashboard "Preferences" tab
 ──────────────────────────────────────────────────────────────────── */
-function ClinicsManagementTab({ centerId, isRTL }: { centerId: number; isRTL: boolean }) {
+function CenterPreferencesTab({ isRTL }: { isRTL: boolean }) {
+  const { setLang } = useLanguage();
   const qc = useQueryClient();
-  const [newName, setNewName] = useState("");
-  const [newSpecialty, setNewSpecialty] = useState("");
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editSpecialty, setEditSpecialty] = useState("");
 
-  const { data: clinics = [], isLoading } = useQuery<CenterClinic[]>({
-    queryKey: ["centerClinics", centerId],
-    queryFn: () => getCenterClinics(centerId),
+  const { data: prefs, isLoading } = useQuery({
+    queryKey: ["preferences"],
+    queryFn: getPreferences,
   });
 
-  const addMutation = useMutation({
-    mutationFn: () => createCenterClinic(centerId, { name: newName.trim(), specialty: newSpecialty.trim() || undefined }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["centerClinics", centerId] }); setNewName(""); setNewSpecialty(""); },
+  const [form, setForm] = useState<Partial<UserPreferences>>({});
+
+  useEffect(() => {
+    if (prefs) setForm(prefs);
+  }, [prefs]);
+
+  const mut = useMutation({
+    mutationFn: updatePreferences,
+    onSuccess: (updated) => {
+      qc.setQueryData(["preferences"], updated);
+      if (updated.siteLanguage) setLang(updated.siteLanguage);
+    },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (id: number) => updateCenterClinic(centerId, id, { name: editName.trim(), specialty: editSpecialty.trim() || undefined }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["centerClinics", centerId] }); setEditId(null); },
-  });
+  const current = { ...prefs, ...form };
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteCenterClinic(centerId, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["centerClinics", centerId] }),
-  });
-
-  const startEdit = (c: CenterClinic) => { setEditId(c.id); setEditName(c.name); setEditSpecialty(c.specialty ?? ""); };
-
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{isRTL ? "إدارة العيادات" : "Manage Clinics"}</h1>
-        <p className="text-gray-500 text-sm mt-1">{isRTL ? "أضف وعدّل عيادات المركز المتعدد التخصصات" : "Add and manage specialty clinics for this poly clinic"}</p>
-      </div>
-
-      {/* Add new */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-col sm:flex-row gap-3">
-        <input
-          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          placeholder={isRTL ? "اسم العيادة..." : "Clinic name..."}
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <input
-          className="w-44 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          placeholder={isRTL ? "التخصص (اختياري)" : "Specialty (optional)"}
-          value={newSpecialty}
-          onChange={(e) => setNewSpecialty(e.target.value)}
-        />
-        <Button
-          className="gap-1.5 bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] shrink-0"
-          onClick={() => newName.trim() && addMutation.mutate()}
-          disabled={!newName.trim() || addMutation.isPending}
-        >
-          <Plus className="h-4 w-4" />
-          {isRTL ? "إضافة" : "Add"}
-        </Button>
-      </div>
-
-      {/* List */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : clinics.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 text-center">
-          <Stethoscope className="h-12 w-12 text-gray-300 mb-4" />
-          <h3 className="font-semibold text-gray-700">{isRTL ? "لا توجد عيادات بعد" : "No clinics yet"}</h3>
-          <p className="text-sm text-gray-500 mt-1">{isRTL ? "أضف أول عيادة من الأعلى" : "Add your first clinic above"}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {clinics.map((clinic) => (
-            <div key={clinic.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-              {editId === clinic.id ? (
-                <>
-                  <input className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm" value={editName} onChange={(e) => setEditName(e.target.value)} />
-                  <input className="w-40 border border-gray-200 rounded-lg px-3 py-1.5 text-sm" value={editSpecialty} onChange={(e) => setEditSpecialty(e.target.value)} />
-                  <Button size="icon" variant="ghost" onClick={() => updateMutation.mutate(clinic.id)} disabled={updateMutation.isPending}><Check className="h-4 w-4 text-green-600" /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => setEditId(null)}><X className="h-4 w-4 text-gray-400" /></Button>
-                </>
-              ) : (
-                <>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{clinic.name}</p>
-                    {clinic.specialty && <p className="text-xs text-gray-500">{clinic.specialty}</p>}
-                  </div>
-                  <Button size="icon" variant="ghost" onClick={() => startEdit(clinic)}><Pencil className="h-4 w-4 text-gray-400" /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(clinic.id)} disabled={deleteMutation.isPending}><Trash2 className="h-4 w-4 text-red-400" /></Button>
-                </>
-              )}
-            </div>
+  function LangRadio({ field, label, labelAr }: { field: "siteLanguage" | "notificationLanguage"; label: string; labelAr: string }) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-gray-700">{isRTL ? labelAr : label}</Label>
+        <div className="flex gap-3">
+          {(["en", "ar"] as const).map(v => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setForm(f => ({ ...f, [field]: v }))}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                current[field] === v
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              <span className="text-base">{v === "en" ? "🇬🇧" : "🇪🇬"}</span>
+              {v === "en" ? (isRTL ? "الإنجليزية" : "English") : (isRTL ? "العربية" : "Arabic")}
+            </button>
           ))}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  if (isLoading) return <div className="py-12 text-center text-gray-400">{isRTL ? "جاري التحميل..." : "Loading..."}</div>;
+
+  return (
+    <div className="max-w-xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{isRTL ? "إعدادات الحساب" : "Account Preferences"}</h1>
+        <p className="text-gray-500 text-sm mt-1">{isRTL ? "خصّص تجربتك وخيارات الإشعارات." : "Customize your experience and notification options."}</p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Site Language */}
+        <Card className="border-0 shadow-sm shadow-gray-200/60">
+          <CardHeader className="pb-3 border-b bg-gray-50/50 rounded-t-xl">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+              <Globe className="h-4 w-4 text-primary" />
+              {isRTL ? "لغة الموقع" : "Site Language"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <LangRadio field="siteLanguage" label="Display language" labelAr="لغة العرض" />
+          </CardContent>
+        </Card>
+
+        {/* Notification Language */}
+        <Card className="border-0 shadow-sm shadow-gray-200/60">
+          <CardHeader className="pb-3 border-b bg-gray-50/50 rounded-t-xl">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+              <Bell className="h-4 w-4 text-primary" />
+              {isRTL ? "إعدادات الإشعارات" : "Notification Settings"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-5">
+            <LangRadio field="notificationLanguage" label="Email notification language" labelAr="لغة إشعارات البريد الإلكتروني" />
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">{isRTL ? "طرق الإشعار" : "Notification Methods"}</Label>
+              <div className="space-y-2.5">
+                {([
+                  { key: "notifyViaEmail" as const, icon: <Mail className="h-4 w-4" />, label: "Email", labelAr: "بريد إلكتروني", note: "", noteAr: "" },
+                  { key: "notifyViaSms" as const, icon: <Sms className="h-4 w-4" />, label: "SMS", labelAr: "رسالة قصيرة", note: "coming soon", noteAr: "قريباً" },
+                  { key: "notifyViaWhatsApp" as const, icon: <Bell className="h-4 w-4" />, label: "WhatsApp", labelAr: "واتساب", note: "coming soon", noteAr: "قريباً" },
+                ] as const).map(m => (
+                  <label
+                    key={m.key}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!(current[m.key])}
+                      onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))}
+                      className="accent-primary h-4 w-4"
+                    />
+                    <span className="text-gray-500">{m.icon}</span>
+                    <span className="text-sm font-medium text-gray-700">{isRTL ? m.labelAr : m.label}</span>
+                    {m.note && <span className="text-xs text-gray-400 italic ms-auto">{isRTL ? m.noteAr : m.note}</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => mut.mutate(form)}
+            disabled={mut.isPending}
+            className="min-w-[120px]"
+          >
+            {mut.isPending ? (isRTL ? "جاري الحفظ..." : "Saving...") : (isRTL ? "حفظ التغييرات" : "Save Changes")}
+          </Button>
+          {mut.isSuccess && !mut.isPending && <span className="text-sm text-green-600 font-medium">{isRTL ? "✓ تم الحفظ" : "✓ Saved"}</span>}
+          {mut.isError && <span className="text-sm text-red-500">{isRTL ? "حدث خطأ" : "Failed to save"}</span>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -822,9 +851,7 @@ export default function MedicalCenterDashboard() {
     { id: "billing",      icon: <CreditCard className="h-4 w-4" />,  label: isRTL ? "الاشتراك"  : "Billing"       },
     { id: "publications", icon: <Newspaper className="h-4 w-4" />,   label: isRTL ? "المنشورات" : "Publications"  },
     { id: "doctors",      icon: <UserPlus className="h-4 w-4" />,    label: isRTL ? "الأطباء"   : "Doctors"       },
-    ...(centerProfile?.subType === "POLY_CLINIC"
-      ? [{ id: "clinics" as CenterTab, icon: <Stethoscope className="h-4 w-4" />, label: isRTL ? "إدارة العيادات" : "Clinics" }]
-      : []),
+    { id: "preferences",  icon: <Settings className="h-4 w-4" />,    label: isRTL ? "التفضيلات" : "Preferences"   },
   ];
 
   return (
@@ -865,16 +892,6 @@ export default function MedicalCenterDashboard() {
                   {isRTL ? "الملف الشخصي" : "Profile"}
                 </span>
               </Link>
-
-              <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
-                <Users className="h-4 w-4" />
-                {t.doctors}
-              </span>
-
-              <span className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors cursor-pointer">
-                <Settings className="h-4 w-4" />
-                {isRTL ? "الإعدادات" : "Settings"}
-              </span>
 
               <button
                 onClick={signOut}
@@ -1025,10 +1042,8 @@ export default function MedicalCenterDashboard() {
             {/* ── Doctors Tab ── */}
             {activeTab === "doctors" && <AffiliatedDoctorsTab isRTL={isRTL} />}
 
-            {/* ── Clinics Tab (POLY_CLINIC only) ── */}
-            {activeTab === "clinics" && centerProfile?.id && (
-              <ClinicsManagementTab centerId={centerProfile.id} isRTL={isRTL} />
-            )}
+            {/* ── Preferences Tab ── */}
+            {activeTab === "preferences" && <CenterPreferencesTab isRTL={isRTL} />}
           </div>
         </main>
       </div>

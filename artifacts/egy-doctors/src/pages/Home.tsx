@@ -26,13 +26,15 @@ import {
   Droplets,
   Scan,
   Bone,
+  Building2,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, getStats, type ApiDoctor } from "@/lib/api";
+import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, type ApiDoctor, type MedicalCenterDirectoryEntry } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
 type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
@@ -59,6 +61,11 @@ export default function Home() {
   const isRTL = dir === "rtl";
 
   const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: getStats, staleTime: 5 * 60 * 1000 });
+  const { data: medicalCenters = [] } = useQuery<MedicalCenterDirectoryEntry[]>({
+    queryKey: ["medicalCentersDirectory"],
+    queryFn: () => getMedicalCentersDirectory(),
+    staleTime: 5 * 60 * 1000,
+  });
   const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";
   const citiesValue = stats ? stats.citiesWithClinics.toLocaleString() : "—";
 
@@ -641,6 +648,87 @@ export default function Home() {
               {isRTL ? "تحميل المزيد من الأطباء" : "Load More Doctors"}
             </Button>
           </div>
+
+          {/* Medical Centers Directory */}
+          {medicalCenters.length > 0 && (
+            <div className="mt-10">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h1 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                  {isRTL ? "المراكز الطبية المسجلة" : "Registered Medical Centers"}
+                </h1>
+              </div>
+
+              <div className="space-y-3">
+                {medicalCenters.map((center) => (
+                  <div
+                    key={center.id}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 w-full p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center"
+                    style={{ border: "1px solid #EBEBF5" }}
+                  >
+                    {/* Logo / Icon */}
+                    <div className="shrink-0">
+                      {center.image ? (
+                        <img
+                          src={center.image}
+                          alt={center.name}
+                          className="w-16 h-16 rounded-2xl object-cover shadow-md"
+                          style={{ background: "#0F172A" }}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md" style={{ background: "#0F172A" }}>
+                          <Building2 className="w-7 h-7 text-[#D4A853]" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-extrabold text-slate-900 truncate">
+                        {isRTL && center.nameAr ? center.nameAr : center.name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                        {center.cityName && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {isRTL && center.cityNameAr ? center.cityNameAr : center.cityName}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {center.doctorsCount} {isRTL ? "طبيب" : center.doctorsCount === 1 ? "doctor" : "doctors"}
+                        </span>
+                      </div>
+
+                      {center.specialties.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2.5">
+                          {center.specialties.slice(0, 6).map((sp, i) => (
+                            <span
+                              key={i}
+                              className="inline-block text-[10px] font-semibold text-[#8B6914] bg-[#D4A853]/10 border border-[#D4A853]/30 rounded-full px-2 py-0.5"
+                            >
+                              {isRTL && sp.nameAr ? sp.nameAr : sp.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action */}
+                    <div className="shrink-0">
+                      <Button
+                        variant="outline"
+                        className="px-5 py-2 rounded-xl border-gray-300 text-gray-600 font-semibold text-xs hover:bg-white transition-colors bg-transparent h-auto"
+                        onClick={() => setLocation("/search")}
+                      >
+                        {isRTL ? "عرض الأطباء" : "View Doctors"}
+                        <ChevronRight className="w-3 h-3 ms-1" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </Layout>

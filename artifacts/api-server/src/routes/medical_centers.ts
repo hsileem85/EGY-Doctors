@@ -2,10 +2,11 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, medicalCentersTable, centerClinicsTable, usersTable, doctorsTable, specialtiesTable,
+  clinicsTable, citiesTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -197,9 +198,17 @@ const AffiliatedDoctorBody = z.object({
   schedule: z.record(z.object({ from: z.string(), to: z.string() })).optional().nullable(),
 });
 
-async function getCenterForUser(userId: number): Promise<{ id: number } | null> {
+async function getCenterForUser(userId: number) {
   const [center] = await db
-    .select({ id: medicalCentersTable.id })
+    .select({
+      id: medicalCentersTable.id,
+      name: medicalCentersTable.name,
+      nameAr: medicalCentersTable.nameAr,
+      address: medicalCentersTable.address,
+      phone: medicalCentersTable.phone,
+      lat: medicalCentersTable.lat,
+      lng: medicalCentersTable.lng,
+    })
     .from(medicalCentersTable)
     .where(eq(medicalCentersTable.userId, userId))
     .limit(1);
@@ -264,7 +273,23 @@ router.post("/medical-centers/affiliated-doctors", requireCenter, async (req, re
     isActive: true,
   }).returning();
 
-  logger.info({ centerId: center.id, doctorId: doctor.id }, "Affiliated doctor created");
+  // Also create a real clinic record for this doctor, using the center's
+  // location/contact info, so the doctor behaves like any normal doctor
+  // (appears in search with a bookable clinic) while staying annotated
+  // as affiliated with this medical center via `affiliatedCenterId`.
+  await db.insert(clinicsTable).values({
+    doctorId: doctor.id,
+    nameEn: center.name,
+    name: center.nameAr ?? null,
+    address: center.address ?? null,
+    phone: center.phone ?? null,
+    lat: center.lat ?? null,
+    lng: center.lng ?? null,
+    fee: d.fee ?? null,
+    bookingConfirmationMethod: "automatic",
+  });
+
+  logger.info({ centerId: center.id, doctorId: doctor.id }, "Affiliated doctor + clinic created");
   res.status(201).json({
     id: doctor.id,
     name: doctor.nameEn,
@@ -312,6 +337,18 @@ router.put("/medical-centers/affiliated-doctors/:id", requireCenter, async (req,
     .where(eq(doctorsTable.id, doctorId))
     .returning();
 
+  // Keep the doctor's linked clinic record (name/fee) in sync.
+  if (d.name !== undefined || d.fee !== undefined) {
+    await db
+      .update(clinicsTable)
+      .set({
+        ...(d.name !== undefined ? { nameEn: center.name } : {}),
+        ...(d.fee !== undefined ? { fee: d.fee ?? null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(clinicsTable.doctorId, doctorId));
+  }
+
   res.json({
     id: doctor.id,
     name: doctor.nameEn,
@@ -343,11 +380,89 @@ router.delete("/medical-centers/affiliated-doctors/:id", requireCenter, async (r
     res.status(403).json({ error: "Forbidden" }); return;
   }
 
+  await db.delete(clinicsTable).where(eq(clinicsTable.doctorId, doctorId));
   await db.delete(doctorsTable).where(eq(doctorsTable.id, doctorId));
   await db.delete(usersTable).where(eq(usersTable.id, doc.userId));
 
   logger.info({ centerId: center.id, doctorId }, "Affiliated doctor deleted");
   res.status(204).send();
+});
+
+/* ════════════════════════════════════════════════════
+   Public Medical Centers Directory (Home page section)
+════════════════════════════════════════════════════ */
+
+/* ── GET /medical-centers/directory ── */
+router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
+  const centers = await db
+    .select({
+      id: medicalCentersTable.id,
+      name: medicalCentersTable.name,
+      nameAr: medicalCentersTable.nameAr,
+      type: medicalCentersTable.type,
+      subType: medicalCentersTable.subType,
+      image: medicalCentersTable.image,
+      bio: medicalCentersTable.bio,
+      bioAr: medicalCentersTable.bioAr,
+      address: medicalCentersTable.address,
+      phone: medicalCentersTable.phone,
+      cityName: citiesTable.name,
+      cityNameAr: citiesTable.nameAr,
+    })
+    .from(medicalCentersTable)
+    .leftJoin(citiesTable, eq(medicalCentersTable.cityId, citiesTable.id))
+    .where(eq(medicalCentersTable.isApproved, true))
+    .orderBy(desc(medicalCentersTable.createdAt));
+
+  if (centers.length === 0) { res.json([]); return; }
+
+  const centerIds = centers.map(c => c.id);
+  const doctorRows = await db
+    .select({
+      centerId: doctorsTable.affiliatedCenterId,
+      id: doctorsTable.id,
+      name: doctorsTable.nameEn,
+      nameAr: doctorsTable.name,
+      specialtyName: specialtiesTable.name,
+      specialtyNameAr: specialtiesTable.nameAr,
+    })
+    .from(doctorsTable)
+    .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .where(and(inArray(doctorsTable.affiliatedCenterId, centerIds), eq(doctorsTable.isActive, true)));
+
+  const doctorsByCenter = new Map<number, typeof doctorRows>();
+  for (const row of doctorRows) {
+    if (row.centerId == null) continue;
+    const list = doctorsByCenter.get(row.centerId) ?? [];
+    list.push(row);
+    doctorsByCenter.set(row.centerId, list);
+  }
+
+  res.json(centers.map(c => {
+    const doctors = doctorsByCenter.get(c.id) ?? [];
+    const specialties = Array.from(new Map(
+      doctors
+        .filter(d => d.specialtyName)
+        .map(d => [d.specialtyName, { name: d.specialtyName, nameAr: d.specialtyNameAr }]),
+    ).values());
+    return {
+      id: c.id,
+      name: c.name,
+      nameAr: c.nameAr,
+      type: c.type,
+      subType: c.subType,
+      image: c.image,
+      bio: c.bio,
+      bioAr: c.bioAr,
+      address: c.address,
+      phone: c.phone,
+      cityName: c.cityName,
+      cityNameAr: c.cityNameAr,
+      specialties,
+      doctors: doctors.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr })),
+      doctorsCount: doctors.length,
+    };
+  }));
 });
 
 export default router;
