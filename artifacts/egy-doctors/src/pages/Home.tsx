@@ -718,7 +718,7 @@ export default function Home() {
                       <Button
                         variant="outline"
                         className="px-5 py-2 rounded-xl border-gray-300 text-gray-600 font-semibold text-xs hover:bg-white transition-colors bg-transparent h-auto"
-                        onClick={() => setLocation("/search")}
+                        onClick={() => setLocation(`/search?medicalCenterId=${center.id}`)}
                       >
                         {isRTL ? "عرض الأطباء" : "View Doctors"}
                         <ChevronRight className="w-3 h-3 ms-1" />

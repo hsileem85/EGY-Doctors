@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useSearch } from "wouter";
-import { Filter, Search as SearchIcon, X, SlidersHorizontal } from "lucide-react";
+import { useLocation, useSearch } from "wouter";
+import { Filter, Search as SearchIcon, X, SlidersHorizontal, Building2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { DoctorCard } from "@/components/DoctorCard";
 import { Input } from "@/components/ui/input";
@@ -12,13 +12,16 @@ import { useQuery } from "@tanstack/react-query";
 import { getDoctors, getSpecialties, getCities } from "@/lib/api";
 
 export default function Search() {
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
+  const isRTL = dir === "rtl";
+  const [, setLocation] = useLocation();
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
 
   const initialQuery = searchParams.get("q") || "";
   const initialSpecialty = searchParams.get("specialty") || "";
   const initialCity = searchParams.get("city") || "";
+  const medicalCenterId = searchParams.get("medicalCenterId");
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
@@ -50,6 +53,12 @@ export default function Search() {
   const toggleCity = (c: string) =>
     setSelectedCities(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
 
+  const medicalCenterName = useMemo(() => {
+    if (!medicalCenterId) return null;
+    const match = allDoctors.find(d => d.affiliatedCenter?.id === Number(medicalCenterId));
+    return match?.affiliatedCenter?.name ?? null;
+  }, [medicalCenterId, allDoctors]);
+
   const filteredDoctors = useMemo(() => {
     return allDoctors.filter(doctor => {
       const matchSearch =
@@ -66,9 +75,12 @@ export default function Search() {
         selectedCities.length === 0 ||
         selectedCities.some(c => doctor.cityName.toLowerCase().includes(c.toLowerCase()));
 
-      return matchSearch && matchSpecialty && matchCity;
+      const matchMedicalCenter =
+        !medicalCenterId || doctor.affiliatedCenter?.id === Number(medicalCenterId);
+
+      return matchSearch && matchSpecialty && matchCity && matchMedicalCenter;
     });
-  }, [searchQuery, selectedSpecialties, selectedCities, allDoctors]);
+  }, [searchQuery, selectedSpecialties, selectedCities, medicalCenterId, allDoctors]);
 
   const activeFilterCount = selectedSpecialties.length + selectedCities.length;
   const hasActiveFilters = activeFilterCount > 0;
@@ -207,6 +219,24 @@ export default function Search() {
           </aside>
 
           <main className="flex-1 min-w-0">
+            {medicalCenterId && (
+              <div className="mb-4 flex items-center justify-between gap-2 bg-primary/5 border border-primary/20 rounded-xl px-4 py-2.5">
+                <span className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  {isRTL
+                    ? `عرض أطباء ${medicalCenterName ?? "المركز الطبي"} فقط`
+                    : `Showing doctors from ${medicalCenterName ?? "this medical center"} only`}
+                </span>
+                <button
+                  onClick={() => setLocation("/search")}
+                  className="flex items-center gap-1 text-xs text-primary font-semibold hover:text-primary/80 shrink-0"
+                >
+                  <X className="h-3 w-3" />
+                  {isRTL ? "إزالة" : "Clear"}
+                </button>
+              </div>
+            )}
+
             <div className="mb-4 flex justify-between items-center">
               <h2 className="text-base sm:text-xl font-bold text-gray-900">
                 {loadingDoctors
