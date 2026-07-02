@@ -624,46 +624,60 @@ router.put("/admin/settings/contact", async (req, res): Promise<void> => {
 
 /* ─── GET /admin/settings ─── */
 router.get("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
-  const keys = ["price_3_months", "price_6_months", "price_1_year", "default_free_trial_days", "subscription_currency"];
+  const keys = [
+    "doctor_price_3_months", "doctor_price_6_months", "doctor_price_1_year",
+    "center_price_3_months", "center_price_6_months", "center_price_1_year",
+    "price_3_months", "price_6_months", "price_1_year",
+    "default_free_trial_days", "subscription_currency",
+  ];
   const rows = await db.select().from(siteSettingsTable).where(inArray(siteSettingsTable.key, keys));
   const m: Record<string, string> = {};
   for (const r of rows) m[r.key] = r.value;
   res.json({
-    price3Months:        Number(m["price_3_months"]           ?? 800),
-    price6Months:        Number(m["price_6_months"]           ?? 1500),
-    price1Year:          Number(m["price_1_year"]             ?? 2500),
+    doctorPrice3Months:   Number(m["doctor_price_3_months"] ?? m["price_3_months"] ?? 800),
+    doctorPrice6Months:   Number(m["doctor_price_6_months"] ?? m["price_6_months"] ?? 1500),
+    doctorPrice1Year:     Number(m["doctor_price_1_year"]   ?? m["price_1_year"]   ?? 2500),
+    centerPrice3Months:   Number(m["center_price_3_months"] ?? 1200),
+    centerPrice6Months:   Number(m["center_price_6_months"] ?? 2200),
+    centerPrice1Year:     Number(m["center_price_1_year"]   ?? 3800),
     defaultFreeTrialDays: Number(m["default_free_trial_days"] ?? 14),
-    currency:            m["subscription_currency"]           ?? "EGP",
+    currency:             m["subscription_currency"] ?? "EGP",
   });
 });
 
 /* ─── PUT /admin/settings ─── */
 router.put("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
   const schema = z.object({
-    price3Months:         z.number().positive(),
-    price6Months:         z.number().positive(),
-    price1Year:           z.number().positive(),
+    doctorPrice3Months:   z.number().positive(),
+    doctorPrice6Months:   z.number().positive(),
+    doctorPrice1Year:     z.number().positive(),
+    centerPrice3Months:   z.number().positive(),
+    centerPrice6Months:   z.number().positive(),
+    centerPrice1Year:     z.number().positive(),
     defaultFreeTrialDays: z.number().int().min(1).max(365),
     currency:             z.string().min(1).optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(422).json({ error: "Invalid settings data" }); return; }
-  const { price3Months, price6Months, price1Year, defaultFreeTrialDays, currency } = parsed.data;
+  const d = parsed.data;
 
   const entries: { key: string; value: string }[] = [
-    { key: "price_3_months",           value: String(price3Months) },
-    { key: "price_6_months",           value: String(price6Months) },
-    { key: "price_1_year",             value: String(price1Year) },
-    { key: "default_free_trial_days",  value: String(defaultFreeTrialDays) },
+    { key: "doctor_price_3_months", value: String(d.doctorPrice3Months) },
+    { key: "doctor_price_6_months", value: String(d.doctorPrice6Months) },
+    { key: "doctor_price_1_year",   value: String(d.doctorPrice1Year) },
+    { key: "center_price_3_months", value: String(d.centerPrice3Months) },
+    { key: "center_price_6_months", value: String(d.centerPrice6Months) },
+    { key: "center_price_1_year",   value: String(d.centerPrice1Year) },
+    { key: "default_free_trial_days", value: String(d.defaultFreeTrialDays) },
   ];
-  if (currency) entries.push({ key: "subscription_currency", value: currency });
+  if (d.currency) entries.push({ key: "subscription_currency", value: d.currency });
 
   for (const entry of entries) {
     await db.insert(siteSettingsTable).values(entry)
       .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: entry.value } });
   }
 
-  req.log.info({ price3Months, price6Months, price1Year, defaultFreeTrialDays }, "Platform settings updated");
+  req.log.info(d, "Platform settings updated (split pricing)");
   res.json({ message: "Settings saved." });
 });
 

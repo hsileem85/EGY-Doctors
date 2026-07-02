@@ -4,7 +4,10 @@ import jwt from "jsonwebtoken";
 import PDFDocument from "pdfkit";
 import { eq, inArray, and, desc, or, ne, gte } from "drizzle-orm";
 import { z } from "zod";
-import { db, doctorsTable, usersTable, siteSettingsTable, vouchersTable, paymentsTable } from "@workspace/db";
+import {
+  db, doctorsTable, medicalCentersTable, usersTable,
+  siteSettingsTable, vouchersTable, paymentsTable,
+} from "@workspace/db";
 import { logger } from "../lib/logger";
 import { sendReceiptEmail } from "../lib/email";
 
@@ -20,22 +23,45 @@ function decodeJwt(authHeader: string | undefined): JwtPayload | null {
 }
 
 type PlanType = "MONTHS_3" | "MONTHS_6" | "YEARLY";
+type UserRole = "doctor" | "medical_center";
 
 const PLAN_LABELS: Record<PlanType, string> = {
   MONTHS_3: "3-Month Subscription",
   MONTHS_6: "6-Month Subscription",
-  YEARLY: "1-Year Subscription",
+  YEARLY:   "1-Year Subscription",
 };
 
-async function getPricingSettings() {
-  const keys = ["price_3_months", "price_6_months", "price_1_year", "default_free_trial_days", "subscription_currency"];
+function isAllowedRole(role: string): role is UserRole {
+  return role === "doctor" || role === "medical_center";
+}
+
+/* ── Fetch pricing settings, role-aware ── */
+async function getPricingSettings(role: UserRole = "doctor") {
+  const isCenter = role === "medical_center";
+  const keys = isCenter
+    ? ["center_price_3_months", "center_price_6_months", "center_price_1_year", "default_free_trial_days", "subscription_currency"]
+    : ["doctor_price_3_months", "doctor_price_6_months", "doctor_price_1_year",
+       "price_3_months", "price_6_months", "price_1_year",
+       "default_free_trial_days", "subscription_currency"];
+
   const rows = await db.select().from(siteSettingsTable).where(inArray(siteSettingsTable.key, keys));
   const m: Record<string, string> = {};
   for (const r of rows) m[r.key] = r.value;
+
+  if (isCenter) {
+    return {
+      price3Months: Number(m["center_price_3_months"] ?? 1200),
+      price6Months: Number(m["center_price_6_months"] ?? 2200),
+      price1Year:   Number(m["center_price_1_year"]   ?? 3800),
+      trialDays:    Number(m["default_free_trial_days"] ?? 14),
+      currency:     m["subscription_currency"] ?? "EGP",
+    };
+  }
+
   return {
-    price3Months: Number(m["price_3_months"] ?? 800),
-    price6Months: Number(m["price_6_months"] ?? 1500),
-    price1Year:   Number(m["price_1_year"]   ?? 2500),
+    price3Months: Number(m["doctor_price_3_months"] ?? m["price_3_months"] ?? 800),
+    price6Months: Number(m["doctor_price_6_months"] ?? m["price_6_months"] ?? 1500),
+    price1Year:   Number(m["doctor_price_1_year"]   ?? m["price_1_year"]   ?? 2500),
     trialDays:    Number(m["default_free_trial_days"] ?? 14),
     currency:     m["subscription_currency"] ?? "EGP",
   };
@@ -49,24 +75,56 @@ function planMonths(plan: PlanType) {
   return { MONTHS_3: 3, MONTHS_6: 6, YEARLY: 12 }[plan];
 }
 
+/* ── Get or lazy-create medical center record ── */
+async function getOrCreateMedicalCenter(userId: number) {
+  const [existing] = await db.select().from(medicalCentersTable)
+    .where(eq(medicalCentersTable.userId, userId)).limit(1);
+  if (existing) return existing;
+
+  const [user] = await db.select({ name: usersTable.name, nameAr: usersTable.nameAr })
+    .from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+
+  const [created] = await db.insert(medicalCentersTable).values({
+    userId,
+    name: user?.name ?? "Medical Center",
+    nameAr: user?.nameAr ?? null,
+  }).returning();
+  return created;
+}
+
+/* ── Get doctor record ── */
+async function getDoctor(userId: number) {
+  const [row] = await db.select().from(doctorsTable)
+    .where(eq(doctorsTable.userId, userId)).limit(1);
+  return row ?? null;
+}
+
 /* ─── GET /billing/payments ─── */
 router.get("/billing/payments", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!payload || !isAllowedRole(payload.role)) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const [doctor] = await db.select({ id: doctorsTable.id })
-    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
-  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
-
-  const [expiryRow] = await db
-    .select({ value: siteSettingsTable.value })
-    .from(siteSettingsTable)
-    .where(eq(siteSettingsTable.key, "pending_payment_expiry_minutes"))
-    .limit(1);
+  const [expiryRow] = await db.select({ value: siteSettingsTable.value })
+    .from(siteSettingsTable).where(eq(siteSettingsTable.key, "pending_payment_expiry_minutes")).limit(1);
   const rawExpiry = Number(expiryRow?.value);
   const expiryMinutes = Number.isFinite(rawExpiry) && rawExpiry > 0 ? rawExpiry : 30;
-
   const pendingCutoff = new Date(Date.now() - expiryMinutes * 60 * 1000);
+
+  let whereFilter;
+  if (payload.role === "doctor") {
+    const doctor = await getDoctor(payload.sub);
+    if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+    whereFilter = and(
+      eq(paymentsTable.doctorId, doctor.id),
+      or(ne(paymentsTable.status, "PENDING"), gte(paymentsTable.createdAt, pendingCutoff)),
+    );
+  } else {
+    const center = await getOrCreateMedicalCenter(payload.sub);
+    whereFilter = and(
+      eq(paymentsTable.medicalCenterId, center.id),
+      or(ne(paymentsTable.status, "PENDING"), gte(paymentsTable.createdAt, pendingCutoff)),
+    );
+  }
 
   const payments = await db.select({
     id: paymentsTable.id,
@@ -79,17 +137,7 @@ router.get("/billing/payments", async (req, res): Promise<void> => {
     paymobTransactionId: paymentsTable.paymobTransactionId,
     createdAt: paymentsTable.createdAt,
     paidAt: paymentsTable.paidAt,
-  }).from(paymentsTable)
-    .where(
-      and(
-        eq(paymentsTable.doctorId, doctor.id),
-        or(
-          ne(paymentsTable.status, "PENDING"),
-          gte(paymentsTable.createdAt, pendingCutoff),
-        ),
-      ),
-    )
-    .orderBy(desc(paymentsTable.createdAt));
+  }).from(paymentsTable).where(whereFilter).orderBy(desc(paymentsTable.createdAt));
 
   res.json(payments.map((p) => ({
     ...p,
@@ -101,32 +149,45 @@ router.get("/billing/payments", async (req, res): Promise<void> => {
 /* ─── GET /billing/subscription ─── */
 router.get("/billing/subscription", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!payload || !isAllowedRole(payload.role)) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const [doctor] = await db.select({
-    id: doctorsTable.id,
-    subscriptionStatus: doctorsTable.subscriptionStatus,
-    subscriptionPlan: doctorsTable.subscriptionPlan,
-    subscriptionEndDate: doctorsTable.subscriptionEndDate,
-    isTrialUsed: doctorsTable.isTrialUsed,
-  }).from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
+  const role = payload.role as UserRole;
+  const settings = await getPricingSettings(role);
 
-  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+  if (role === "doctor") {
+    const doctor = await getDoctor(payload.sub);
+    if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
 
-  let status = doctor.subscriptionStatus ?? "INACTIVE";
-  if ((status === "ACTIVE" || status === "TRIAL") && doctor.subscriptionEndDate && doctor.subscriptionEndDate < new Date()) {
-    status = "INACTIVE";
-    await db.update(doctorsTable).set({ subscriptionStatus: "INACTIVE" }).where(eq(doctorsTable.id, doctor.id));
-    logger.info({ doctorId: doctor.id }, "Doctor subscription auto-expired");
+    let status = doctor.subscriptionStatus ?? "INACTIVE";
+    if ((status === "ACTIVE" || status === "TRIAL") && doctor.subscriptionEndDate && doctor.subscriptionEndDate < new Date()) {
+      status = "INACTIVE";
+      await db.update(doctorsTable).set({ subscriptionStatus: "INACTIVE" }).where(eq(doctorsTable.id, doctor.id));
+    }
+
+    res.json({
+      status,
+      plan: doctor.subscriptionPlan ?? "SEMI_ANNUAL",
+      endDate: doctor.subscriptionEndDate?.toISOString() ?? null,
+      isTrialUsed: doctor.isTrialUsed ?? false,
+      ...settings,
+    });
+    return;
   }
 
-  const settings = await getPricingSettings();
+  // medical_center
+  const center = await getOrCreateMedicalCenter(payload.sub);
+
+  let status = center.subscriptionStatus ?? "INACTIVE";
+  if ((status === "ACTIVE" || status === "TRIAL") && center.subscriptionEndDate && center.subscriptionEndDate < new Date()) {
+    status = "INACTIVE";
+    await db.update(medicalCentersTable).set({ subscriptionStatus: "INACTIVE" }).where(eq(medicalCentersTable.id, center.id));
+  }
 
   res.json({
     status,
-    plan: doctor.subscriptionPlan ?? "SEMI_ANNUAL",
-    endDate: doctor.subscriptionEndDate?.toISOString() ?? null,
-    isTrialUsed: doctor.isTrialUsed ?? false,
+    plan: center.subscriptionPlan ?? "SEMI_ANNUAL",
+    endDate: center.subscriptionEndDate?.toISOString() ?? null,
+    isTrialUsed: center.isTrialUsed ?? false,
     ...settings,
   });
 });
@@ -134,32 +195,47 @@ router.get("/billing/subscription", async (req, res): Promise<void> => {
 /* ─── POST /billing/start-trial ─── */
 router.post("/billing/start-trial", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!payload || !isAllowedRole(payload.role)) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const [doctor] = await db.select({ id: doctorsTable.id, isTrialUsed: doctorsTable.isTrialUsed })
-    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
-  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
-  if (doctor.isTrialUsed) { res.status(400).json({ error: "Free trial has already been used." }); return; }
-
-  const settings = await getPricingSettings();
+  const role = payload.role as UserRole;
+  const settings = await getPricingSettings(role);
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + settings.trialDays);
 
-  await db.update(doctorsTable).set({
-    subscriptionStatus: "TRIAL",
-    subscriptionPlan: "TRIAL",
-    subscriptionEndDate: endDate,
-    isTrialUsed: true,
-  }).where(eq(doctorsTable.id, doctor.id));
+  if (role === "doctor") {
+    const doctor = await getDoctor(payload.sub);
+    if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+    if (doctor.isTrialUsed) { res.status(400).json({ error: "Free trial has already been used." }); return; }
 
-  req.log.info({ doctorId: doctor.id, trialDays: settings.trialDays }, "Doctor free trial started");
+    await db.update(doctorsTable).set({
+      subscriptionStatus: "TRIAL",
+      subscriptionPlan: "TRIAL",
+      subscriptionEndDate: endDate,
+      isTrialUsed: true,
+    }).where(eq(doctorsTable.id, doctor.id));
+
+    req.log.info({ doctorId: doctor.id, trialDays: settings.trialDays }, "Doctor free trial started");
+  } else {
+    const center = await getOrCreateMedicalCenter(payload.sub);
+    if (center.isTrialUsed) { res.status(400).json({ error: "Free trial has already been used." }); return; }
+
+    await db.update(medicalCentersTable).set({
+      subscriptionStatus: "TRIAL",
+      subscriptionPlan: "TRIAL",
+      subscriptionEndDate: endDate,
+      isTrialUsed: true,
+    }).where(eq(medicalCentersTable.id, center.id));
+
+    req.log.info({ centerId: center.id, trialDays: settings.trialDays }, "Medical center free trial started");
+  }
+
   res.json({ success: true, status: "TRIAL", endDate: endDate.toISOString(), trialDays: settings.trialDays });
 });
 
 /* ─── POST /billing/validate-voucher ─── */
 router.post("/billing/validate-voucher", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!payload || !isAllowedRole(payload.role)) { res.status(403).json({ error: "Forbidden" }); return; }
 
   const schema = z.object({
     code: z.string().min(1),
@@ -176,7 +252,7 @@ router.post("/billing/validate-voucher", async (req, res): Promise<void> => {
   if (voucher.expirationDate && voucher.expirationDate < new Date()) { res.status(400).json({ error: "Promo code has expired." }); return; }
   if (voucher.maxUses !== null && voucher.currentUses >= voucher.maxUses) { res.status(400).json({ error: "Promo code usage limit reached." }); return; }
 
-  const settings = await getPricingSettings();
+  const settings = await getPricingSettings(payload.role as UserRole);
   const originalPrice = planPrice(settings, planType as PlanType);
   const discount = (originalPrice * voucher.discountPercentage) / 100;
   const finalPrice = Math.max(0, originalPrice - discount);
@@ -203,7 +279,7 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   }
 
   const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!payload || !isAllowedRole(payload.role)) { res.status(403).json({ error: "Forbidden" }); return; }
 
   const schema = z.object({
     planType: z.enum(["MONTHS_3", "MONTHS_6", "YEARLY"]),
@@ -232,13 +308,23 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
     return;
   }
 
-  const [doctor] = await db.select({ id: doctorsTable.id })
-    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
-  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
-
-  const settings = await getPricingSettings();
+  const role = payload.role as UserRole;
+  const settings = await getPricingSettings(role);
   let finalAmount = planPrice(settings, planType as PlanType);
   let appliedVoucherCode: string | null = null;
+
+  // Resolve entity (doctor or center)
+  let doctorId: number | null = null;
+  let centerId: number | null = null;
+
+  if (role === "doctor") {
+    const doctor = await getDoctor(payload.sub);
+    if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
+    doctorId = doctor.id;
+  } else {
+    const center = await getOrCreateMedicalCenter(payload.sub);
+    centerId = center.id;
+  }
 
   if (voucherCode) {
     const [voucher] = await db.select().from(vouchersTable)
@@ -257,12 +343,13 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   const currency = settings.currency || "EGP";
 
   /* ── UAT bypass: skip Paymob, activate subscription immediately ── */
-  if (process.env.UAT_PAYMENT_BYPASS === "true") {
+  if (uatBypass) {
     const uatOrderId = `UAT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     await db.transaction(async (tx) => {
       await tx.insert(paymentsTable).values({
-        doctorId: doctor.id,
+        doctorId,
+        medicalCenterId: centerId,
         paymobOrderId: uatOrderId,
         planType,
         amount: finalAmount,
@@ -272,37 +359,57 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
         paidAt: new Date(),
       });
 
-      const [doc] = await tx
-        .select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
-        .from(doctorsTable).where(eq(doctorsTable.id, doctor.id)).limit(1);
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + planMonths(planType as PlanType));
 
-      if (doc) {
-        const base = doc.subscriptionEndDate && doc.subscriptionEndDate > new Date()
-          ? doc.subscriptionEndDate : new Date();
-        const endDate = new Date(base);
-        endDate.setMonth(endDate.getMonth() + planMonths(planType as PlanType));
+      if (appliedVoucherCode) {
+        const [voucher] = await tx.select().from(vouchersTable)
+          .where(eq(vouchersTable.code, appliedVoucherCode)).limit(1);
+        if (voucher) {
+          if (voucher.additionalFreeDays > 0) endDate.setDate(endDate.getDate() + voucher.additionalFreeDays);
+          await tx.update(vouchersTable)
+            .set({ currentUses: voucher.currentUses + 1 })
+            .where(eq(vouchersTable.id, voucher.id));
+        }
+      }
 
+      if (doctorId !== null) {
+        const [doc] = await tx.select({ subscriptionEndDate: doctorsTable.subscriptionEndDate })
+          .from(doctorsTable).where(eq(doctorsTable.id, doctorId)).limit(1);
+        const base = doc?.subscriptionEndDate && doc.subscriptionEndDate > new Date() ? doc.subscriptionEndDate : new Date();
+        const ed = new Date(base);
+        ed.setMonth(ed.getMonth() + planMonths(planType as PlanType));
         if (appliedVoucherCode) {
           const [voucher] = await tx.select().from(vouchersTable)
             .where(eq(vouchersTable.code, appliedVoucherCode)).limit(1);
-          if (voucher) {
-            if (voucher.additionalFreeDays > 0) endDate.setDate(endDate.getDate() + voucher.additionalFreeDays);
-            await tx.update(vouchersTable)
-              .set({ currentUses: voucher.currentUses + 1 })
-              .where(eq(vouchersTable.id, voucher.id));
-          }
+          if (voucher?.additionalFreeDays) ed.setDate(ed.getDate() + voucher.additionalFreeDays);
         }
-
         await tx.update(doctorsTable).set({
           subscriptionStatus: "ACTIVE",
           subscriptionPlan: planType,
-          subscriptionEndDate: endDate,
-        }).where(eq(doctorsTable.id, doctor.id));
+          subscriptionEndDate: ed,
+        }).where(eq(doctorsTable.id, doctorId));
+      } else if (centerId !== null) {
+        const [ctr] = await tx.select({ subscriptionEndDate: medicalCentersTable.subscriptionEndDate })
+          .from(medicalCentersTable).where(eq(medicalCentersTable.id, centerId)).limit(1);
+        const base = ctr?.subscriptionEndDate && ctr.subscriptionEndDate > new Date() ? ctr.subscriptionEndDate : new Date();
+        const ed = new Date(base);
+        ed.setMonth(ed.getMonth() + planMonths(planType as PlanType));
+        if (appliedVoucherCode) {
+          const [voucher] = await tx.select().from(vouchersTable)
+            .where(eq(vouchersTable.code, appliedVoucherCode)).limit(1);
+          if (voucher?.additionalFreeDays) ed.setDate(ed.getDate() + voucher.additionalFreeDays);
+        }
+        await tx.update(medicalCentersTable).set({
+          subscriptionStatus: "ACTIVE",
+          subscriptionPlan: planType,
+          subscriptionEndDate: ed,
+        }).where(eq(medicalCentersTable.id, centerId));
       }
     });
 
     const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`;
-    req.log.info({ doctorId: doctor.id, planType, uatOrderId }, "UAT payment bypass — subscription activated");
+    req.log.info({ doctorId, centerId, planType, uatOrderId }, "UAT payment bypass — subscription activated");
     res.json({
       paymentKey: "uat-bypass",
       iframeId: "uat",
@@ -354,9 +461,9 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
         expiration: 3600,
         order_id: orderData.id,
         billing_data: {
-          apartment: "NA", email: "NA", floor: "NA", first_name: "Doctor",
+          apartment: "NA", email: "NA", floor: "NA", first_name: "User",
           street: "NA", building: "NA", phone_number: "NA", shipping_method: "NA",
-          postal_code: "NA", city: "Cairo", country: "EG", last_name: "User", state: "NA",
+          postal_code: "NA", city: "Cairo", country: "EG", last_name: "NA", state: "NA",
         },
         currency,
         integration_id: Number(integrationId),
@@ -368,7 +475,8 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
     const keyData = await keyRes.json() as { token: string };
 
     const [payment] = await db.insert(paymentsTable).values({
-      doctorId: doctor.id,
+      doctorId,
+      medicalCenterId: centerId,
       paymobOrderId,
       planType,
       amount: finalAmount,
@@ -377,7 +485,7 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
       status: "PENDING",
     }).returning();
 
-    req.log.info({ doctorId: doctor.id, planType, amountCents, paymobOrderId }, "Paymob payment initiated");
+    req.log.info({ doctorId, centerId, planType, amountCents, paymobOrderId }, "Paymob payment initiated");
 
     res.json({
       paymentKey: keyData.token,
@@ -452,7 +560,8 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
 
   if (success) {
     let paidPayment: typeof paymentsTable.$inferSelect | undefined;
-    let activatedDoctorId: number | undefined;
+    let activatedDoctorId: number | null = null;
+    let activatedCenterId: number | null = null;
 
     await db.transaction(async (tx) => {
       const [updated] = await tx
@@ -466,48 +575,67 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
         return;
       }
 
-      const [doctor] = await tx
-        .select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
-        .from(doctorsTable)
-        .where(eq(doctorsTable.id, updated.doctorId))
-        .limit(1);
-
-      if (!doctor) return;
-
-      const base = doctor.subscriptionEndDate && doctor.subscriptionEndDate > new Date()
-        ? doctor.subscriptionEndDate : new Date();
-      const endDate = new Date(base);
+      const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + planMonths(updated.planType as PlanType));
 
       if (updated.voucherCode) {
-        const [voucher] = await tx
-          .select()
-          .from(vouchersTable)
-          .where(eq(vouchersTable.code, updated.voucherCode))
-          .limit(1);
+        const [voucher] = await tx.select().from(vouchersTable)
+          .where(eq(vouchersTable.code, updated.voucherCode)).limit(1);
         if (voucher) {
-          if (voucher.additionalFreeDays > 0) {
-            endDate.setDate(endDate.getDate() + voucher.additionalFreeDays);
-          }
-          await tx
-            .update(vouchersTable)
-            .set({ currentUses: voucher.currentUses + 1 })
-            .where(eq(vouchersTable.id, voucher.id));
+          if (voucher.additionalFreeDays > 0) endDate.setDate(endDate.getDate() + voucher.additionalFreeDays);
+          await tx.update(vouchersTable)
+            .set({ currentUses: voucher.currentUses + 1 }).where(eq(vouchersTable.id, voucher.id));
         }
       }
 
-      await tx.update(doctorsTable).set({
-        subscriptionStatus: "ACTIVE",
-        subscriptionPlan: updated.planType,
-        subscriptionEndDate: endDate,
-      }).where(eq(doctorsTable.id, doctor.id));
-
-      logger.info({ doctorId: doctor.id, planType: updated.planType, paymobOrderId }, "Subscription activated via Paymob webhook");
+      if (updated.doctorId !== null && updated.doctorId !== undefined) {
+        const [doctor] = await tx.select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
+          .from(doctorsTable).where(eq(doctorsTable.id, updated.doctorId)).limit(1);
+        if (doctor) {
+          const base = doctor.subscriptionEndDate && doctor.subscriptionEndDate > new Date()
+            ? doctor.subscriptionEndDate : new Date();
+          const ed = new Date(base);
+          ed.setMonth(ed.getMonth() + planMonths(updated.planType as PlanType));
+          if (updated.voucherCode) {
+            const [v] = await tx.select().from(vouchersTable)
+              .where(eq(vouchersTable.code, updated.voucherCode)).limit(1);
+            if (v?.additionalFreeDays) ed.setDate(ed.getDate() + v.additionalFreeDays);
+          }
+          await tx.update(doctorsTable).set({
+            subscriptionStatus: "ACTIVE",
+            subscriptionPlan: updated.planType,
+            subscriptionEndDate: ed,
+          }).where(eq(doctorsTable.id, doctor.id));
+          activatedDoctorId = doctor.id;
+          logger.info({ doctorId: doctor.id, planType: updated.planType, paymobOrderId }, "Doctor subscription activated via webhook");
+        }
+      } else if (updated.medicalCenterId !== null && updated.medicalCenterId !== undefined) {
+        const [center] = await tx.select({ id: medicalCentersTable.id, subscriptionEndDate: medicalCentersTable.subscriptionEndDate })
+          .from(medicalCentersTable).where(eq(medicalCentersTable.id, updated.medicalCenterId)).limit(1);
+        if (center) {
+          const base = center.subscriptionEndDate && center.subscriptionEndDate > new Date()
+            ? center.subscriptionEndDate : new Date();
+          const ed = new Date(base);
+          ed.setMonth(ed.getMonth() + planMonths(updated.planType as PlanType));
+          if (updated.voucherCode) {
+            const [v] = await tx.select().from(vouchersTable)
+              .where(eq(vouchersTable.code, updated.voucherCode)).limit(1);
+            if (v?.additionalFreeDays) ed.setDate(ed.getDate() + v.additionalFreeDays);
+          }
+          await tx.update(medicalCentersTable).set({
+            subscriptionStatus: "ACTIVE",
+            subscriptionPlan: updated.planType,
+            subscriptionEndDate: ed,
+          }).where(eq(medicalCentersTable.id, center.id));
+          activatedCenterId = center.id;
+          logger.info({ centerId: center.id, planType: updated.planType, paymobOrderId }, "Medical center subscription activated via webhook");
+        }
+      }
 
       paidPayment = updated;
-      activatedDoctorId = doctor.id;
     });
 
+    // Send receipt email for doctor payments
     if (paidPayment && activatedDoctorId) {
       const payment = paidPayment;
       const doctorId = activatedDoctorId;
@@ -515,37 +643,27 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
         try {
           const [row] = await db
             .select({ email: usersTable.email, nameEn: doctorsTable.nameEn })
-            .from(doctorsTable)
-            .innerJoin(usersTable, eq(usersTable.id, doctorsTable.userId))
-            .where(eq(doctorsTable.id, doctorId))
-            .limit(1);
-
-          if (!row?.email) {
-            logger.warn({ doctorId }, "Doctor has no email — skipping receipt email");
-            return;
-          }
-
+            .from(doctorsTable).innerJoin(usersTable, eq(usersTable.id, doctorsTable.userId))
+            .where(eq(doctorsTable.id, doctorId)).limit(1);
+          if (!row?.email) return;
           const pdfBuffer = await generateReceiptBuffer(payment, row.nameEn ?? "Doctor");
           await sendReceiptEmail(row.email, payment, row.nameEn ?? "Doctor", pdfBuffer);
-          logger.info({ doctorId, paymentId: payment.id }, "Receipt email sent after successful payment");
         } catch (err) {
-          logger.warn({ err, doctorId, paymentId: payment.id }, "Failed to send receipt email after payment");
+          logger.warn({ err, doctorId, paymentId: payment.id }, "Failed to send receipt email");
         }
       })();
     }
   } else {
-    await db
-      .update(paymentsTable)
+    await db.update(paymentsTable)
       .set({ status: "FAILED", paymobTransactionId })
       .where(and(eq(paymentsTable.paymobOrderId, paymobOrderId), eq(paymentsTable.status, "PENDING")));
-
     logger.info({ paymobOrderId }, "Paymob payment failed");
   }
 
   res.sendStatus(200);
 });
 
-/* ─── POST /billing/checkout (admin-only — dev/testing use only) ─── */
+/* ─── POST /billing/checkout (admin-only — dev/testing) ─── */
 router.post("/billing/checkout", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
   if (!payload || payload.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
@@ -558,18 +676,16 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(422).json({ error: "Invalid checkout data" }); return; }
   const { planType, voucherCode } = parsed.data;
 
-  const [doctor] = await db.select({ id: doctorsTable.id, subscriptionEndDate: doctorsTable.subscriptionEndDate })
-    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
+  const doctor = await getDoctor(payload.sub);
   if (!doctor) { res.status(404).json({ error: "Doctor profile not found" }); return; }
 
-  const settings = await getPricingSettings();
+  const settings = await getPricingSettings("doctor");
   let finalPrice = planPrice(settings, planType as PlanType);
   let additionalFreeDays = 0;
 
   if (voucherCode) {
     const [voucher] = await db.select().from(vouchersTable)
       .where(eq(vouchersTable.code, voucherCode.toUpperCase())).limit(1);
-
     if (
       voucher && voucher.isActive &&
       !(voucher.expirationDate && voucher.expirationDate < new Date()) &&
@@ -577,9 +693,8 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
     ) {
       finalPrice = Math.max(0, finalPrice - (finalPrice * voucher.discountPercentage) / 100);
       additionalFreeDays = voucher.additionalFreeDays;
-      await db.update(vouchersTable)
-        .set({ currentUses: voucher.currentUses + 1 })
-        .where(eq(vouchersTable.id, voucher.id));
+      await db.update(vouchersTable).set({ currentUses: voucher.currentUses + 1 })
+        .where(eq(vouchersTable.code, voucherCode.toUpperCase()));
     }
   }
 
@@ -595,183 +710,82 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
     subscriptionEndDate: endDate,
   }).where(eq(doctorsTable.id, doctor.id));
 
-  req.log.info({ doctorId: doctor.id, planType, finalPrice, endDate }, "Doctor subscription activated (mock checkout)");
+  await db.insert(paymentsTable).values({
+    doctorId: doctor.id,
+    planType,
+    amount: finalPrice,
+    currency: settings.currency,
+    voucherCode: voucherCode ?? null,
+    status: "PAID",
+    paidAt: new Date(),
+  });
+
+  req.log.info({ doctorId: doctor.id, planType }, "Admin checkout — subscription activated");
   res.json({ success: true, status: "ACTIVE", plan: planType, endDate: endDate.toISOString(), price: finalPrice, currency: settings.currency });
 });
 
-/* ─── Receipt PDF buffer helper ─── */
-function generateReceiptBuffer(
-  payment: {
-    id: number;
-    planType: string;
-    amount: number;
-    currency: string;
-    paymobOrderId: string | null;
-    paymobTransactionId: string | null;
-    paidAt: Date | null;
-    createdAt: Date;
-  },
-  doctorName: string,
-): Promise<Buffer> {
+/* ─── GET /billing/payments/:id/receipt ─── */
+router.get("/billing/payments/:id/receipt", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || !isAllowedRole(payload.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const paymentId = Number(req.params.id);
+  if (!paymentId) { res.status(400).json({ error: "Invalid payment ID" }); return; }
+
+  const [payment] = await db.select().from(paymentsTable)
+    .where(eq(paymentsTable.id, paymentId)).limit(1);
+  if (!payment) { res.status(404).json({ error: "Payment not found" }); return; }
+
+  // Verify ownership
+  if (payload.role === "doctor") {
+    const doctor = await getDoctor(payload.sub);
+    if (!doctor || payment.doctorId !== doctor.id) { res.status(403).json({ error: "Forbidden" }); return; }
+  } else {
+    const center = await getOrCreateMedicalCenter(payload.sub);
+    if (payment.medicalCenterId !== center.id) { res.status(403).json({ error: "Forbidden" }); return; }
+  }
+
+  const [userRow] = await db.select({ name: usersTable.name }).from(usersTable)
+    .where(eq(usersTable.id, payload.sub)).limit(1);
+  const name = userRow?.name ?? "User";
+
+  const pdfBuffer = await generateReceiptBuffer(payment, name);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="receipt-${paymentId}.pdf"`);
+  res.end(pdfBuffer);
+});
+
+/* ── PDF receipt generator ── */
+async function generateReceiptBuffer(payment: typeof paymentsTable.$inferSelect, name: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const planLabels: Record<string, string> = {
-      MONTHS_3: "3-Month Subscription",
-      MONTHS_6: "6-Month Subscription",
-      YEARLY: "1-Year Subscription",
-    };
-    const planLabel = planLabels[payment.planType] ?? payment.planType;
-    const paymentDate = (payment.paidAt ?? payment.createdAt).toLocaleDateString("en-GB", {
-      year: "numeric", month: "long", day: "numeric",
-    });
-
-    const PRIMARY = "#1a6fa8";
-    const LIGHT_GRAY = "#f5f7fa";
-    const MID_GRAY = "#6b7280";
-    const DARK = "#111827";
-
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.rect(0, 0, doc.page.width, 90).fill(PRIMARY);
-    doc.fillColor("#ffffff").fontSize(24).font("Helvetica-Bold").text("EGY Doctors", 50, 28);
-    doc.fillColor("rgba(255,255,255,0.7)").fontSize(11).font("Helvetica").text("Payment Receipt", 50, 58);
+    doc.fontSize(20).fillColor("#0F172A").text("EGY Doctors", { align: "center" });
+    doc.fontSize(14).fillColor("#D4A853").text("Payment Receipt", { align: "center" });
+    doc.moveDown();
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor("#E2E8F0").stroke();
+    doc.moveDown();
 
-    doc.fillColor(DARK).fontSize(13).font("Helvetica-Bold").text("Receipt", 50, 120);
-    doc.fillColor(MID_GRAY).fontSize(10).font("Helvetica")
-      .text(`Receipt #${payment.id}`, 50, 138)
-      .text(`Date: ${paymentDate}`, 50, 152);
+    doc.fontSize(11).fillColor("#374151");
+    const fmt = (k: string, v: string) => doc.text(`${k}: ${v}`, { continued: false }).moveDown(0.3);
+    fmt("Name", name);
+    fmt("Payment ID", String(payment.id));
+    fmt("Plan", payment.planType);
+    fmt("Amount", `${payment.amount} ${payment.currency}`);
+    fmt("Status", payment.status);
+    if (payment.voucherCode) fmt("Promo Code", payment.voucherCode);
+    if (payment.paymobOrderId) fmt("Order ID", payment.paymobOrderId);
+    fmt("Date", payment.paidAt ? payment.paidAt.toLocaleDateString() : payment.createdAt.toLocaleDateString());
 
-    const tableTop = 195;
-    doc.rect(50, tableTop, doc.page.width - 100, 30).fill(LIGHT_GRAY);
-    doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica-Bold")
-      .text("FIELD", 65, tableTop + 10)
-      .text("DETAILS", 300, tableTop + 10);
-
-    const rows: Array<[string, string]> = [
-      ["Doctor Name",    doctorName],
-      ["Plan",           planLabel],
-      ["Amount",         `${payment.amount.toLocaleString("en-EG")} ${payment.currency}`],
-      ["Payment Date",   paymentDate],
-      ["Order ID",       payment.paymobOrderId ?? "—"],
-      ["Transaction ID", payment.paymobTransactionId ?? "—"],
-      ["Status",         "PAID"],
-    ];
-
-    let rowY = tableTop + 30;
-    rows.forEach(([label, value], i) => {
-      if (i % 2 === 1) doc.rect(50, rowY, doc.page.width - 100, 28).fill("#fafafa");
-      doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica").text(label, 65, rowY + 9);
-      doc.fillColor(DARK).fontSize(9).font("Helvetica").text(value, 300, rowY + 9, { width: doc.page.width - 370 });
-      rowY += 28;
-    });
-
-    doc.rect(50, rowY, doc.page.width - 100, 1).fill("#e5e7eb");
-
-    const footerY = doc.page.height - 70;
-    doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica")
-      .text("Thank you for subscribing to EGY Doctors.", 50, footerY, { align: "center", width: doc.page.width - 100 })
-      .text("This receipt is automatically generated and does not require a signature.", 50, footerY + 14, { align: "center", width: doc.page.width - 100 });
+    doc.moveDown(2);
+    doc.fontSize(9).fillColor("#9CA3AF").text("Thank you for subscribing to EGY Doctors.", { align: "center" });
 
     doc.end();
   });
 }
-
-/* ─── GET /billing/payments/:id/receipt ─── */
-router.get("/billing/payments/:id/receipt", async (req, res): Promise<void> => {
-  const payload = decodeJwt(req.headers.authorization);
-  if (!payload || payload.role !== "doctor") { res.status(403).json({ error: "Forbidden" }); return; }
-
-  const paymentId = Number(req.params.id);
-  if (!Number.isInteger(paymentId) || paymentId <= 0) { res.status(400).json({ error: "Invalid payment ID" }); return; }
-
-  const [doctor] = await db.select({ id: doctorsTable.id, nameEn: doctorsTable.nameEn })
-    .from(doctorsTable).where(eq(doctorsTable.userId, payload.sub)).limit(1);
-  if (!doctor) { res.status(404).json({ error: "Doctor not found" }); return; }
-
-  const [payment] = await db.select({
-    id: paymentsTable.id,
-    doctorId: paymentsTable.doctorId,
-    planType: paymentsTable.planType,
-    amount: paymentsTable.amount,
-    currency: paymentsTable.currency,
-    status: paymentsTable.status,
-    paymobOrderId: paymentsTable.paymobOrderId,
-    paymobTransactionId: paymentsTable.paymobTransactionId,
-    paidAt: paymentsTable.paidAt,
-    createdAt: paymentsTable.createdAt,
-  }).from(paymentsTable)
-    .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.doctorId, doctor.id)))
-    .limit(1);
-
-  if (!payment) { res.status(404).json({ error: "Payment not found" }); return; }
-  if (payment.status !== "PAID") { res.status(400).json({ error: "Receipt is only available for paid transactions" }); return; }
-
-  const planLabels: Record<string, string> = {
-    MONTHS_3: "3-Month Subscription",
-    MONTHS_6: "6-Month Subscription",
-    YEARLY:   "1-Year Subscription",
-  };
-  const planLabel = planLabels[payment.planType] ?? payment.planType;
-  const paymentDate = (payment.paidAt ?? payment.createdAt).toLocaleDateString("en-GB", {
-    year: "numeric", month: "long", day: "numeric",
-  });
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="receipt-${payment.id}.pdf"`);
-
-  const doc = new PDFDocument({ size: "A4", margin: 50 });
-  doc.pipe(res);
-
-  const PRIMARY = "#1a6fa8";
-  const LIGHT_GRAY = "#f5f7fa";
-  const MID_GRAY = "#6b7280";
-  const DARK = "#111827";
-
-  doc.rect(0, 0, doc.page.width, 90).fill(PRIMARY);
-  doc.fillColor("#ffffff").fontSize(24).font("Helvetica-Bold").text("EGY Doctors", 50, 28);
-  doc.fillColor("rgba(255,255,255,0.7)").fontSize(11).font("Helvetica").text("Payment Receipt", 50, 58);
-
-  doc.fillColor(DARK).fontSize(13).font("Helvetica-Bold").text("Receipt", 50, 120);
-  doc.fillColor(MID_GRAY).fontSize(10).font("Helvetica")
-    .text(`Receipt #${payment.id}`, 50, 138)
-    .text(`Date: ${paymentDate}`, 50, 152);
-
-  const tableTop = 195;
-  doc.rect(50, tableTop, doc.page.width - 100, 30).fill(LIGHT_GRAY);
-  doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica-Bold")
-    .text("FIELD", 65, tableTop + 10)
-    .text("DETAILS", 300, tableTop + 10);
-
-  const rows: Array<[string, string]> = [
-    ["Doctor Name",    doctor.nameEn],
-    ["Plan",           planLabel],
-    ["Amount",         `${payment.amount.toLocaleString("en-EG")} ${payment.currency}`],
-    ["Payment Date",   paymentDate],
-    ["Order ID",       payment.paymobOrderId ?? "—"],
-    ["Transaction ID", payment.paymobTransactionId ?? "—"],
-    ["Status",         "PAID"],
-  ];
-
-  let rowY = tableTop + 30;
-  rows.forEach(([label, value], i) => {
-    if (i % 2 === 1) doc.rect(50, rowY, doc.page.width - 100, 28).fill("#fafafa");
-    doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica").text(label, 65, rowY + 9);
-    doc.fillColor(DARK).fontSize(9).font("Helvetica").text(value, 300, rowY + 9, { width: doc.page.width - 370 });
-    rowY += 28;
-  });
-
-  doc.rect(50, rowY, doc.page.width - 100, 1).fill("#e5e7eb");
-
-  const footerY = doc.page.height - 70;
-  doc.fillColor(MID_GRAY).fontSize(9).font("Helvetica")
-    .text("Thank you for subscribing to EGY Doctors.", 50, footerY, { align: "center", width: doc.page.width - 100 })
-    .text("This receipt is automatically generated and does not require a signature.", 50, footerY + 14, { align: "center", width: doc.page.width - 100 });
-
-  doc.end();
-
-  req.log.info({ doctorId: doctor.id, paymentId: payment.id }, "Payment receipt downloaded");
-});
 
 export default router;

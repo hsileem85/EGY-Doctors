@@ -4,7 +4,8 @@ export const postTypeEnum = pgEnum("post_type", ["article", "tip", "video"]);
 
 export const magazinePostsTable = pgTable("magazine_posts", {
   id: serial("id").primaryKey(),
-  doctorId: integer("doctor_id").notNull(),
+  doctorId: integer("doctor_id"),
+  medicalCenterId: integer("medical_center_id"),
   type: postTypeEnum("type").notNull(),
   title: varchar("title", { length: 500 }),
   content: text("content"),

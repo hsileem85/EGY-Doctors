@@ -1,0 +1,29 @@
+Please implement a unified yet role-differentiated Subscription Billing and Feature System for both "Doctors" and "Medical Centers" on the EGY Doctors platform. The core features (Publications, Follows, Paywalls) must be identical for both roles, but their Subscription Pricing must be split and managed separately by the Admin.
+
+Please execute the following comprehensive update across the stack:
+
+### 1. Database Schema Synchronization & Split Pricing
+* **Role Unification for Features:** - Replicate `subscriptionStatus`, `subscriptionPlan`, `subscriptionEndDate`, and `isTrialUsed` to the `MedicalCenter` model (exactly as they exist in the `Doctor` model).
+  - Update the `Publication` and `Follow` models to support linking to EITHER a `doctorId` OR a `medicalCenterId` (Polymorphic or dual optional foreign keys).
+  - Preserve identity differences: `medicalSyndicateNumber` belongs ONLY to the `Doctor` model, while facility details (`commercialRegistrationNumber`, etc.) belong ONLY to the `MedicalCenter` model.
+* **SystemSettings Model (Split Pricing):** Update the singleton settings table to hold separate prices. Add the following fields:
+  - Doctor Prices: `doctorPrice3Months`, `doctorPrice6Months`, `doctorPrice1Year`.
+  - Center Prices: `centerPrice3Months`, `centerPrice6Months`, `centerPrice1Year`.
+  - General: `defaultFreeTrialDays` (Integer).
+* **Voucher Model:** Maintain the `Voucher` table for promo codes (`code`, `discountPercentage`, `additionalFreeDays`, `expirationDate`, `isActive`, `maxUses`, `currentUses`).
+
+### 2. Backend APIs & Role-Aware Logic
+* **Admin Settings API:** Update `PUT /api/admin/settings` to handle the 6 new distinct pricing fields + trial days.
+* **Checkout API (`POST /api/billing/checkout`):** - The endpoint MUST dynamically identify if the requesting user is a `Doctor` or a `MedicalCenter`.
+  - Fetch the EXACT role-specific price from the `SystemSettings` table (e.g., if a Medical Center selects a 6-month plan, fetch `centerPrice6Months`).
+  - Apply any valid `voucherCode` discounts mathematically to this specific price before generating the payment session/redirection URL.
+* **Feature APIs & Guards:** Update `POST /api/publications`, `GET /api/publications`, and the Follow notification triggers to seamlessly handle both `Doctor` and `MedicalCenter` authors. Ensure the middleware strictly verifies the `subscriptionEndDate` of the specific provider before allowing content creation.
+
+### 3. Admin Dashboard UI (Dual Pricing Management)
+* **Platform Settings Tab:** Redesign the Billing Management screen to clearly separate "Doctor Pricing Plans" and "Medical Center Pricing Plans". Include the 3 input fields (3 Months, 6 Months, 1 Year) under each respective category, allowing the Admin to set completely different tiers.
+* **Vouchers Tab:** Include the datatable and creation form to manage promotional codes for the platform.
+
+### 4. Provider Dashboards (Doctor & Medical Center)
+* **Billing & Subscription Page:** Implement this page identically in BOTH dashboards. Display the 3 pricing cards (3 Months, 6 Months, 1 Year). Ensure the frontend dynamically displays the correct prices based on the logged-in user's role (fetching either the Doctor prices or Center prices). 
+* **Checkout Flow:** Include the Free Trial action button (if `!isTrialUsed`) and the "Apply Promo Code" input field to update the total before final payment.
+* **Feature Paywall:** In the "Publications" section for both dashboards, enforce the active subscription check. If `INACTIVE`, display a visually appealing lock overlay asking them to renew their subscription to unlock publishing tools and public search visibility.

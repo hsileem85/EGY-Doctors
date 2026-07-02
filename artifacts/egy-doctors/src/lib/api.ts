@@ -652,9 +652,12 @@ export async function downloadPaymentReceipt(paymentId: number): Promise<void> {
 /* ─── Admin Platform Settings ─── */
 
 export interface PlatformSettings {
-  price3Months: number;
-  price6Months: number;
-  price1Year: number;
+  doctorPrice3Months: number;
+  doctorPrice6Months: number;
+  doctorPrice1Year: number;
+  centerPrice3Months: number;
+  centerPrice6Months: number;
+  centerPrice1Year: number;
   defaultFreeTrialDays: number;
   currency: string;
 }

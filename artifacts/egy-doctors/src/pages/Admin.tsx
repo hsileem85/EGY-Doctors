@@ -440,7 +440,11 @@ const CONTACT_DEFAULTS: ContactSettings = {
 function PricingSettingsPanel({ lang }: { lang: "en" | "ar" }) {
   const isAr = lang === "ar";
   const qc = useQueryClient();
-  const DEFAULTS: PlatformSettings = { price3Months: 800, price6Months: 1500, price1Year: 2500, defaultFreeTrialDays: 14, currency: "EGP" };
+  const DEFAULTS: PlatformSettings = {
+    doctorPrice3Months: 800, doctorPrice6Months: 1500, doctorPrice1Year: 2500,
+    centerPrice3Months: 1200, centerPrice6Months: 2200, centerPrice1Year: 3800,
+    defaultFreeTrialDays: 14, currency: "EGP",
+  };
   const [form, setForm] = useState<PlatformSettings>(DEFAULTS);
   const [saved, setSaved] = useState(false);
 
@@ -471,33 +475,69 @@ function PricingSettingsPanel({ lang }: { lang: "en" | "ar" }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-lg">
-      <h3 className="font-semibold text-gray-900 mb-1">{isAr ? "أسعار الاشتراك" : "Subscription Pricing"}</h3>
-      <p className="text-sm text-gray-500 mb-5">{isAr ? "الأسعار الظاهرة للأطباء في صفحة الاشتراك" : "Prices shown to doctors on the subscription page"}</p>
-      {isLoading ? (
-        <div className="text-gray-400 text-sm py-4">{isAr ? "جاري التحميل..." : "Loading..."}</div>
-      ) : (
-        <div className="space-y-4">
-          {numField("price3Months",        "3-Month Price (EGP)",   "سعر 3 أشهر (جنيه)")}
-          {numField("price6Months",        "6-Month Price (EGP)",   "سعر 6 أشهر (جنيه)")}
-          {numField("price1Year",          "1-Year Price (EGP)",    "سعر السنة (جنيه)")}
-          {numField("defaultFreeTrialDays","Free Trial Days",        "أيام التجربة المجانية")}
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "العملة" : "Currency"}</label>
-            <Input value={form.currency} placeholder="EGP"
-              onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} />
-          </div>
-          <div className="flex items-center gap-3 pt-1">
-            <Button onClick={() => { setSaved(false); mut.mutate(form); }} disabled={mut.isPending}
-              className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2">
-              <Save className="h-4 w-4" />
-              {mut.isPending ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ" : "Save Settings")}
-            </Button>
-            {saved && <span className="text-sm text-green-400 font-medium">{isAr ? "✓ تم الحفظ" : "✓ Saved"}</span>}
-            {mut.isError && <span className="text-sm text-red-400">{isAr ? "خطأ في الحفظ" : "Failed to save"}</span>}
-          </div>
+    <div className="space-y-5 max-w-2xl">
+      {/* Doctor Pricing */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Stethoscope className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-gray-900">{isAr ? "أسعار اشتراك الأطباء" : "Doctor Subscription Pricing"}</h3>
         </div>
-      )}
+        <p className="text-sm text-gray-500 mb-5">{isAr ? "الأسعار الظاهرة للأطباء في صفحة الاشتراك" : "Prices shown to doctors on the subscription page"}</p>
+        {isLoading ? (
+          <div className="text-gray-400 text-sm py-2">{isAr ? "جاري التحميل..." : "Loading..."}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {numField("doctorPrice3Months", "3-Month Price (EGP)", "سعر 3 أشهر (جنيه)")}
+            {numField("doctorPrice6Months", "6-Month Price (EGP)", "سعر 6 أشهر (جنيه)")}
+            {numField("doctorPrice1Year",   "1-Year Price (EGP)",  "سعر السنة (جنيه)")}
+          </div>
+        )}
+      </div>
+
+      {/* Medical Center Pricing */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Building2 className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-gray-900">{isAr ? "أسعار اشتراك المراكز الطبية" : "Medical Center Subscription Pricing"}</h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-5">{isAr ? "الأسعار الظاهرة للمراكز الطبية في صفحة الاشتراك" : "Prices shown to medical centers on the subscription page"}</p>
+        {isLoading ? (
+          <div className="text-gray-400 text-sm py-2">{isAr ? "جاري التحميل..." : "Loading..."}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {numField("centerPrice3Months", "3-Month Price (EGP)", "سعر 3 أشهر (جنيه)")}
+            {numField("centerPrice6Months", "6-Month Price (EGP)", "سعر 6 أشهر (جنيه)")}
+            {numField("centerPrice1Year",   "1-Year Price (EGP)",  "سعر السنة (جنيه)")}
+          </div>
+        )}
+      </div>
+
+      {/* Shared settings */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="font-semibold text-gray-900 mb-4">{isAr ? "إعدادات مشتركة" : "Shared Settings"}</h3>
+        {isLoading ? (
+          <div className="text-gray-400 text-sm py-2">{isAr ? "جاري التحميل..." : "Loading..."}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {numField("defaultFreeTrialDays", "Free Trial Days", "أيام التجربة المجانية")}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">{isAr ? "العملة" : "Currency"}</label>
+              <Input value={form.currency} placeholder="EGP"
+                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={() => { setSaved(false); mut.mutate(form); }} disabled={mut.isPending}
+          className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2">
+          <Save className="h-4 w-4" />
+          {mut.isPending ? (isAr ? "جارٍ الحفظ..." : "Saving...") : (isAr ? "حفظ الإعدادات" : "Save All Settings")}
+        </Button>
+        {saved && <span className="text-sm text-green-400 font-medium">{isAr ? "✓ تم الحفظ" : "✓ Saved"}</span>}
+        {mut.isError && <span className="text-sm text-red-400">{isAr ? "خطأ في الحفظ" : "Failed to save"}</span>}
+      </div>
     </div>
   );
 }
