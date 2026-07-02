@@ -26,13 +26,15 @@ interface Post {
   numericId: number;
   doctorId: string;
   doctorName: string;
+  doctorNameAr: string | null;
   specialty: string;
+  specialtyAr: string;
   avatar: string;
   type: PostType;
   title: string;
   content: string;
   videoUrl?: string;
-  time: string;
+  createdAt: string;
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
@@ -43,32 +45,27 @@ interface Post {
 }
 
 function apiPostToPost(p: ApiMagazinePost): Post {
-  const initials = p.doctorName
+  const nameEn = p.doctorName ?? "Unknown";
+  const initials = nameEn
     .split(" ")
     .filter(w => w[0])
     .slice(0, 2)
     .map(w => w[0].toUpperCase())
     .join("");
-  const elapsed = (() => {
-    const diff = Date.now() - new Date(p.createdAt).getTime();
-    const h = Math.floor(diff / 3600000);
-    if (h < 1) return "Just now";
-    if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    return d === 1 ? "1 day ago" : `${d} days ago`;
-  })();
   return {
     id: String(p.id),
     numericId: p.id,
     doctorId: String(p.doctorId),
-    doctorName: p.doctorName,
-    specialty: p.specialty,
+    doctorName: nameEn,
+    doctorNameAr: p.doctorNameAr ?? null,
+    specialty: p.specialty ?? "",
+    specialtyAr: p.specialtyAr ?? "",
     avatar: initials || "DR",
     type: p.type,
     title: p.title ?? "",
     content: p.content ?? "",
     videoUrl: p.mediaUrl ?? undefined,
-    time: elapsed,
+    createdAt: p.createdAt,
     likesCount: p.likesCount,
     commentsCount: p.commentsCount,
     sharesCount: p.sharesCount,
@@ -79,22 +76,24 @@ function apiPostToPost(p: ApiMagazinePost): Post {
   };
 }
 
-const typeFilters: { key: "all" | PostType; label: string; icon: React.ReactNode }[] = [
-  { key: "all", label: "All", icon: <Newspaper className="h-4 w-4" /> },
-  { key: "article", label: "Articles", icon: <FileText className="h-4 w-4" /> },
-  { key: "video", label: "Videos", icon: <PlayCircle className="h-4 w-4" /> },
-  { key: "tip", label: "Tips", icon: <TrendingUp className="h-4 w-4" /> },
-];
-
-function getTypeIcon(type: PostType) {
-  switch (type) {
-    case "article": return <FileText className="h-4 w-4" />;
-    case "video": return <PlayCircle className="h-4 w-4" />;
-    case "tip": return <TrendingUp className="h-4 w-4" />;
-  }
+function getElapsed(createdAt: string, isRTL: boolean): string {
+  const diff = Date.now() - new Date(createdAt).getTime();
+  const h = Math.floor(diff / 3600000);
+  if (h < 1) return isRTL ? "الآن" : "Just now";
+  if (h < 24) return isRTL ? `منذ ${h} ساعة` : `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (isRTL) return d === 1 ? "منذ يوم" : `منذ ${d} أيام`;
+  return d === 1 ? "1 day ago" : `${d} days ago`;
 }
 
-function getTypeLabel(type: PostType) {
+function getTypeLabel(type: PostType, isRTL: boolean): string {
+  if (isRTL) {
+    switch (type) {
+      case "article": return "مقالة";
+      case "video": return "فيديو";
+      case "tip": return "نصيحة صحية";
+    }
+  }
   switch (type) {
     case "article": return "Article";
     case "video": return "Video";
@@ -108,6 +107,10 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  const displayName = isRTL ? (post.doctorNameAr ?? post.doctorName) : post.doctorName;
+  const displaySpecialty = isRTL ? (post.specialtyAr || post.specialty) : post.specialty;
+  const elapsed = getElapsed(post.createdAt, isRTL);
 
   const followMutation = useMutation({
     mutationFn: () => followDoctor(post.numericDoctorId),
@@ -161,15 +164,15 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
             <div className="min-w-0">
               <Link href={`/doctor/${post.doctorId}`}>
                 <h3 className="font-semibold text-white hover:text-[#D4A853] transition-colors cursor-pointer truncate">
-                  {post.doctorName}
+                  {displayName}
                 </h3>
               </Link>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
-                <span className="text-gray-400">{post.specialty}</span>
+                <span className="text-gray-400">{displaySpecialty}</span>
                 <span className="text-gray-600 hidden sm:inline">·</span>
                 <span className="text-gray-500 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {post.time}
+                  {elapsed}
                 </span>
               </div>
             </div>
@@ -208,8 +211,10 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
         <div className="px-5 pb-4">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <Badge className="bg-[#D4A853]/10 text-[#D4A853] border-[#D4A853]/20 hover:bg-[#D4A853]/20 shrink-0">
-              {getTypeIcon(post.type)}
-              <span className="ml-1">{getTypeLabel(post.type)}</span>
+              {post.type === "article" && <FileText className="h-4 w-4" />}
+              {post.type === "video" && <PlayCircle className="h-4 w-4" />}
+              {post.type === "tip" && <TrendingUp className="h-4 w-4" />}
+              <span className={isRTL ? "mr-1" : "ml-1"}>{getTypeLabel(post.type, isRTL)}</span>
             </Badge>
             {post.tags.map(tag => (
               <Badge key={tag} variant="outline" className="bg-[#0F172A]/50 border-[#334155] text-gray-400 text-xs shrink-0">
@@ -237,7 +242,7 @@ function PostCard({ post, isRTL }: { post: Post; isRTL: boolean }) {
               initialCommentsCount={post.commentsCount}
               initialSharesCount={post.sharesCount}
               isLikedByCurrentUser={post.isLikedByCurrentUser}
-              doctorName={post.doctorName}
+              doctorName={displayName}
               postTitle={post.title}
               doctorId={post.doctorId}
               isRTL={isRTL}
@@ -263,6 +268,13 @@ export default function Magazine() {
   const { dir } = useLanguage();
   const isRTL = dir === "rtl";
   const [filter, setFilter] = useState<"all" | PostType>("all");
+
+  const typeFilters: { key: "all" | PostType; label: string; icon: React.ReactNode }[] = [
+    { key: "all", label: isRTL ? "الكل" : "All", icon: <Newspaper className="h-4 w-4" /> },
+    { key: "article", label: isRTL ? "مقالات" : "Articles", icon: <FileText className="h-4 w-4" /> },
+    { key: "video", label: isRTL ? "فيديوهات" : "Videos", icon: <PlayCircle className="h-4 w-4" /> },
+    { key: "tip", label: isRTL ? "نصائح" : "Tips", icon: <TrendingUp className="h-4 w-4" /> },
+  ];
 
   const { data: apiPosts = [], isLoading: postsLoading } = useQuery<ApiMagazinePost[]>({
     queryKey: ["magazinePosts"],
