@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Save, ArrowLeft, CheckCircle2, Globe, Facebook, Instagram, MapPin } from "lucide-react";
+import { Building2, Save, ArrowLeft, CheckCircle2, Globe, Facebook, Instagram, MapPin, LocateFixed, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,6 +62,7 @@ export default function MedicalCenterProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notApproved, setNotApproved] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     getMedicalCenterProfile()
@@ -278,11 +279,45 @@ export default function MedicalCenterProfile() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-xs text-gray-500">
-                  {isRTL
-                    ? "أضف إحداثيات GPS لعرض موقعك بدقة على الخريطة."
-                    : "Add GPS coordinates to display your location accurately on the map."}
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs text-gray-500">
+                    {isRTL
+                      ? "أضف إحداثيات GPS لعرض موقعك بدقة على الخريطة."
+                      : "Add GPS coordinates to display your location accurately on the map."}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isLocating}
+                    className="shrink-0 text-xs h-8 gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                    onClick={() => {
+                      if (!navigator.geolocation) {
+                        toast({ title: isRTL ? "المتصفح لا يدعم تحديد الموقع" : "Geolocation not supported by your browser", variant: "destructive" });
+                        return;
+                      }
+                      setIsLocating(true);
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          f("lat", pos.coords.latitude.toFixed(6));
+                          f("lng", pos.coords.longitude.toFixed(6));
+                          setIsLocating(false);
+                          toast({ title: isRTL ? "تم تحديد موقعك بنجاح" : "Location detected successfully" });
+                        },
+                        () => {
+                          setIsLocating(false);
+                          toast({ title: isRTL ? "تعذّر تحديد الموقع — تأكد من منح الإذن" : "Could not get location — please allow location access", variant: "destructive" });
+                        },
+                        { timeout: 10000, enableHighAccuracy: true },
+                      );
+                    }}
+                  >
+                    {isLocating
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <LocateFixed className="h-3.5 w-3.5" />}
+                    {isRTL ? "موقعي الحالي" : "Get My Location"}
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>{isRTL ? "خط العرض (Latitude)" : "Latitude"}</Label>
@@ -307,6 +342,17 @@ export default function MedicalCenterProfile() {
                     />
                   </div>
                 </div>
+                {form.lat && form.lng && (
+                  <a
+                    href={`https://www.google.com/maps?q=${form.lat},${form.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    {isRTL ? "معاينة الموقع على الخريطة" : "Preview on map"}
+                  </a>
+                )}
               </CardContent>
             </Card>
 
