@@ -44,7 +44,7 @@ onlyBuiltDependencies:
 
 overrides:
   '@babel/core': '>=7.29.6'
-  js-yaml: '>=4.2.0'
+  js-yaml: '>=4.2.0 <5'
   markdown-it: '>=14.2.0'
   qs: '>=6.15.2'
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0

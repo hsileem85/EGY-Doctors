@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { db, specialtiesTable, citiesTable, areasTable } from "@workspace/db";
+import { db, specialtiesTable, servicesTable, citiesTable, areasTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -15,6 +15,20 @@ router.get("/specialties", async (_req, res): Promise<void> => {
   }).from(specialtiesTable)
     .where(eq(specialtiesTable.isActive, "true"))
     .orderBy(specialtiesTable.displayOrder);
+
+  res.json(rows);
+});
+
+/* ─── GET /services ─── */
+router.get("/services", async (_req, res): Promise<void> => {
+  const rows = await db.select({
+    id: servicesTable.id,
+    name: servicesTable.name,
+    nameAr: servicesTable.nameAr,
+    displayOrder: servicesTable.displayOrder,
+  }).from(servicesTable)
+    .where(eq(servicesTable.isActive, "true"))
+    .orderBy(servicesTable.displayOrder);
 
   res.json(rows);
 });

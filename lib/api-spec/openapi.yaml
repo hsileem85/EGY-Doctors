@@ -232,6 +232,72 @@ paths:
       responses:
         "204":
           description: No Content
+  /admin/services:
+    get:
+      operationId: listServices
+      tags: [admin]
+      summary: List all services
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+    post:
+      operationId: createService
+      tags: [admin]
+      summary: Create a service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+  /admin/services/{id}:
+    put:
+      operationId: updateService
+      tags: [admin]
+      summary: Update a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    delete:
+      operationId: deleteService
+      tags: [admin]
+      summary: Delete a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: No Content
   /admin/cities:
     get:
       operationId: listCities
@@ -510,6 +576,40 @@ components:
         nameAr: { type: string }
         shortName: { type: string }
         description: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+    Service:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - name
+        - nameAr
+        - displayOrder
+        - isActive
+        - createdAt
+        - updatedAt
+    ServiceInput:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: string }
+        displayOrder: { type: integer }
+      required:
+        - name
+        - nameAr
+    ServiceUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        nameAr: { type: string }
         displayOrder: { type: integer }
         isActive: { type: string }
     City:

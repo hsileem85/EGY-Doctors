@@ -6,3 +6,5 @@
 - [drizzle-kit push blocked by unrelated prompt](db-push-tty-blocked.md) — unrelated ambiguous rename prompts block additive schema pushes; apply simple additive columns via raw SQL instead.
 - [Dev workflows sometimes missing](dev-workflows-missing.md) — if restart_workflow fails with RUN_COMMAND_NOT_FOUND, recreate workflows from artifact.toml ports/env vars instead of assuming the app is broken.
 - [Booking schedule source of truth](booking-schedule-source-of-truth.md) — availability (schedule, period, sessions/hour) must sync clinics+doctors rows and validate server-side; never generate slots client-side.
+- [Duplicate legacy workflows](duplicate-legacy-workflows.md) — stale non-artifact-named workflows can conflict on ports with canonical `artifacts/...` workflows; remove the stale one, not the canonical one.
+- [Orval + js-yaml v5](orval-js-yaml.md) — pin js-yaml override to `>=4.2.0 <5` in pnpm-workspace.yaml or OpenAPI codegen breaks.

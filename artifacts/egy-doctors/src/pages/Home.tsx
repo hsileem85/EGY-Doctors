@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, CENTER_SERVICE_OPTIONS, type ApiDoctor, type MedicalCenterDirectoryEntry, type CenterServiceType } from "@/lib/api";
+import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, getServices, type ApiDoctor, type MedicalCenterDirectoryEntry, type ApiService } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
 type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
@@ -67,7 +67,7 @@ export default function Home() {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [nearMeActive, setNearMeActive] = useState(false);
   const [locationToast, setLocationToast] = useState<string | null>(null);
-  const [centerServiceFilters, setCenterServiceFilters] = useState<Set<CenterServiceType>>(new Set());
+  const [centerServiceFilters, setCenterServiceFilters] = useState<Set<number>>(new Set());
   const { t, dir } = useLanguage();
   const isRTL = dir === "rtl";
 
@@ -77,15 +77,20 @@ export default function Home() {
     queryFn: () => getMedicalCentersDirectory(),
     staleTime: 5 * 60 * 1000,
   });
+  const { data: serviceOptions = [] } = useQuery<ApiService[]>({
+    queryKey: ["services"],
+    queryFn: () => getServices(),
+    staleTime: 5 * 60 * 1000,
+  });
   const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";
   const citiesValue = stats ? stats.citiesWithClinics.toLocaleString() : "—";
 
   const filteredMedicalCenters = useMemo(() => {
     if (centerServiceFilters.size === 0) return medicalCenters;
-    return medicalCenters.filter((c) => c.services?.some((s) => centerServiceFilters.has(s)));
+    return medicalCenters.filter((c) => c.services?.some((s) => centerServiceFilters.has(s.id)));
   }, [medicalCenters, centerServiceFilters]);
 
-  function toggleCenterServiceFilter(value: CenterServiceType) {
+  function toggleCenterServiceFilter(value: number) {
     setCenterServiceFilters((prev) => {
       const next = new Set(prev);
       next.has(value) ? next.delete(value) : next.add(value);
@@ -698,20 +703,20 @@ export default function Home() {
                 <span className="text-xs font-semibold text-gray-500 me-1">
                   {isRTL ? "فلترة حسب الخدمة:" : "Filter by service:"}
                 </span>
-                {CENTER_SERVICE_OPTIONS.map((opt) => {
-                  const active = centerServiceFilters.has(opt.value);
+                {serviceOptions.map((opt) => {
+                  const active = centerServiceFilters.has(opt.id);
                   return (
                     <button
-                      key={opt.value}
+                      key={opt.id}
                       type="button"
-                      onClick={() => toggleCenterServiceFilter(opt.value)}
+                      onClick={() => toggleCenterServiceFilter(opt.id)}
                       className={`text-xs font-semibold rounded-full px-3 py-1 border transition-colors ${
                         active
                           ? "bg-[#0F172A] text-white border-[#0F172A]"
                           : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
                       }`}
                     >
-                      {isRTL ? opt.labelAr : opt.label}
+                      {isRTL ? opt.nameAr : opt.name}
                     </button>
                   );
                 })}
@@ -832,18 +837,14 @@ export default function Home() {
 
                       {center.services && center.services.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
-                          {center.services.map((svc) => {
-                            const opt = CENTER_SERVICE_OPTIONS.find((o) => o.value === svc);
-                            if (!opt) return null;
-                            return (
-                              <span
-                                key={svc}
-                                className="inline-block text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5"
-                              >
-                                {isRTL ? opt.labelAr : opt.label}
-                              </span>
-                            );
-                          })}
+                          {center.services.map((svc) => (
+                            <span
+                              key={svc.id}
+                              className="inline-block text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5"
+                            >
+                              {isRTL ? svc.nameAr : svc.name}
+                            </span>
+                          ))}
                         </div>
                       )}
                     </div>

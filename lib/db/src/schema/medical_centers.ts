@@ -3,20 +3,6 @@ import { subscriptionStatusEnum } from "./doctors";
 
 export const centerSubTypeEnum = ["POLY_CLINIC", "HOSPITAL", "LAB", "SCAN_CENTER"] as const;
 
-export const centerServiceEnum = [
-  "LAB",
-  "SCAN",
-  "DENTAL",
-  "EYE",
-  "PHYSICAL_THERAPY",
-  "PHARMACY",
-  "X_RAY",
-  "EMERGENCY",
-  "MATERNITY",
-  "GENERAL_CHECKUP",
-] as const;
-export type CenterService = (typeof centerServiceEnum)[number];
-
 export const medicalCentersTable = pgTable("medical_centers", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().unique(),
@@ -37,7 +23,7 @@ export const medicalCentersTable = pgTable("medical_centers", {
   instagram: text("instagram"),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
-  services: text("services").array(),
+  services: integer("services").array(),
   isApproved: boolean("is_approved").notNull().default(false),
   hasVezeetaProfile: boolean("has_vezeeta_profile").notNull().default(false),
   subscriptionStatus: text("subscription_status", { enum: subscriptionStatusEnum }).notNull().default("INACTIVE"),

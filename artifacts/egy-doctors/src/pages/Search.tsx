@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
 import {
-  getDoctors, getSpecialties, getCities, getMedicalCentersDirectory,
-  CENTER_SERVICE_OPTIONS, type CenterServiceType, type MedicalCenterDirectoryEntry,
+  getDoctors, getSpecialties, getCities, getMedicalCentersDirectory, getServices,
+  type MedicalCenterDirectoryEntry, type ApiService,
 } from "@/lib/api";
 
 export default function Search() {
@@ -34,9 +34,9 @@ export default function Search() {
   const [selectedCities, setSelectedCities] = useState<string[]>(
     initialCity ? [initialCity] : []
   );
-  const [selectedServices, setSelectedServices] = useState<CenterServiceType[]>(
+  const [selectedServices, setSelectedServices] = useState<number[]>(
     initialServices
-      ? (initialServices.split(",").filter(Boolean) as CenterServiceType[])
+      ? initialServices.split(",").filter(Boolean).map(Number).filter((n) => !Number.isNaN(n))
       : []
   );
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -61,13 +61,18 @@ export default function Search() {
     queryFn: () => getMedicalCentersDirectory(),
   });
 
+  const { data: serviceOptions = [] } = useQuery<ApiService[]>({
+    queryKey: ["services"],
+    queryFn: () => getServices(),
+  });
+
   const toggleSpecialty = (s: string) =>
     setSelectedSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
   const toggleCity = (c: string) =>
     setSelectedCities(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
 
-  const toggleService = (s: CenterServiceType) => {
+  const toggleService = (s: number) => {
     setSelectedServices(prev => {
       const next = prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s];
       const params = new URLSearchParams(searchString);
@@ -105,7 +110,7 @@ export default function Search() {
 
       const matchService =
         selectedServices.length === 0 ||
-        (doctor.affiliatedCenter?.services ?? []).some(s => selectedServices.includes(s));
+        (doctor.affiliatedCenter?.services ?? []).some(s => selectedServices.includes(s.id));
 
       return matchSearch && matchSpecialty && matchCity && matchMedicalCenter && matchService;
     });
@@ -123,7 +128,7 @@ export default function Search() {
 
       const matchService =
         selectedServices.length === 0 ||
-        (center.services ?? []).some(s => selectedServices.includes(s));
+        (center.services ?? []).some(s => selectedServices.includes(s.id));
 
       const matchMedicalCenter = !medicalCenterId || center.id === Number(medicalCenterId);
 
@@ -213,16 +218,16 @@ export default function Search() {
           {isRTL ? "الخدمات" : "Services"}
         </h3>
         <div className="space-y-2.5">
-          {CENTER_SERVICE_OPTIONS.map(opt => (
-            <div key={opt.value} className="flex items-center gap-2">
+          {serviceOptions.map(opt => (
+            <div key={opt.id} className="flex items-center gap-2">
               <Checkbox
-                id={`service-${opt.value}`}
-                checked={selectedServices.includes(opt.value)}
-                onCheckedChange={() => toggleService(opt.value)}
-                data-testid={`checkbox-service-${opt.value}`}
+                id={`service-${opt.id}`}
+                checked={selectedServices.includes(opt.id)}
+                onCheckedChange={() => toggleService(opt.id)}
+                data-testid={`checkbox-service-${opt.id}`}
               />
-              <Label htmlFor={`service-${opt.value}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                {isRTL ? opt.labelAr : opt.label}
+              <Label htmlFor={`service-${opt.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
+                {isRTL ? opt.nameAr : opt.name}
               </Label>
             </div>
           ))}
@@ -396,22 +401,18 @@ export default function Search() {
 
                         {center.services && center.services.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-2">
-                            {center.services.map(svc => {
-                              const opt = CENTER_SERVICE_OPTIONS.find(o => o.value === svc);
-                              if (!opt) return null;
-                              return (
-                                <span
-                                  key={svc}
-                                  className={`inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
-                                    selectedServices.includes(svc)
-                                      ? "text-primary bg-primary/10 border-primary/30"
-                                      : "text-gray-600 bg-gray-100 border-gray-200"
-                                  }`}
-                                >
-                                  {isRTL ? opt.labelAr : opt.label}
-                                </span>
-                              );
-                            })}
+                            {center.services.map(svc => (
+                              <span
+                                key={svc.id}
+                                className={`inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
+                                  selectedServices.includes(svc.id)
+                                    ? "text-primary bg-primary/10 border-primary/30"
+                                    : "text-gray-600 bg-gray-100 border-gray-200"
+                                }`}
+                              >
+                                {isRTL ? svc.nameAr : svc.name}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>

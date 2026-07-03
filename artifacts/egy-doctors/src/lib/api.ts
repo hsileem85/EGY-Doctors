@@ -107,7 +107,7 @@ export interface ApiDoctor extends AvailabilityConfig {
     lat?: number | null;
     lng?: number | null;
     cityName?: string | null;
-    services?: CenterServiceType[] | null;
+    services?: { id: number; name: string; nameAr: string }[] | null;
   } | null;
   schedule?: DoctorScheduleMap | null;
 }
@@ -737,30 +737,16 @@ export function deleteAdminVoucher(id: number): Promise<{ message: string }> {
 
 export type CenterSubType = "POLY_CLINIC" | "HOSPITAL" | "LAB" | "SCAN_CENTER";
 
-export type CenterServiceType =
-  | "LAB"
-  | "SCAN"
-  | "DENTAL"
-  | "EYE"
-  | "PHYSICAL_THERAPY"
-  | "PHARMACY"
-  | "X_RAY"
-  | "EMERGENCY"
-  | "MATERNITY"
-  | "GENERAL_CHECKUP";
+export interface ApiService {
+  id: number;
+  name: string;
+  nameAr: string;
+  displayOrder: number;
+}
 
-export const CENTER_SERVICE_OPTIONS: { value: CenterServiceType; label: string; labelAr: string }[] = [
-  { value: "LAB", label: "Lab", labelAr: "معمل تحاليل" },
-  { value: "SCAN", label: "Scan", labelAr: "أشعة تصويرية" },
-  { value: "DENTAL", label: "Dental", labelAr: "أسنان" },
-  { value: "EYE", label: "Eye", labelAr: "عيون" },
-  { value: "PHYSICAL_THERAPY", label: "Physical Therapy", labelAr: "علاج طبيعي" },
-  { value: "PHARMACY", label: "Pharmacy", labelAr: "صيدلية" },
-  { value: "X_RAY", label: "X-Ray", labelAr: "أشعة سينية" },
-  { value: "EMERGENCY", label: "Emergency", labelAr: "طوارئ" },
-  { value: "MATERNITY", label: "Maternity", labelAr: "ولادة" },
-  { value: "GENERAL_CHECKUP", label: "General Checkup", labelAr: "فحص عام" },
-];
+export function getServices(): Promise<ApiService[]> {
+  return request("/services");
+}
 
 export interface MedicalCenterProfile {
   id: number;
@@ -780,7 +766,7 @@ export interface MedicalCenterProfile {
   instagram: string | null;
   lat: number | null;
   lng: number | null;
-  services: CenterServiceType[] | null;
+  services: number[] | null;
   isApproved: boolean;
   hasVezeetaProfile: boolean;
   subscriptionStatus: string;
@@ -865,7 +851,7 @@ export interface MedicalCenterDirectoryEntry {
   specialties: { name: string | null; nameAr: string | null }[];
   doctors: { id: number; name: string; nameAr: string | null }[];
   doctorsCount: number;
-  services: CenterServiceType[];
+  services: { id: number; name: string; nameAr: string }[];
 }
 
 export function getMedicalCentersDirectory(): Promise<MedicalCenterDirectoryEntry[]> {
@@ -893,7 +879,7 @@ export interface MedicalCenterPublicProfile {
   specialties: { name: string | null; nameAr: string | null }[];
   doctors: { id: number; name: string; nameAr: string | null; specialtyName: string | null; specialtyNameAr: string | null }[];
   doctorsCount: number;
-  services: CenterServiceType[];
+  services: { id: number; name: string; nameAr: string }[];
 }
 
 export function getMedicalCenterPublicProfile(id: number): Promise<MedicalCenterPublicProfile> {

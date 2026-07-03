@@ -19,6 +19,10 @@ import {
   useCreateArea,
   useUpdateArea,
   useDeleteArea,
+  useListServices,
+  useCreateService,
+  useUpdateService,
+  useDeleteService,
   useListAdminNotifications,
   useMarkAdminNotificationRead,
   useClearAdminNotifications,
@@ -27,6 +31,7 @@ import {
   getListSpecialtiesQueryKey,
   getListCitiesQueryKey,
   getListAreasQueryKey,
+  getListServicesQueryKey,
   type Doctor,
   type AdminNotification,
 } from "@workspace/api-client-react";
@@ -76,6 +81,7 @@ import {
   Globe,
   Save,
   DollarSign,
+  ClipboardList,
 } from "lucide-react";
 import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter } from "@/lib/api";
 
@@ -203,6 +209,7 @@ function useInvalidateAdmin() {
     qc.invalidateQueries({ queryKey: getListSpecialtiesQueryKey() });
     qc.invalidateQueries({ queryKey: getListCitiesQueryKey() });
     qc.invalidateQueries({ queryKey: getListAreasQueryKey() });
+    qc.invalidateQueries({ queryKey: getListServicesQueryKey() });
   };
 }
 
@@ -329,6 +336,7 @@ const tabs = [
   { id: "specialties", label: "Specialties", labelAr: "التخصصات", icon: Stethoscope },
   { id: "cities", label: "Cities", labelAr: "المحافظات", icon: MapPinHouse },
   { id: "areas", label: "Areas", labelAr: "المناطق", icon: MapPin },
+  { id: "services", label: "Services", labelAr: "الخدمات", icon: ClipboardList },
   { id: "contact", label: "Contact Info", labelAr: "معلومات التواصل", icon: Globe },
   { id: "billing", label: "Billing", labelAr: "الاشتراكات", icon: DollarSign },
 ] as const;
@@ -416,6 +424,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         {activeTab === "specialties" && <SpecialtiesSection lang={lang} />}
         {activeTab === "cities" && <CitiesSection lang={lang} />}
         {activeTab === "areas" && <AreasSection lang={lang} />}
+        {activeTab === "services" && <ServicesSection lang={lang} />}
         {activeTab === "contact" && <ContactInfoSection lang={lang} />}
         {activeTab === "billing" && <BillingManagementSection lang={lang} />}
       </div>
@@ -1580,6 +1589,129 @@ function CitiesSection({ lang }: { lang: string }) {
             <DialogHeader>
               <DialogTitle>
                 {editId ? (lang === "ar" ? "تعديل محافظة" : "Edit City") : (lang === "ar" ? "إضافة محافظة" : "Add City")}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 pt-2">
+              <Input placeholder={lang === "ar" ? "الاسم (إنجليزي)" : "Name (English)"} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input placeholder={lang === "ar" ? "الاسم (عربي)" : "Name (Arabic)"} value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} />
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 font-medium">
+                  {lang === "ar" ? "ترتيب العرض" : "Display Order"}
+                </label>
+                <Input type="number" min={1} value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} />
+              </div>
+              <Button className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={handleSubmit} disabled={create.isPending || update.isPending || !form.name || !form.nameAr}>
+                {editId ? (lang === "ar" ? "حفظ" : "Save") : (lang === "ar" ? "إضافة" : "Add")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-gray-500">{lang === "ar" ? "جاري التحميل..." : "Loading..."}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8">{lang === "ar" ? "الترتيب" : "Order"}</TableHead>
+                  <TableHead>{lang === "ar" ? "الاسم" : "Name"}</TableHead>
+                  <TableHead>{lang === "ar" ? "الاسم (ع)" : "Name (AR)"}</TableHead>
+                  <TableHead>{lang === "ar" ? "الحالة" : "Status"}</TableHead>
+                  <TableHead>{lang === "ar" ? "الإجراءات" : "Actions"}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-sm text-gray-500 w-8">{item.displayOrder}</TableCell>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.nameAr}</TableCell>
+                    <TableCell>
+                      <Badge variant={item.isActive === "true" ? "default" : "secondary"}>
+                        {item.isActive === "true" ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "معطل" : "Inactive")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => handleEdit(item)}><Pencil className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Services Section ─── */
+
+function ServicesSection({ lang }: { lang: string }) {
+  const { data: items = [], isLoading } = useListServices();
+  const create = useCreateService();
+  const update = useUpdateService();
+  const remove = useDeleteService();
+  const invalidate = useInvalidateAdmin();
+
+  const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState({ name: "", nameAr: "", displayOrder: 1 });
+
+  const nextOrder = items.length > 0 ? Math.max(...items.map((i) => i.displayOrder)) + 1 : 1;
+
+  const reset = () => {
+    setForm({ name: "", nameAr: "", displayOrder: nextOrder });
+    setEditId(null);
+  };
+
+  const handleSubmit = () => {
+    const payload = { name: form.name, nameAr: form.nameAr, displayOrder: Number(form.displayOrder) };
+    if (editId) {
+      update.mutate(
+        { id: editId, data: payload },
+        { onSuccess: () => { invalidate(); setOpen(false); reset(); } }
+      );
+    } else {
+      create.mutate(
+        { data: payload },
+        { onSuccess: () => { invalidate(); setOpen(false); reset(); } }
+      );
+    }
+  };
+
+  const handleEdit = (item: typeof items[0]) => {
+    setForm({ name: item.name, nameAr: item.nameAr, displayOrder: item.displayOrder });
+    setEditId(item.id);
+    setOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm(lang === "ar" ? "هل أنت متأكد؟" : "Are you sure?")) {
+      remove.mutate({ id }, { onSuccess: invalidate });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold text-gray-900">{lang === "ar" ? "الخدمات" : "Services"}</h3>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o && !editId) reset(); }}>
+          <DialogTrigger asChild>
+            <Button className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48]" onClick={() => { reset(); setOpen(true); }}>
+              <Plus className="w-4 h-4 mr-1" />
+              {lang === "ar" ? "إضافة" : "Add"}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editId ? (lang === "ar" ? "تعديل خدمة" : "Edit Service") : (lang === "ar" ? "إضافة خدمة" : "Add Service")}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 pt-2">

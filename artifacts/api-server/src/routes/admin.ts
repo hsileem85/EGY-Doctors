@@ -3,7 +3,7 @@ import { eq, max, inArray, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, servicesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -57,6 +57,12 @@ import {
   UpdateSpecialtyBody,
   UpdateSpecialtyResponse,
   DeleteSpecialtyParams,
+  ListServicesResponse,
+  CreateServiceBody,
+  UpdateServiceParams,
+  UpdateServiceBody,
+  UpdateServiceResponse,
+  DeleteServiceParams,
   ListCitiesResponse,
   CreateCityBody,
   UpdateCityParams,
@@ -353,6 +359,79 @@ router.delete("/admin/specialties/:id", async (req, res): Promise<void> => {
 
   if (!row) {
     res.status(404).json({ error: "Specialty not found" });
+    return;
+  }
+
+  res.sendStatus(204);
+});
+
+/* ─── Services ─── */
+
+router.get("/admin/services", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(servicesTable).orderBy(servicesTable.displayOrder);
+  res.json(ListServicesResponse.parse(stringifyDates(rows)));
+});
+
+router.post("/admin/services", async (req, res): Promise<void> => {
+  const parsed = CreateServiceBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  let { displayOrder } = parsed.data;
+  if (displayOrder == null) {
+    const [result] = await db.select({ maxOrder: max(servicesTable.displayOrder) }).from(servicesTable);
+    displayOrder = (result?.maxOrder ?? 0) + 1;
+  }
+
+  const [row] = await db.insert(servicesTable).values({ ...parsed.data, displayOrder }).returning();
+  res.status(201).json(UpdateServiceResponse.parse(stringifyRow(row)));
+});
+
+router.put("/admin/services/:id", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = UpdateServiceParams.safeParse({ id: raw });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const parsed = UpdateServiceBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [row] = await db
+    .update(servicesTable)
+    .set(parsed.data)
+    .where(eq(servicesTable.id, params.data.id))
+    .returning();
+
+  if (!row) {
+    res.status(404).json({ error: "Service not found" });
+    return;
+  }
+
+  res.json(UpdateServiceResponse.parse(stringifyRow(row)));
+});
+
+router.delete("/admin/services/:id", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = DeleteServiceParams.safeParse({ id: raw });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [row] = await db
+    .delete(servicesTable)
+    .where(eq(servicesTable.id, params.data.id))
+    .returning();
+
+  if (!row) {
+    res.status(404).json({ error: "Service not found" });
     return;
   }
 

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getMedicalCenterPublicProfile, CENTER_SERVICE_OPTIONS, type MedicalCenterPublicProfile } from "@/lib/api";
+import { getMedicalCenterPublicProfile, type MedicalCenterPublicProfile } from "@/lib/api";
 
 function whatsappUrl(phone: string) {
   const digits = phone.replace(/[^\d]/g, "");
@@ -256,18 +256,14 @@ export default function MedicalCenterPublicProfile() {
                       {isRTL ? "الخدمات المتاحة" : "Available Services"}
                     </h2>
                     <div className="flex flex-wrap gap-2">
-                      {center.services.map((svc) => {
-                        const opt = CENTER_SERVICE_OPTIONS.find((o) => o.value === svc);
-                        if (!opt) return null;
-                        return (
-                          <Badge
-                            key={svc}
-                            className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                          >
-                            {isRTL ? opt.labelAr : opt.label}
-                          </Badge>
-                        );
-                      })}
+                      {center.services.map((svc) => (
+                        <Badge
+                          key={svc.id}
+                          className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                        >
+                          {isRTL ? svc.nameAr : svc.name}
+                        </Badge>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>

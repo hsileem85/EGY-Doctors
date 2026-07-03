@@ -297,6 +297,64 @@ export const DeleteSpecialtyParams = zod.object({
 
 
 /**
+ * @summary List all services
+ */
+export const ListServicesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "displayOrder": zod.number(),
+  "isActive": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListServicesResponse = zod.array(ListServicesResponseItem)
+
+
+/**
+ * @summary Create a service
+ */
+export const CreateServiceBody = zod.object({
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "displayOrder": zod.number().optional()
+})
+
+
+/**
+ * @summary Update a service
+ */
+export const UpdateServiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateServiceBody = zod.object({
+  "name": zod.string().optional(),
+  "nameAr": zod.string().optional(),
+  "displayOrder": zod.number().optional(),
+  "isActive": zod.string().optional()
+})
+
+export const UpdateServiceResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "displayOrder": zod.number(),
+  "isActive": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a service
+ */
+export const DeleteServiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all cities
  */
 export const ListCitiesResponseItem = zod.object({

@@ -150,6 +150,29 @@ export interface SpecialtyUpdate {
   isActive?: string;
 }
 
+export interface Service {
+  id: number;
+  name: string;
+  nameAr: string;
+  displayOrder: number;
+  isActive: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceInput {
+  name: string;
+  nameAr: string;
+  displayOrder?: number;
+}
+
+export interface ServiceUpdate {
+  name?: string;
+  nameAr?: string;
+  displayOrder?: number;
+  isActive?: string;
+}
+
 export interface City {
   id: number;
   name: string;

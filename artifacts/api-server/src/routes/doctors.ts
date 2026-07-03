@@ -6,13 +6,23 @@ import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
   clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable,
-  doctorFollowsTable, centerClinicsTable, medicalCentersTable, availabilityPeriodEnum,
+  doctorFollowsTable, centerClinicsTable, medicalCentersTable, servicesTable, availabilityPeriodEnum,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
 const router: IRouter = Router();
 const centerCitiesTable = alias(citiesTable, "center_cities");
+
+async function resolveServiceIds(idLists: (number[] | null)[]): Promise<Map<number, { id: number; name: string; nameAr: string }>> {
+  const allIds = Array.from(new Set(idLists.flatMap((ids) => ids ?? [])));
+  if (allIds.length === 0) return new Map();
+  const rows = await db
+    .select({ id: servicesTable.id, name: servicesTable.name, nameAr: servicesTable.nameAr })
+    .from(servicesTable)
+    .where(inArray(servicesTable.id, allIds));
+  return new Map(rows.map((r) => [r.id, r]));
+}
 
 function makeImage(name: string) {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F172A&color=D4A853&size=200`;
@@ -165,6 +175,8 @@ router.get("/doctors", async (req, res): Promise<void> => {
     }
   }
 
+  const serviceById = await resolveServiceIds(rows.map((r) => r.affiliatedCenterServices));
+
   const response = rows.map((r) => {
     const doctorClinics = (clinicsByDoctor.get(r.id) ?? []).map((c) => ({
       id: c.id,
@@ -232,7 +244,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
             lat: r.affiliatedCenterLat ?? null,
             lng: r.affiliatedCenterLng ?? null,
             cityName: r.affiliatedCenterCityName ?? null,
-            services: r.affiliatedCenterServices ?? [],
+            services: (r.affiliatedCenterServices ?? []).map((id) => serviceById.get(id)).filter((s): s is { id: number; name: string; nameAr: string } => !!s),
           }
         : null,
     };
@@ -427,7 +439,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
           lat: row.affiliatedCenterLat ?? null,
           lng: row.affiliatedCenterLng ?? null,
           cityName: row.affiliatedCenterCityName ?? null,
-          services: row.affiliatedCenterServices ?? [],
+          services: Array.from((await resolveServiceIds([row.affiliatedCenterServices])).values()),
         }
       : null,
     schedule: normalizeScheduleKeys(row.schedule ? JSON.parse(row.schedule) : null),

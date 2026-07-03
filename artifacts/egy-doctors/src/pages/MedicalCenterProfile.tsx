@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { getMedicalCenterProfile, updateMedicalCenterProfile, CENTER_SERVICE_OPTIONS, type MedicalCenterProfile, type CenterSubType, type CenterServiceType } from "@/lib/api";
+import { getMedicalCenterProfile, updateMedicalCenterProfile, getServices, type MedicalCenterProfile, type CenterSubType } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 const subTypeLabels: Record<CenterSubType, { en: string; ar: string }> = {
   POLY_CLINIC: { en: "Poly Clinic",   ar: "عيادة متعددة التخصصات" },
@@ -44,7 +45,7 @@ interface FormState {
   instagram: string;
   lat: string;
   lng: string;
-  services: CenterServiceType[];
+  services: number[];
 }
 
 const EMPTY: FormState = {
@@ -66,6 +67,8 @@ export default function MedicalCenterProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [notApproved, setNotApproved] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+
+  const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: getServices });
 
   useEffect(() => {
     getMedicalCenterProfile()
@@ -377,18 +380,18 @@ export default function MedicalCenterProfile() {
                     : "Select the services your center offers. These are shown publicly on search and home pages."}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {CENTER_SERVICE_OPTIONS.map((opt) => {
-                    const selected = form.services.includes(opt.value);
+                  {services.map((opt) => {
+                    const selected = form.services.includes(opt.id);
                     return (
                       <button
                         type="button"
-                        key={opt.value}
+                        key={opt.id}
                         onClick={() =>
                           f(
                             "services",
                             selected
-                              ? form.services.filter((s) => s !== opt.value)
-                              : [...form.services, opt.value],
+                              ? form.services.filter((s) => s !== opt.id)
+                              : [...form.services, opt.id],
                           )
                         }
                         className={`text-sm font-medium rounded-lg px-3 py-2 border transition-colors text-start ${
@@ -397,7 +400,7 @@ export default function MedicalCenterProfile() {
                             : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                         }`}
                       >
-                        {isRTL ? opt.labelAr : opt.label}
+                        {isRTL ? opt.nameAr : opt.name}
                       </button>
                     );
                   })}

@@ -6,7 +6,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, medicalCentersTable, centerClinicsTable, usersTable, doctorsTable, specialtiesTable,
-  clinicsTable, citiesTable, centerServiceEnum, availabilityPeriodEnum,
+  clinicsTable, citiesTable, servicesTable, availabilityPeriodEnum,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -48,8 +48,18 @@ const ProfileBody = z.object({
   instagram: z.string().optional().nullable(),
   lat: z.number().optional().nullable(),
   lng: z.number().optional().nullable(),
-  services: z.array(z.enum(centerServiceEnum)).optional(),
+  services: z.array(z.number().int()).optional(),
 });
+
+async function resolveServices(ids: number[] | null): Promise<{ id: number; name: string; nameAr: string }[]> {
+  if (!ids || ids.length === 0) return [];
+  const rows = await db
+    .select({ id: servicesTable.id, name: servicesTable.name, nameAr: servicesTable.nameAr })
+    .from(servicesTable)
+    .where(inArray(servicesTable.id, ids));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.map((id) => byId.get(id)).filter((r): r is { id: number; name: string; nameAr: string } => !!r);
+}
 
 /* ── GET /medical-centers/profile ── */
 router.get("/medical-centers/profile", requireCenter, async (req, res): Promise<void> => {
@@ -503,6 +513,13 @@ router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
     doctorsByCenter.set(row.centerId, list);
   }
 
+  const allServiceIds = Array.from(new Set(centers.flatMap(c => c.services ?? [])));
+  const serviceRows = allServiceIds.length > 0
+    ? await db.select({ id: servicesTable.id, name: servicesTable.name, nameAr: servicesTable.nameAr })
+        .from(servicesTable).where(inArray(servicesTable.id, allServiceIds))
+    : [];
+  const serviceById = new Map(serviceRows.map((r) => [r.id, r]));
+
   res.json(centers.map(c => {
     const doctors = doctorsByCenter.get(c.id) ?? [];
     const specialties = Array.from(new Map(
@@ -528,7 +545,7 @@ router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
       specialties,
       doctors: doctors.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr })),
       doctorsCount: doctors.length,
-      services: c.services ?? [],
+      services: (c.services ?? []).map((id) => serviceById.get(id)).filter((s): s is { id: number; name: string; nameAr: string } => !!s),
     };
   }));
 });
@@ -597,7 +614,7 @@ router.get("/medical-centers/:id", async (req, res): Promise<void> => {
       specialtyNameAr: d.specialtyNameAr,
     })),
     doctorsCount: doctors.length,
-    services: center.services ?? [],
+    services: await resolveServices(center.services),
   });
 });
 
