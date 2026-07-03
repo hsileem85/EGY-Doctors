@@ -51,13 +51,19 @@ function buildSchedule(
   const result: Record<string, string[]> = {};
   if (!scheduleSource) return result;
 
+  const normalizedSchedule: Record<string, { active?: boolean; from: string; to: string }> = {};
+  for (const [key, val] of Object.entries(scheduleSource)) {
+    const canonical = DAY_KEYS.find((d) => d.toLowerCase() === key.trim().slice(0, 3).toLowerCase());
+    if (canonical && val) normalizedSchedule[canonical] = val as { active?: boolean; from: string; to: string };
+  }
+
   const today = new Date();
   for (let i = 0; i < SCHEDULE_HORIZON_DAYS; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split("T")[0];
     const dayKey = DAY_KEYS[d.getDay()];
-    const window = scheduleSource[dayKey] as { active?: boolean; from: string; to: string } | undefined;
+    const window = normalizedSchedule[dayKey];
     if (!window || window.active === false || !window.from || !window.to) continue;
 
     const from = parseTimeToMinutes(window.from);

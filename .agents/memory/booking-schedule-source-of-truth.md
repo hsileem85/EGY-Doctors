@@ -19,3 +19,10 @@ If neither is configured, show an empty state — never fall back to a fabricate
 
 ## How to apply
 When adding any new booking/availability-adjacent feature, always read schedule from these two columns (never regenerate it), and mirror the day-key/time-parsing logic between frontend display and backend validation so they never disagree about what's bookable.
+
+## Day-key casing must be normalized, not just "consistent"
+The Medical Center dashboard's "Edit Doctor" schedule form (`MedicalCenterDashboard.tsx` `AffiliatedDoctorsTab`) independently defined its own `DAYS` array and originally used all-uppercase keys (`SAT`,`SUN`,`MON`...), while every other schedule consumer (booking calendar, `POST /appointments` validator) used capitalized 3-letter keys (`Sat`,`Sun`,`Mon`...). Because JS object key lookup is case-sensitive, a doctor with a fully configured schedule showed "No availability configured yet" on the public booking page — the data existed but the wrong-case key silently missed the lookup, with `if (!window) return false;`/`continue` swallowing the mismatch instead of erroring.
+
+**Why:** Multiple independent UI surfaces (own-clinic schedule editor, affiliated-doctor schedule editor, public booking calendar, backend validator) each read/write the same `schedule` JSON column but were authored separately, so casing drifted. Case-sensitive key lookups fail silently (`undefined`) rather than throwing, so this kind of bug ships invisibly and only surfaces as "the doctor says it's set up but patients can't book."
+
+**How to apply:** Any time you touch a `schedule` read site (frontend or backend), route it through a `normalizeScheduleKeys` helper that maps `key.slice(0,3)` case-insensitively to the canonical `Sun/Mon/Tue/Wed/Thu/Fri/Sat` before indexing — done at the API layer (`doctors.ts`, `medical_centers.ts`, `appointments.ts`) and defensively again in the frontend consumers (`DoctorProfile.tsx`, `MedicalCenterDashboard.tsx`) so historical DB rows saved with any casing keep working without a data migration.

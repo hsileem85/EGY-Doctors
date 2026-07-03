@@ -8,6 +8,17 @@ const router: IRouter = Router();
 
 const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
+/** Normalizes a schedule object's day keys to canonical casing ("Mon", "SAT", "tue" -> "Sun".."Sat"),
+ * so schedules saved with different key casing (e.g. affiliated-doctor form using "MON") still resolve. */
+function normalizeScheduleKeys<T>(schedule: Record<string, T>): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [key, val] of Object.entries(schedule)) {
+    const canonical = DAY_KEYS.find((d) => d.toLowerCase() === key.trim().slice(0, 3).toLowerCase());
+    if (canonical) out[canonical] = val;
+  }
+  return out;
+}
+
 function serializeRow(r: typeof appointmentsTable.$inferSelect) {
   return {
     ...r,
@@ -101,7 +112,8 @@ router.post("/appointments", async (req, res): Promise<void> => {
   }
   if (scheduleRaw) {
     try {
-      const schedule = JSON.parse(scheduleRaw) as Record<string, { active?: boolean; from: string; to: string }>;
+      const rawSchedule = JSON.parse(scheduleRaw) as Record<string, { active?: boolean; from: string; to: string }>;
+      const schedule = normalizeScheduleKeys(rawSchedule);
       if (!isWithinSchedule(schedule, d.appointmentDate, d.appointmentTime)) {
         res.status(400).json({ error: "This time is outside the doctor's available schedule" });
         return;

@@ -558,13 +558,13 @@ function CenterPreferencesTab({ isRTL }: { isRTL: boolean }) {
 ──────────────────────────────────────────────────────────────────── */
 
 const DAYS = [
-  { key: "SAT", en: "Saturday",  ar: "السبت"   },
-  { key: "SUN", en: "Sunday",    ar: "الأحد"   },
-  { key: "MON", en: "Monday",    ar: "الاثنين" },
-  { key: "TUE", en: "Tuesday",   ar: "الثلاثاء" },
-  { key: "WED", en: "Wednesday", ar: "الأربعاء" },
-  { key: "THU", en: "Thursday",  ar: "الخميس"  },
-  { key: "FRI", en: "Friday",    ar: "الجمعة"  },
+  { key: "Sat", en: "Saturday",  ar: "السبت"   },
+  { key: "Sun", en: "Sunday",    ar: "الأحد"   },
+  { key: "Mon", en: "Monday",    ar: "الاثنين" },
+  { key: "Tue", en: "Tuesday",   ar: "الثلاثاء" },
+  { key: "Wed", en: "Wednesday", ar: "الأربعاء" },
+  { key: "Thu", en: "Thursday",  ar: "الخميس"  },
+  { key: "Fri", en: "Friday",    ar: "الجمعة"  },
 ];
 
 type DaySlot = { enabled: boolean; from: string; to: string };
@@ -621,7 +621,8 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
     const sch = EMPTY_SCHEDULE();
     if (doc.schedule) {
       for (const [key, val] of Object.entries(doc.schedule)) {
-        if (sch[key]) sch[key] = { enabled: true, from: val.from, to: val.to };
+        const canonical = DAYS.find(d => d.key.toLowerCase() === key.trim().slice(0, 3).toLowerCase())?.key;
+        if (canonical && sch[canonical]) sch[canonical] = { enabled: true, from: val.from, to: val.to };
       }
     }
     setEditId(doc.id);

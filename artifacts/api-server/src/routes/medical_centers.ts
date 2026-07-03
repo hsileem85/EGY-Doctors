@@ -237,9 +237,20 @@ router.get("/medical-centers/affiliated-doctors", requireCenter, async (req, res
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
     .where(eq(doctorsTable.affiliatedCenterId, center.id));
 
+  const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+  function normalizeScheduleKeys(schedule: Record<string, { from: string; to: string }> | null) {
+    if (!schedule) return null;
+    const out: Record<string, { from: string; to: string }> = {};
+    for (const [key, val] of Object.entries(schedule)) {
+      const canonical = DAY_KEYS.find((dk) => dk.toLowerCase() === key.trim().slice(0, 3).toLowerCase());
+      if (canonical) out[canonical] = val;
+    }
+    return out;
+  }
+
   res.json(rows.map(d => ({
     ...d,
-    schedule: d.schedule ? (JSON.parse(d.schedule) as Record<string, { from: string; to: string }>) : null,
+    schedule: normalizeScheduleKeys(d.schedule ? (JSON.parse(d.schedule) as Record<string, { from: string; to: string }>) : null),
   })));
 });
 

@@ -18,6 +18,20 @@ function makeImage(name: string) {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F172A&color=D4A853&size=200`;
 }
 
+const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/** Normalizes a schedule object's day keys to canonical casing ("MON", "tue" -> "Mon", "Tue", ...),
+ * so schedules saved with different key casing (e.g. affiliated-doctor form previously using "MON") still resolve. */
+function normalizeScheduleKeys<T>(schedule: Record<string, T> | null): Record<string, T> | null {
+  if (!schedule) return null;
+  const out: Record<string, T> = {};
+  for (const [key, val] of Object.entries(schedule)) {
+    const canonical = DAY_KEYS.find((d) => d.toLowerCase() === key.trim().slice(0, 3).toLowerCase());
+    if (canonical) out[canonical] = val;
+  }
+  return out;
+}
+
 function serializeDate(d: unknown): string {
   if (d instanceof Date) return d.toISOString().split("T")[0];
   return String(d);
@@ -408,7 +422,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
           services: row.affiliatedCenterServices ?? [],
         }
       : null,
-    schedule: row.schedule ? JSON.parse(row.schedule) : null,
+    schedule: normalizeScheduleKeys(row.schedule ? JSON.parse(row.schedule) : null),
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",
@@ -421,7 +435,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       areaName: c.areaName ?? "",
       lat: c.lat ?? null,
       lng: c.lng ?? null,
-      schedule: c.schedule ? JSON.parse(c.schedule) : null,
+      schedule: normalizeScheduleKeys(c.schedule ? JSON.parse(c.schedule) : null),
       bookingConfirmationMethod: (c.bookingConfirmationMethod as "automatic" | "manual" | null) ?? "automatic",
     })),
     reviewList: reviews.map((r) => ({
@@ -544,7 +558,7 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
     clinics: clinics.map((c) => ({
       ...c,
       name: c.nameEn,
-      schedule: c.schedule ? JSON.parse(c.schedule) : null,
+      schedule: normalizeScheduleKeys(c.schedule ? JSON.parse(c.schedule) : null),
     })),
   });
 });
