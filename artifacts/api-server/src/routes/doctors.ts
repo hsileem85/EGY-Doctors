@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
   clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable,
-  doctorFollowsTable, centerClinicsTable, medicalCentersTable,
+  doctorFollowsTable, centerClinicsTable, medicalCentersTable, availabilityPeriodEnum,
 } from "@workspace/db";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -288,6 +288,10 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     cityId: doctorsTable.cityId,
     areaId: doctorsTable.areaId,
     schedule: doctorsTable.schedule,
+    availabilityPeriod: doctorsTable.availabilityPeriod,
+    availabilityFrom: doctorsTable.availabilityFrom,
+    availabilityTo: doctorsTable.availabilityTo,
+    sessionsPerHour: doctorsTable.sessionsPerHour,
     specialtyName: specialtiesTable.name,
     specialtyNameAr: specialtiesTable.nameAr,
     cityName: citiesTable.name,
@@ -338,6 +342,10 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       lat: clinicsTable.lat,
       lng: clinicsTable.lng,
       schedule: clinicsTable.schedule,
+      availabilityPeriod: clinicsTable.availabilityPeriod,
+      availabilityFrom: clinicsTable.availabilityFrom,
+      availabilityTo: clinicsTable.availabilityTo,
+      sessionsPerHour: clinicsTable.sessionsPerHour,
       bookingConfirmationMethod: clinicsTable.bookingConfirmationMethod,
       areaName: areasTable.name,
     })
@@ -423,6 +431,10 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
         }
       : null,
     schedule: normalizeScheduleKeys(row.schedule ? JSON.parse(row.schedule) : null),
+    availabilityPeriod: row.availabilityPeriod ?? null,
+    availabilityFrom: row.availabilityFrom ?? null,
+    availabilityTo: row.availabilityTo ?? null,
+    sessionsPerHour: row.sessionsPerHour ?? null,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",
@@ -436,6 +448,10 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       lat: c.lat ?? null,
       lng: c.lng ?? null,
       schedule: normalizeScheduleKeys(c.schedule ? JSON.parse(c.schedule) : null),
+      availabilityPeriod: c.availabilityPeriod ?? null,
+      availabilityFrom: c.availabilityFrom ?? null,
+      availabilityTo: c.availabilityTo ?? null,
+      sessionsPerHour: c.sessionsPerHour ?? null,
       bookingConfirmationMethod: (c.bookingConfirmationMethod as "automatic" | "manual" | null) ?? "automatic",
     })),
     reviewList: reviews.map((r) => ({
@@ -529,6 +545,10 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
     areaId: doctorsTable.areaId,
     accountStatus: doctorsTable.accountStatus,
     onboardingStatus: doctorsTable.onboardingStatus,
+    availabilityPeriod: doctorsTable.availabilityPeriod,
+    availabilityFrom: doctorsTable.availabilityFrom,
+    availabilityTo: doctorsTable.availabilityTo,
+    sessionsPerHour: doctorsTable.sessionsPerHour,
     specialtyName: specialtiesTable.name,
     cityName: citiesTable.name,
     websiteUrl: doctorsTable.websiteUrl,
@@ -668,6 +688,10 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     lat: z.coerce.number().optional().nullable(),
     lng: z.coerce.number().optional().nullable(),
     schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() })).optional().nullable(),
+    availabilityPeriod: z.enum(availabilityPeriodEnum).optional().nullable(),
+    availabilityFrom: z.string().optional().nullable(),
+    availabilityTo: z.string().optional().nullable(),
+    sessionsPerHour: z.coerce.number().int().min(1).max(12).optional().nullable(),
   });
 
   const parsed = Schema.safeParse(req.body);
@@ -684,6 +708,19 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     schedule: scheduleVal !== undefined ? (scheduleVal ? JSON.stringify(scheduleVal) : null) : null,
     ...rest,
   }).returning();
+
+  // Keep the doctor row's availability config in sync — the booking
+  // calendar falls back to the doctor's own values when a clinic-level
+  // value is absent, and other reads (e.g. doctor list) use the doctor row.
+  if (rest.availabilityPeriod !== undefined || rest.availabilityFrom !== undefined
+    || rest.availabilityTo !== undefined || rest.sessionsPerHour !== undefined) {
+    await db.update(doctorsTable).set({
+      ...(rest.availabilityPeriod !== undefined ? { availabilityPeriod: rest.availabilityPeriod ?? null } : {}),
+      ...(rest.availabilityFrom !== undefined ? { availabilityFrom: rest.availabilityFrom ?? null } : {}),
+      ...(rest.availabilityTo !== undefined ? { availabilityTo: rest.availabilityTo ?? null } : {}),
+      ...(rest.sessionsPerHour !== undefined ? { sessionsPerHour: rest.sessionsPerHour ?? null } : {}),
+    }).where(eq(doctorsTable.id, doc.id));
+  }
 
   res.status(201).json({ ...clinic, name: clinic.nameEn, schedule: clinic.schedule ? JSON.parse(clinic.schedule) : null });
 });
@@ -718,6 +755,10 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
     lat: z.coerce.number().optional().nullable(),
     lng: z.coerce.number().optional().nullable(),
     schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() })).optional().nullable(),
+    availabilityPeriod: z.enum(availabilityPeriodEnum).optional().nullable(),
+    availabilityFrom: z.string().optional().nullable(),
+    availabilityTo: z.string().optional().nullable(),
+    sessionsPerHour: z.coerce.number().int().min(1).max(12).optional().nullable(),
   });
   const parsed = Schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message }); return; }
@@ -734,6 +775,19 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
     .returning();
 
   if (!updated) { res.status(404).json({ error: "Clinic not found" }); return; }
+
+  // Keep the doctor row's availability config in sync with the clinic's,
+  // mirroring the medical-center affiliated-doctor sync behavior.
+  if (rest.availabilityPeriod !== undefined || rest.availabilityFrom !== undefined
+    || rest.availabilityTo !== undefined || rest.sessionsPerHour !== undefined) {
+    await db.update(doctorsTable).set({
+      ...(rest.availabilityPeriod !== undefined ? { availabilityPeriod: rest.availabilityPeriod ?? null } : {}),
+      ...(rest.availabilityFrom !== undefined ? { availabilityFrom: rest.availabilityFrom ?? null } : {}),
+      ...(rest.availabilityTo !== undefined ? { availabilityTo: rest.availabilityTo ?? null } : {}),
+      ...(rest.sessionsPerHour !== undefined ? { sessionsPerHour: rest.sessionsPerHour ?? null } : {}),
+    }).where(eq(doctorsTable.id, doc.id));
+  }
+
   res.json({ ...updated, name: updated.nameEn, schedule: updated.schedule ? JSON.parse(updated.schedule) : null });
 });
 

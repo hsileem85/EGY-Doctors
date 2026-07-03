@@ -39,6 +39,8 @@ const defaultSchedule = (): ClinicSchedule => ({
   Fri: { active: false, from: "09:00", to: "17:00" },
 });
 
+type AvailabilityPeriod = "week" | "month" | "quarter" | "year" | "custom";
+
 type Clinic = {
   id: string;
   name: string;
@@ -53,6 +55,10 @@ type Clinic = {
   followUpPrice: string;
   bookingConfirmationMethod: "automatic" | "manual";
   schedule: ClinicSchedule;
+  availabilityPeriod: AvailabilityPeriod;
+  availabilityFrom: string;
+  availabilityTo: string;
+  sessionsPerHour: string;
 };
 
 function makeClinic(overrides?: Partial<Clinic>): Clinic {
@@ -70,6 +76,10 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
     followUpPrice: "0",
     bookingConfirmationMethod: "automatic",
     schedule: defaultSchedule(),
+    availabilityPeriod: "month",
+    availabilityFrom: "",
+    availabilityTo: "",
+    sessionsPerHour: "2",
     ...overrides,
   };
 }
@@ -215,6 +225,10 @@ export default function DoctorProfileSetup() {
           schedule: c.schedule
             ? { ...defaultSchedule(), ...(c.schedule as Partial<ClinicSchedule>) }
             : defaultSchedule(),
+          availabilityPeriod: (c.availabilityPeriod ?? "month") as AvailabilityPeriod,
+          availabilityFrom: c.availabilityFrom ?? "",
+          availabilityTo: c.availabilityTo ?? "",
+          sessionsPerHour: c.sessionsPerHour != null ? String(c.sessionsPerHour) : "2",
         };
       });
       setClinics(hydrated);
@@ -287,6 +301,7 @@ export default function DoctorProfileSetup() {
         const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
         const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
         const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
+        const sessionsPerHourVal = clinic.sessionsPerHour ? parseInt(clinic.sessionsPerHour, 10) : undefined;
         const data = {
           name: clinic.name || `Clinic`,
           address: clinic.address || undefined,
@@ -299,6 +314,10 @@ export default function DoctorProfileSetup() {
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
           lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
           schedule: clinic.schedule,
+          availabilityPeriod: clinic.availabilityPeriod,
+          availabilityFrom: clinic.availabilityPeriod === "custom" && clinic.availabilityFrom ? clinic.availabilityFrom : null,
+          availabilityTo: clinic.availabilityPeriod === "custom" && clinic.availabilityTo ? clinic.availabilityTo : null,
+          sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : undefined,
         };
         if (isNaN(numId)) {
           return apiAddClinic(data);
@@ -363,6 +382,7 @@ export default function DoctorProfileSetup() {
         const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
         const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
         const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
+        const sessionsPerHourVal = clinic.sessionsPerHour ? parseInt(clinic.sessionsPerHour, 10) : undefined;
         const data = {
           name: clinic.name || `Clinic`,
           address: clinic.address || undefined,
@@ -375,6 +395,10 @@ export default function DoctorProfileSetup() {
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
           lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
           schedule: clinic.schedule,
+          availabilityPeriod: clinic.availabilityPeriod,
+          availabilityFrom: clinic.availabilityPeriod === "custom" && clinic.availabilityFrom ? clinic.availabilityFrom : null,
+          availabilityTo: clinic.availabilityPeriod === "custom" && clinic.availabilityTo ? clinic.availabilityTo : null,
+          sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : undefined,
         };
         if (isNaN(numId)) {
           return apiAddClinic(data);
@@ -919,6 +943,68 @@ export default function DoctorProfileSetup() {
                               </div>
                             </div>
                           ))}
+                        </div>
+
+                        {/* Availability window + slot frequency */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                          <div className="space-y-2">
+                            <Label>{isRTL ? "مدة إتاحة الحجز" : "Booking Availability Period"}</Label>
+                            <Select
+                              value={clinic.availabilityPeriod}
+                              onValueChange={v => updateClinic(clinic.id, { availabilityPeriod: v as AvailabilityPeriod })}
+                            >
+                              <SelectTrigger className="bg-white" data-testid={`select-availability-period-${idx}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="week">{isRTL ? "أسبوع" : "Week"}</SelectItem>
+                                <SelectItem value="month">{isRTL ? "شهر" : "Month"}</SelectItem>
+                                <SelectItem value="quarter">{isRTL ? "3 أشهر" : "Quarter (3 months)"}</SelectItem>
+                                <SelectItem value="year">{isRTL ? "سنة" : "Year"}</SelectItem>
+                                <SelectItem value="custom">{isRTL ? "فترة مخصصة" : "Custom range"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-gray-400">
+                              {isRTL ? "المدة التي تظهر فيها المواعيد المتاحة للمرضى في تقويم الحجز." : "How far ahead patients can see and book slots on the calendar."}
+                            </p>
+                            {clinic.availabilityPeriod === "custom" && (
+                              <div className="grid grid-cols-2 gap-2 pt-1">
+                                <Input
+                                  type="date"
+                                  value={clinic.availabilityFrom}
+                                  onChange={e => updateClinic(clinic.id, { availabilityFrom: e.target.value })}
+                                  data-testid={`input-availability-from-${idx}`}
+                                />
+                                <Input
+                                  type="date"
+                                  value={clinic.availabilityTo}
+                                  onChange={e => updateClinic(clinic.id, { availabilityTo: e.target.value })}
+                                  data-testid={`input-availability-to-${idx}`}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{isRTL ? "عدد الجلسات في الساعة" : "Sessions per Hour"}</Label>
+                            <Select
+                              value={clinic.sessionsPerHour}
+                              onValueChange={v => updateClinic(clinic.id, { sessionsPerHour: v })}
+                            >
+                              <SelectTrigger className="bg-white" data-testid={`select-sessions-per-hour-${idx}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[1, 2, 3, 4, 6, 12].map(n => (
+                                  <SelectItem key={n} value={String(n)}>
+                                    {n} {isRTL ? "/ ساعة" : "/ hour"} ({Math.round(60 / n)} {isRTL ? "دقيقة" : "min"})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-gray-400">
+                              {isRTL ? "يحدد مدة كل موعد في التقويم (60 ÷ عدد الجلسات)." : "Determines each slot's length on the calendar (60 ÷ sessions per hour)."}
+                            </p>
+                          </div>
                         </div>
                       </CardContent>
                     )}

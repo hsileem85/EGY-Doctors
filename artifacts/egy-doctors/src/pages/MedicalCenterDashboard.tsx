@@ -568,22 +568,32 @@ const DAYS = [
 ];
 
 type DaySlot = { enabled: boolean; from: string; to: string };
+type AvailabilityPeriod = "week" | "month" | "quarter" | "year" | "custom";
 interface DocForm {
   name: string;
   nameAr: string;
   specialtyId: string;
   fee: string;
   schedule: Record<string, DaySlot>;
+  availabilityPeriod: AvailabilityPeriod;
+  availabilityFrom: string;
+  availabilityTo: string;
+  sessionsPerHour: string;
 }
 
 const EMPTY_SCHEDULE = (): Record<string, DaySlot> =>
   Object.fromEntries(DAYS.map(d => [d.key, { enabled: false, from: "09:00", to: "17:00" }]));
 
+const EMPTY_FORM = (): DocForm => ({
+  name: "", nameAr: "", specialtyId: "", fee: "", schedule: EMPTY_SCHEDULE(),
+  availabilityPeriod: "month", availabilityFrom: "", availabilityTo: "", sessionsPerHour: "2",
+});
+
 function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<DocForm>({ name: "", nameAr: "", specialtyId: "", fee: "", schedule: EMPTY_SCHEDULE() });
+  const [form, setForm] = useState<DocForm>(EMPTY_FORM());
 
   const { data: specialties = [] } = useQuery<ApiSpecialty[]>({
     queryKey: ["specialties"],
@@ -597,13 +607,13 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
 
   const createMutation = useMutation({
     mutationFn: createAffiliatedDoctor,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["affiliatedDoctors"] }); setOpen(false); setForm({ name: "", nameAr: "", specialtyId: "", fee: "", schedule: EMPTY_SCHEDULE() }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["affiliatedDoctors"] }); setOpen(false); setForm(EMPTY_FORM()); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateAffiliatedDoctor>[1] }) =>
       updateAffiliatedDoctor(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["affiliatedDoctors"] }); setOpen(false); setEditId(null); setForm({ name: "", nameAr: "", specialtyId: "", fee: "", schedule: EMPTY_SCHEDULE() }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["affiliatedDoctors"] }); setOpen(false); setEditId(null); setForm(EMPTY_FORM()); },
   });
 
   const deleteMutation = useMutation({
@@ -613,7 +623,7 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
 
   function openAdd() {
     setEditId(null);
-    setForm({ name: "", nameAr: "", specialtyId: "", fee: "", schedule: EMPTY_SCHEDULE() });
+    setForm(EMPTY_FORM());
     setOpen(true);
   }
 
@@ -626,7 +636,17 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
       }
     }
     setEditId(doc.id);
-    setForm({ name: doc.name ?? "", nameAr: doc.nameAr ?? "", specialtyId: doc.specialtyId?.toString() ?? "", fee: doc.fee?.toString() ?? "", schedule: sch });
+    setForm({
+      name: doc.name ?? "",
+      nameAr: doc.nameAr ?? "",
+      specialtyId: doc.specialtyId?.toString() ?? "",
+      fee: doc.fee?.toString() ?? "",
+      schedule: sch,
+      availabilityPeriod: (doc.availabilityPeriod ?? "month") as AvailabilityPeriod,
+      availabilityFrom: doc.availabilityFrom ?? "",
+      availabilityTo: doc.availabilityTo ?? "",
+      sessionsPerHour: doc.sessionsPerHour != null ? String(doc.sessionsPerHour) : "2",
+    });
     setOpen(true);
   }
 
@@ -639,12 +659,17 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
     for (const [key, val] of Object.entries(form.schedule)) {
       if (val.enabled) scheduleData[key] = { from: val.from, to: val.to };
     }
+    const sessionsPerHourVal = form.sessionsPerHour ? parseInt(form.sessionsPerHour, 10) : undefined;
     const data = {
       name: form.name.trim(),
       nameAr: form.nameAr.trim() || undefined,
       specialtyId: form.specialtyId ? parseInt(form.specialtyId, 10) : null,
       fee: form.fee ? parseInt(form.fee, 10) : null,
       schedule: Object.keys(scheduleData).length > 0 ? scheduleData : null,
+      availabilityPeriod: form.availabilityPeriod,
+      availabilityFrom: form.availabilityPeriod === "custom" && form.availabilityFrom ? form.availabilityFrom : null,
+      availabilityTo: form.availabilityPeriod === "custom" && form.availabilityTo ? form.availabilityTo : null,
+      sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : null,
     };
     if (editId !== null) {
       updateMutation.mutate({ id: editId, data });
@@ -786,6 +811,57 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>{isRTL ? "مدة إتاحة الحجز" : "Booking Availability Period"}</Label>
+                <Select
+                  value={form.availabilityPeriod}
+                  onValueChange={v => setForm(p => ({ ...p, availabilityPeriod: v as AvailabilityPeriod }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="week">{isRTL ? "أسبوع" : "Week"}</SelectItem>
+                    <SelectItem value="month">{isRTL ? "شهر" : "Month"}</SelectItem>
+                    <SelectItem value="quarter">{isRTL ? "3 أشهر" : "Quarter (3 months)"}</SelectItem>
+                    <SelectItem value="year">{isRTL ? "سنة" : "Year"}</SelectItem>
+                    <SelectItem value="custom">{isRTL ? "فترة مخصصة" : "Custom range"}</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.availabilityPeriod === "custom" && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <input
+                      type="date"
+                      value={form.availabilityFrom}
+                      onChange={e => setForm(p => ({ ...p, availabilityFrom: e.target.value }))}
+                      className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                    <input
+                      type="date"
+                      value={form.availabilityTo}
+                      onChange={e => setForm(p => ({ ...p, availabilityTo: e.target.value }))}
+                      className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isRTL ? "عدد الجلسات في الساعة" : "Sessions per Hour"}</Label>
+                <Select
+                  value={form.sessionsPerHour}
+                  onValueChange={v => setForm(p => ({ ...p, sessionsPerHour: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 6, 12].map(n => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} {isRTL ? "/ ساعة" : "/ hour"} ({Math.round(60 / n)} {isRTL ? "دقيقة" : "min"})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

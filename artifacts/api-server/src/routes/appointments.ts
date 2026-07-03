@@ -61,6 +61,32 @@ function isWithinSchedule(
   return t >= from && t < to;
 }
 
+const AVAILABILITY_PERIOD_DAYS: Record<string, number> = {
+  week: 7,
+  month: 30,
+  quarter: 90,
+  year: 365,
+};
+
+/** Returns true if `dateStr` (YYYY-MM-DD) falls within the configured availability window, defaulting to a 30-day horizon. */
+function isWithinAvailabilityWindow(
+  dateStr: string,
+  availabilityPeriod: string | null,
+  availabilityFrom: string | null,
+  availabilityTo: string | null,
+): boolean {
+  if (availabilityPeriod === "custom" && availabilityFrom && availabilityTo) {
+    return dateStr >= availabilityFrom && dateStr <= availabilityTo;
+  }
+  const horizonDays = (availabilityPeriod && AVAILABILITY_PERIOD_DAYS[availabilityPeriod]) || 30;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const target = new Date(dateStr + "T00:00:00Z");
+  const maxDate = new Date(today);
+  maxDate.setUTCDate(maxDate.getUTCDate() + horizonDays);
+  return target >= today && target <= maxDate;
+}
+
 /* ─── POST /appointments ─── */
 router.post("/appointments", async (req, res): Promise<void> => {
   const Schema = z.object({
@@ -100,15 +126,41 @@ router.post("/appointments", async (req, res): Promise<void> => {
   }
 
   // ── Reject bookings outside the doctor/clinic's configured schedule, when one is configured ──
+  // Prefer the clinic's own schedule/availability settings; if the clinic has
+  // none configured (e.g. a medical-center-affiliated doctor's auto-created
+  // clinic), fall back to the doctor-level values so bookings are still
+  // validated correctly.
   let scheduleRaw: string | null = null;
+  let availabilityPeriod: string | null = null;
+  let availabilityFrom: string | null = null;
+  let availabilityTo: string | null = null;
   if (d.clinicId) {
-    const [clinic] = await db.select({ schedule: clinicsTable.schedule })
-      .from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
+    const [clinic] = await db.select({
+      schedule: clinicsTable.schedule,
+      availabilityPeriod: clinicsTable.availabilityPeriod,
+      availabilityFrom: clinicsTable.availabilityFrom,
+      availabilityTo: clinicsTable.availabilityTo,
+    }).from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
     scheduleRaw = clinic?.schedule ?? null;
-  } else {
-    const [doc] = await db.select({ schedule: doctorsTable.schedule })
-      .from(doctorsTable).where(eq(doctorsTable.id, d.doctorId)).limit(1);
+    availabilityPeriod = clinic?.availabilityPeriod ?? null;
+    availabilityFrom = clinic?.availabilityFrom ?? null;
+    availabilityTo = clinic?.availabilityTo ?? null;
+  }
+  if (!scheduleRaw) {
+    const [doc] = await db.select({
+      schedule: doctorsTable.schedule,
+      availabilityPeriod: doctorsTable.availabilityPeriod,
+      availabilityFrom: doctorsTable.availabilityFrom,
+      availabilityTo: doctorsTable.availabilityTo,
+    }).from(doctorsTable).where(eq(doctorsTable.id, d.doctorId)).limit(1);
     scheduleRaw = doc?.schedule ?? null;
+    availabilityPeriod = availabilityPeriod ?? doc?.availabilityPeriod ?? null;
+    availabilityFrom = availabilityFrom ?? doc?.availabilityFrom ?? null;
+    availabilityTo = availabilityTo ?? doc?.availabilityTo ?? null;
+  }
+  if (!isWithinAvailabilityWindow(d.appointmentDate, availabilityPeriod, availabilityFrom, availabilityTo)) {
+    res.status(400).json({ error: "This date is outside the doctor's available booking window" });
+    return;
   }
   if (scheduleRaw) {
     try {

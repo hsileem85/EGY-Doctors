@@ -31,7 +31,16 @@ export type DayKey = "Sat" | "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri";
 export type ClinicScheduleMap = Record<string, { active: boolean; from: string; to: string }>;
 export type DoctorScheduleMap = Record<string, { from: string; to: string }>;
 
-export interface ApiClinic {
+export type AvailabilityPeriod = "week" | "month" | "quarter" | "year" | "custom";
+
+export interface AvailabilityConfig {
+  availabilityPeriod?: AvailabilityPeriod | null;
+  availabilityFrom?: string | null;
+  availabilityTo?: string | null;
+  sessionsPerHour?: number | null;
+}
+
+export interface ApiClinic extends AvailabilityConfig {
   id: number;
   name: string;
   nameAr?: string;
@@ -58,7 +67,7 @@ export interface ApiReview {
   date: string;
 }
 
-export interface ApiDoctor {
+export interface ApiDoctor extends AvailabilityConfig {
   id: number;
   name: string;
   nameAr?: string;
@@ -336,7 +345,7 @@ export function addClinic(data: {
   lat?: number;
   lng?: number;
   schedule?: ClinicScheduleMap | null;
-}): Promise<ApiClinic> {
+} & AvailabilityConfig): Promise<ApiClinic> {
   return request("/doctor/clinics", { method: "POST", body: JSON.stringify(data) });
 }
 
@@ -354,7 +363,7 @@ export function updateClinic(id: number, data: {
   lat?: number;
   lng?: number;
   schedule?: ClinicScheduleMap | null;
-}): Promise<ApiClinic> {
+} & AvailabilityConfig): Promise<ApiClinic> {
   return request(`/doctor/clinics/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
@@ -793,7 +802,7 @@ export function updateMedicalCenterProfile(
 
 /* ─── Affiliated Doctors ─── */
 
-export interface AffiliatedDoctor {
+export interface AffiliatedDoctor extends AvailabilityConfig {
   id: number;
   name: string;
   nameAr: string;
@@ -815,7 +824,7 @@ export function createAffiliatedDoctor(data: {
   specialtyId?: number | null;
   fee?: number | null;
   schedule?: Record<string, { from: string; to: string }> | null;
-}): Promise<AffiliatedDoctor> {
+} & AvailabilityConfig): Promise<AffiliatedDoctor> {
   return request("/medical-centers/affiliated-doctors", { method: "POST", body: JSON.stringify(data) });
 }
 
@@ -827,7 +836,7 @@ export function updateAffiliatedDoctor(
     specialtyId: number | null;
     fee: number | null;
     schedule: Record<string, { from: string; to: string }> | null;
-  }>,
+  } & AvailabilityConfig>,
 ): Promise<AffiliatedDoctor> {
   return request(`/medical-centers/affiliated-doctors/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }

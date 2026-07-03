@@ -10,8 +10,22 @@ import { useQuery } from "@tanstack/react-query";
 import { getDoctor, getAppointments, bookAppointment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
 
 const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-const SLOT_INTERVAL_MINUTES = 30;
-const SCHEDULE_HORIZON_DAYS = 30;
+const DEFAULT_SLOT_INTERVAL_MINUTES = 30;
+const DEFAULT_SCHEDULE_HORIZON_DAYS = 30;
+
+const AVAILABILITY_PERIOD_DAYS: Record<string, number> = {
+  week: 7,
+  month: 30,
+  quarter: 90,
+  year: 365,
+};
+
+interface AvailabilityConfig {
+  availabilityPeriod?: string | null;
+  availabilityFrom?: string | null;
+  availabilityTo?: string | null;
+  sessionsPerHour?: number | null;
+}
 
 /** Parses a "9:00 AM" / "14:30" style time string into minutes-since-midnight, or null if unparseable. */
 function parseTimeToMinutes(time: string): number | null {
@@ -40,13 +54,34 @@ function formatMinutesAsLabel(mins: number): string {
   return `${h}:${String(m).padStart(2, "0")} ${isPM ? "PM" : "AM"}`;
 }
 
+/** Returns the calendar horizon in days for a given availability config, defaulting to 30 days. */
+function getScheduleHorizonDays(availability: AvailabilityConfig | null | undefined): number {
+  if (!availability?.availabilityPeriod) return DEFAULT_SCHEDULE_HORIZON_DAYS;
+  if (availability.availabilityPeriod === "custom" && availability.availabilityFrom && availability.availabilityTo) {
+    const from = new Date(availability.availabilityFrom + "T00:00:00");
+    const to = new Date(availability.availabilityTo + "T00:00:00");
+    const diffDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays : 0;
+  }
+  return AVAILABILITY_PERIOD_DAYS[availability.availabilityPeriod] ?? DEFAULT_SCHEDULE_HORIZON_DAYS;
+}
+
+/** Returns the slot duration in minutes derived from sessionsPerHour (60 / sessionsPerHour), defaulting to 30 minutes. */
+function getSlotIntervalMinutes(availability: AvailabilityConfig | null | undefined): number {
+  const sessionsPerHour = availability?.sessionsPerHour;
+  if (!sessionsPerHour || sessionsPerHour <= 0) return DEFAULT_SLOT_INTERVAL_MINUTES;
+  return Math.max(1, Math.round(60 / sessionsPerHour));
+}
+
 /**
- * Builds a { "YYYY-MM-DD": ["9:00 AM", ...] } map for the next `SCHEDULE_HORIZON_DAYS` days,
+ * Builds a { "YYYY-MM-DD": ["9:00 AM", ...] } map for the configured availability window,
  * strictly from the doctor/clinic's configured schedule, excluding already-booked slots.
+ * Slot duration and calendar horizon are derived from `availability`.
  */
 function buildSchedule(
   scheduleSource: ClinicScheduleMap | DoctorScheduleMap | null | undefined,
   bookedByDate: Map<string, Set<string>>,
+  availability: AvailabilityConfig | null | undefined,
 ): Record<string, string[]> {
   const result: Record<string, string[]> = {};
   if (!scheduleSource) return result;
@@ -57,8 +92,10 @@ function buildSchedule(
     if (canonical && val) normalizedSchedule[canonical] = val as { active?: boolean; from: string; to: string };
   }
 
+  const horizonDays = getScheduleHorizonDays(availability);
+  const slotIntervalMinutes = getSlotIntervalMinutes(availability);
   const today = new Date();
-  for (let i = 0; i < SCHEDULE_HORIZON_DAYS; i++) {
+  for (let i = 0; i < horizonDays; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split("T")[0];
@@ -75,7 +112,7 @@ function buildSchedule(
     const nowMinutes = today.getHours() * 60 + today.getMinutes();
 
     const slots: string[] = [];
-    for (let m = from; m < to; m += SLOT_INTERVAL_MINUTES) {
+    for (let m = from; m < to; m += slotIntervalMinutes) {
       if (isToday && m <= nowMinutes) continue;
       const label = formatMinutesAsLabel(m);
       if (booked?.has(label)) continue;
@@ -170,9 +207,29 @@ export default function DoctorProfile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isVirtualClinic = !selectedClinic || selectedClinic.id <= 0;
+  // Medical-center-affiliated doctors always have a real (auto-created) clinic,
+  // so isVirtualClinic is false for them — but older records may still have the
+  // schedule saved only at the doctor level. Fall back to doctor.schedule
+  // whenever the selected real clinic has no schedule configured.
   const scheduleSource: ClinicScheduleMap | DoctorScheduleMap | null | undefined = isVirtualClinic
     ? doctor?.schedule
-    : selectedClinic?.schedule;
+    : (selectedClinic?.schedule ?? doctor?.schedule);
+  // Availability config (period + sessions/hour) is authoritative at the clinic level;
+  // fall back to the doctor-level config when the clinic has none configured.
+  const availabilityConfig: AvailabilityConfig | null = useMemo(() => {
+    const clinicConfig: AvailabilityConfig | null = isVirtualClinic ? null : (selectedClinic ?? null);
+    const hasClinicConfig = clinicConfig && (
+      clinicConfig.availabilityPeriod != null || clinicConfig.sessionsPerHour != null
+    );
+    if (hasClinicConfig) return clinicConfig;
+    if (!doctor) return null;
+    return {
+      availabilityPeriod: doctor.availabilityPeriod,
+      availabilityFrom: doctor.availabilityFrom,
+      availabilityTo: doctor.availabilityTo,
+      sessionsPerHour: doctor.sessionsPerHour,
+    };
+  }, [isVirtualClinic, selectedClinic, doctor]);
 
   const { data: existingAppointments } = useQuery({
     queryKey: ["appointments-for-booking", doctor?.id, isVirtualClinic ? null : selectedClinic?.id],
@@ -196,8 +253,8 @@ export default function DoctorProfile() {
   }, [existingAppointments]);
 
   const schedule = useMemo(
-    () => buildSchedule(scheduleSource, bookedByDate),
-    [scheduleSource, bookedByDate],
+    () => buildSchedule(scheduleSource, bookedByDate, availabilityConfig),
+    [scheduleSource, bookedByDate, availabilityConfig],
   );
   const availableDates = useMemo(() => Object.keys(schedule).sort(), [schedule]);
   const hasNoConfiguredSchedule = bookingStep !== "clinic" && !scheduleSource;

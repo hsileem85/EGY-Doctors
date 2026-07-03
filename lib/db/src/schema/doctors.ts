@@ -1,9 +1,10 @@
-import { pgTable, serial, text, varchar, integer, timestamp, doublePrecision, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, timestamp, doublePrecision, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 export const doctorStatusEnum = ["incomplete", "pending", "approved", "rejected"] as const;
 export const doctorOnboardingEnum = ["pending", "approved", "rejected"] as const;
 export const subscriptionStatusEnum = ["ACTIVE", "INACTIVE", "TRIAL"] as const;
+export const availabilityPeriodEnum = ["week", "month", "quarter", "year", "custom"] as const;
 
 export const doctorsTable = pgTable("doctors", {
   id: serial("id").primaryKey(),
@@ -34,6 +35,10 @@ export const doctorsTable = pgTable("doctors", {
   hasVezeetaProfile: boolean("has_vezeeta_profile").notNull().default(false),
   affiliatedCenterId: integer("affiliated_center_id"),
   schedule: text("schedule"),
+  availabilityPeriod: text("availability_period", { enum: availabilityPeriodEnum }),
+  availabilityFrom: date("availability_from"),
+  availabilityTo: date("availability_to"),
+  sessionsPerHour: integer("sessions_per_hour"),
   subscriptionStatus: text("subscription_status", { enum: subscriptionStatusEnum }).notNull().default("INACTIVE"),
   subscriptionPlan: text("subscription_plan").notNull().default("SEMI_ANNUAL"),
   subscriptionEndDate: timestamp("subscription_end_date", { withTimezone: true }),

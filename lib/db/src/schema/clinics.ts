@@ -1,5 +1,6 @@
-import { pgTable, serial, integer, varchar, text, doublePrecision, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, varchar, text, doublePrecision, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { availabilityPeriodEnum } from "./doctors.js";
 
 export const bookingConfirmationMethodEnum = ["automatic", "manual"] as const;
 
@@ -19,6 +20,10 @@ export const clinicsTable = pgTable("clinics", {
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
   schedule: text("schedule"),
+  availabilityPeriod: text("availability_period", { enum: availabilityPeriodEnum }),
+  availabilityFrom: date("availability_from"),
+  availabilityTo: date("availability_to"),
+  sessionsPerHour: integer("sessions_per_hour"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

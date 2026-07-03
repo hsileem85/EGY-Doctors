@@ -6,7 +6,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, medicalCentersTable, centerClinicsTable, usersTable, doctorsTable, specialtiesTable,
-  clinicsTable, citiesTable, centerServiceEnum,
+  clinicsTable, citiesTable, centerServiceEnum, availabilityPeriodEnum,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -197,6 +197,10 @@ const AffiliatedDoctorBody = z.object({
   specialtyId: z.number().int().optional().nullable(),
   fee: z.number().int().min(0).optional().nullable(),
   schedule: z.record(z.object({ from: z.string(), to: z.string() })).optional().nullable(),
+  availabilityPeriod: z.enum(availabilityPeriodEnum).optional().nullable(),
+  availabilityFrom: z.string().optional().nullable(),
+  availabilityTo: z.string().optional().nullable(),
+  sessionsPerHour: z.coerce.number().int().min(1).max(12).optional().nullable(),
 });
 
 async function getCenterForUser(userId: number) {
@@ -230,11 +234,17 @@ router.get("/medical-centers/affiliated-doctors", requireCenter, async (req, res
       specialtyName: specialtiesTable.name,
       specialtyNameAr: specialtiesTable.nameAr,
       fee: doctorsTable.fee,
-      schedule: doctorsTable.schedule,
+      doctorSchedule: doctorsTable.schedule,
+      clinicSchedule: clinicsTable.schedule,
+      availabilityPeriod: clinicsTable.availabilityPeriod,
+      availabilityFrom: clinicsTable.availabilityFrom,
+      availabilityTo: clinicsTable.availabilityTo,
+      sessionsPerHour: clinicsTable.sessionsPerHour,
       isActive: doctorsTable.isActive,
     })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .leftJoin(clinicsTable, eq(clinicsTable.doctorId, doctorsTable.id))
     .where(eq(doctorsTable.affiliatedCenterId, center.id));
 
   const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -248,10 +258,15 @@ router.get("/medical-centers/affiliated-doctors", requireCenter, async (req, res
     return out;
   }
 
-  res.json(rows.map(d => ({
-    ...d,
-    schedule: normalizeScheduleKeys(d.schedule ? (JSON.parse(d.schedule) as Record<string, { from: string; to: string }>) : null),
-  })));
+  res.json(rows.map(({ doctorSchedule, clinicSchedule, ...d }) => {
+    // The clinic's schedule is authoritative (it's what the booking calendar
+    // reads); fall back to the legacy doctors.schedule for older records.
+    const raw = clinicSchedule ?? doctorSchedule;
+    return {
+      ...d,
+      schedule: normalizeScheduleKeys(raw ? (JSON.parse(raw) as Record<string, { from: string; to: string }>) : null),
+    };
+  }));
 });
 
 /* ── POST /medical-centers/affiliated-doctors ── */
@@ -280,6 +295,10 @@ router.post("/medical-centers/affiliated-doctors", requireCenter, async (req, re
     specialtyId: d.specialtyId ?? null,
     fee: d.fee ?? null,
     schedule: d.schedule ? JSON.stringify(d.schedule) : null,
+    availabilityPeriod: d.availabilityPeriod ?? null,
+    availabilityFrom: d.availabilityFrom ?? null,
+    availabilityTo: d.availabilityTo ?? null,
+    sessionsPerHour: d.sessionsPerHour ?? null,
     affiliatedCenterId: center.id,
     accountStatus: "approved",
     isActive: true,
@@ -289,6 +308,9 @@ router.post("/medical-centers/affiliated-doctors", requireCenter, async (req, re
   // location/contact info, so the doctor behaves like any normal doctor
   // (appears in search with a bookable clinic) while staying annotated
   // as affiliated with this medical center via `affiliatedCenterId`.
+  // The schedule/availability settings are written here too (not just
+  // doctorsTable) because the booking calendar reads the *clinic's* values
+  // for any doctor with a real clinic — which every affiliated doctor has.
   await db.insert(clinicsTable).values({
     doctorId: doctor.id,
     nameEn: center.name,
@@ -298,6 +320,11 @@ router.post("/medical-centers/affiliated-doctors", requireCenter, async (req, re
     lat: center.lat ?? null,
     lng: center.lng ?? null,
     fee: d.fee ?? null,
+    schedule: d.schedule ? JSON.stringify(d.schedule) : null,
+    availabilityPeriod: d.availabilityPeriod ?? null,
+    availabilityFrom: d.availabilityFrom ?? null,
+    availabilityTo: d.availabilityTo ?? null,
+    sessionsPerHour: d.sessionsPerHour ?? null,
     bookingConfirmationMethod: "automatic",
   });
 
@@ -311,6 +338,10 @@ router.post("/medical-centers/affiliated-doctors", requireCenter, async (req, re
     specialtyNameAr: null,
     fee: doctor.fee,
     schedule: d.schedule ?? null,
+    availabilityPeriod: doctor.availabilityPeriod,
+    availabilityFrom: doctor.availabilityFrom,
+    availabilityTo: doctor.availabilityTo,
+    sessionsPerHour: doctor.sessionsPerHour,
     isActive: doctor.isActive,
   });
 });
@@ -344,18 +375,33 @@ router.put("/medical-centers/affiliated-doctors/:id", requireCenter, async (req,
       ...(d.specialtyId !== undefined ? { specialtyId: d.specialtyId ?? null } : {}),
       ...(d.fee !== undefined ? { fee: d.fee ?? null } : {}),
       ...(d.schedule !== undefined ? { schedule: d.schedule ? JSON.stringify(d.schedule) : null } : {}),
+      ...(d.availabilityPeriod !== undefined ? { availabilityPeriod: d.availabilityPeriod ?? null } : {}),
+      ...(d.availabilityFrom !== undefined ? { availabilityFrom: d.availabilityFrom ?? null } : {}),
+      ...(d.availabilityTo !== undefined ? { availabilityTo: d.availabilityTo ?? null } : {}),
+      ...(d.sessionsPerHour !== undefined ? { sessionsPerHour: d.sessionsPerHour ?? null } : {}),
       updatedAt: new Date(),
     })
     .where(eq(doctorsTable.id, doctorId))
     .returning();
 
-  // Keep the doctor's linked clinic record (name/fee) in sync.
-  if (d.name !== undefined || d.fee !== undefined) {
+  // Keep the doctor's linked clinic record (name/fee/schedule/availability) in
+  // sync. The clinic's values are the ones actually read by the booking
+  // calendar for any doctor with a real clinic, which every affiliated
+  // doctor has.
+  const hasClinicSync = d.name !== undefined || d.fee !== undefined || d.schedule !== undefined
+    || d.availabilityPeriod !== undefined || d.availabilityFrom !== undefined
+    || d.availabilityTo !== undefined || d.sessionsPerHour !== undefined;
+  if (hasClinicSync) {
     await db
       .update(clinicsTable)
       .set({
         ...(d.name !== undefined ? { nameEn: center.name } : {}),
         ...(d.fee !== undefined ? { fee: d.fee ?? null } : {}),
+        ...(d.schedule !== undefined ? { schedule: d.schedule ? JSON.stringify(d.schedule) : null } : {}),
+        ...(d.availabilityPeriod !== undefined ? { availabilityPeriod: d.availabilityPeriod ?? null } : {}),
+        ...(d.availabilityFrom !== undefined ? { availabilityFrom: d.availabilityFrom ?? null } : {}),
+        ...(d.availabilityTo !== undefined ? { availabilityTo: d.availabilityTo ?? null } : {}),
+        ...(d.sessionsPerHour !== undefined ? { sessionsPerHour: d.sessionsPerHour ?? null } : {}),
         updatedAt: new Date(),
       })
       .where(eq(clinicsTable.doctorId, doctorId));
@@ -370,6 +416,10 @@ router.put("/medical-centers/affiliated-doctors/:id", requireCenter, async (req,
     specialtyNameAr: null,
     fee: doctor.fee,
     schedule: d.schedule ?? null,
+    availabilityPeriod: doctor.availabilityPeriod,
+    availabilityFrom: doctor.availabilityFrom,
+    availabilityTo: doctor.availabilityTo,
+    sessionsPerHour: doctor.sessionsPerHour,
     isActive: doctor.isActive,
   });
 });
