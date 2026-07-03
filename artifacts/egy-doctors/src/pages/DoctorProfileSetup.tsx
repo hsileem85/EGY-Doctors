@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -516,12 +517,14 @@ export default function DoctorProfileSetup() {
                     </div>
                     <div className="space-y-2">
                       <Label>{t.profileSetup.specialty}</Label>
-                      <Select value={profile.specialty} onValueChange={v => setProfile(p => ({ ...p, specialty: v }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {apiSpecialties.map(s => <SelectItem key={s.id} value={s.name}>{t.specialties[s.name] ?? s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <SearchableCombobox
+                        value={profile.specialty}
+                        onValueChange={v => setProfile(p => ({ ...p, specialty: v }))}
+                        options={apiSpecialties.map(s => ({ value: s.name, label: t.specialties[s.name] ?? s.name }))}
+                        placeholder={isRTL ? "اختر التخصص" : "Choose specialty"}
+                        searchPlaceholder={isRTL ? "ابحث في التخصصات..." : "Search specialties..."}
+                        emptyMessage={isRTL ? "لا توجد نتائج" : "No results found"}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>{isRTL ? "الدرجة العلمية" : "Qualification Degree"}</Label>
@@ -703,33 +706,31 @@ export default function DoctorProfileSetup() {
                             </div>
                             <div className="space-y-2">
                               <Label>{isRTL ? "المحافظة" : "City / Governorate"}</Label>
-                              <Select
+                              <SearchableCombobox
                                 value={clinic.cityName}
                                 onValueChange={v => updateClinic(clinic.id, { cityName: v, areaId: "" })}
-                              >
-                                <SelectTrigger><SelectValue placeholder={isRTL ? "اختر المحافظة" : "Select city"} /></SelectTrigger>
-                                <SelectContent>
-                                  {apiCities.map(c => <SelectItem key={c.id} value={c.name}>{t.governorates[c.name] ?? c.name}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
+                                options={apiCities.map(c => ({ value: c.name, label: t.governorates[c.name] ?? c.name }))}
+                                placeholder={isRTL ? "اختر المحافظة" : "Select city"}
+                                searchPlaceholder={isRTL ? "ابحث في المحافظات..." : "Search cities..."}
+                                emptyMessage={isRTL ? "لا توجد نتائج" : "No results found"}
+                              />
                             </div>
                             <div className="space-y-2 md:col-span-2">
                               <Label>{isRTL ? "المنطقة" : "Area"}</Label>
-                              <Select
+                              <SearchableCombobox
                                 value={clinic.areaId}
                                 onValueChange={v => updateClinic(clinic.id, { areaId: v })}
                                 disabled={!clinic.cityName}
-                              >
-                                <SelectTrigger><SelectValue placeholder={isRTL ? "اختر المنطقة" : "Select area"} /></SelectTrigger>
-                                <SelectContent className="max-h-48 overflow-y-auto">
-                                  {apiAreas
-                                    .filter(a => {
-                                      const city = apiCities.find(c => c.name === clinic.cityName);
-                                      return city ? a.cityId === city.id : false;
-                                    })
-                                    .map(a => <SelectItem key={a.id} value={String(a.id)}>{a.nameAr && isRTL ? a.nameAr : a.name}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
+                                options={apiAreas
+                                  .filter(a => {
+                                    const city = apiCities.find(c => c.name === clinic.cityName);
+                                    return city ? a.cityId === city.id : false;
+                                  })
+                                  .map(a => ({ value: String(a.id), label: a.nameAr && isRTL ? a.nameAr : a.name }))}
+                                placeholder={isRTL ? "اختر المنطقة" : "Select area"}
+                                searchPlaceholder={isRTL ? "ابحث في المناطق..." : "Search areas..."}
+                                emptyMessage={isRTL ? "لا توجد نتائج" : "No results found"}
+                              />
                             </div>
                           </div>
                           <div className="space-y-2">

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SpecialtyCombobox } from "@/components/ui/SpecialtyCombobox";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -225,16 +226,15 @@ export default function DoctorRegister() {
               
               <div className="space-y-2">
                 <Label>{t.register.location}</Label>
-                <Select value={formData.location} onValueChange={v => setFormData({...formData, location: v})}>
-                  <SelectTrigger data-testid="select-register-location">
-                    <SelectValue placeholder={t.home.chooseCityOrArea} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {apiCities.map(c => (
-                      <SelectItem key={c.id} value={c.name}>{t.locations[c.name] ?? t.governorates?.[c.name] ?? c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableCombobox
+                  value={formData.location}
+                  onValueChange={v => setFormData({...formData, location: v})}
+                  options={apiCities.map(c => ({ value: c.name, label: t.locations[c.name] ?? t.governorates?.[c.name] ?? c.name }))}
+                  placeholder={t.home.chooseCityOrArea}
+                  searchPlaceholder={lang === "ar" ? "ابحث في المحافظات..." : "Search governorates..."}
+                  emptyMessage={lang === "ar" ? "لا توجد نتائج" : "No results found"}
+                  data-testid="select-register-location"
+                />
               </div>
 
               <div className="space-y-2">

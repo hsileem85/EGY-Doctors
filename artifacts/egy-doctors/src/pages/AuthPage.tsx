@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Stethoscope, Eye, EyeOff, CheckCircle2, Building2, User, Shield, Heart, ArrowLeft } from "lucide-react";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -699,18 +700,15 @@ export default function AuthPage() {
                         </div>
                         <div className="space-y-2">
                           <Label className="text-gray-300">{tl.location}</Label>
-                          <Select value={signupData.location} onValueChange={(v) => setSignupData({ ...signupData, location: v })}>
-                            <SelectTrigger className="bg-[#0F172A]/60 border-[#334155] text-white">
-                              <SelectValue placeholder={isRTL ? "اختر الموقع" : "Choose location"} />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1E293B] border-[#334155]">
-                              {apiCities.map((c) => (
-                                <SelectItem key={c.id} value={c.name} className="text-white focus:bg-[#D4A853]/10 focus:text-[#D4A853]">
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SearchableCombobox
+                            dark
+                            value={signupData.location}
+                            onValueChange={(v) => setSignupData({ ...signupData, location: v })}
+                            options={apiCities.map((c) => ({ value: c.name, label: isRTL ? (c.nameAr || c.name) : c.name }))}
+                            placeholder={isRTL ? "اختر الموقع" : "Choose location"}
+                            searchPlaceholder={isRTL ? "ابحث في المحافظات..." : "Search governorates..."}
+                            emptyMessage={isRTL ? "لا توجد نتائج" : "No results found"}
+                          />
                         </div>
                       </>
                     )}

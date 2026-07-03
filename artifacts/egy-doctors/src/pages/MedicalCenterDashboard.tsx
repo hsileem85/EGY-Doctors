@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
@@ -759,15 +760,17 @@ function AffiliatedDoctorsTab({ isRTL }: { isRTL: boolean }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>{isRTL ? "التخصص" : "Specialty"}</Label>
-                <Select value={form.specialtyId || "none"} onValueChange={v => setForm(p => ({ ...p, specialtyId: v === "none" ? "" : v }))}>
-                  <SelectTrigger><SelectValue placeholder={isRTL ? "اختر..." : "Select..."} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{isRTL ? "بدون تخصص" : "No specialty"}</SelectItem>
-                    {specialties.map(s => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{isRTL ? s.nameAr : s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableCombobox
+                  value={form.specialtyId || ""}
+                  onValueChange={v => setForm(p => ({ ...p, specialtyId: v }))}
+                  options={[
+                    { value: "", label: isRTL ? "بدون تخصص" : "No specialty" },
+                    ...specialties.map(s => ({ value: s.id.toString(), label: isRTL ? s.nameAr : s.name })),
+                  ]}
+                  placeholder={isRTL ? "اختر..." : "Select..."}
+                  searchPlaceholder={isRTL ? "ابحث في التخصصات..." : "Search specialties..."}
+                  emptyMessage={isRTL ? "لا توجد نتائج" : "No results found"}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>{isRTL ? "رسوم الكشف (EGP)" : "Consultation Fee (EGP)"}</Label>
