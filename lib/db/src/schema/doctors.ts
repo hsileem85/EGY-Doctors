@@ -43,6 +43,7 @@ export const doctorsTable = pgTable("doctors", {
   subscriptionPlan: text("subscription_plan").notNull().default("SEMI_ANNUAL"),
   subscriptionEndDate: timestamp("subscription_end_date", { withTimezone: true }),
   isTrialUsed: boolean("is_trial_used").notNull().default(false),
+  isSubmittedForReview: boolean("is_submitted_for_review").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

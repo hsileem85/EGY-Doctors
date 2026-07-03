@@ -44,15 +44,32 @@ function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirm
   return <Badge variant="outline" className={map[status]}>{labels[status]}</Badge>;
 }
 
-function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
+function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser, accountStatus }: {
   doctorName: string;
   signOut: () => void;
   isRTL: boolean;
   refreshUser: () => Promise<void>;
+  accountStatus: string;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: profile } = useQuery({
+    queryKey: ["doctor-profile"],
+    queryFn: getMyDoctorProfile,
+  });
+
+  const clinics = profile?.clinics ?? [];
+  const isSubmitted = profile?.isSubmittedForReview ?? false;
+
+  // Determine if profile is "complete" (has at least 1 clinic + mandatory fields)
+  const hasMandatoryFields = !!(
+    profile?.specialtyId &&
+    profile?.name &&
+    profile?.bio &&
+    profile?.fee
+  );
+  const isProfileComplete = clinics.length > 0 && hasMandatoryFields;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -60,7 +77,6 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
     try {
       await submitDoctorForReview();
       await refreshUser();
-      setSubmitted(true);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(isRTL ? "حدث خطأ، يرجى المحاولة مجدداً." : msg || "Something went wrong. Please try again.");
@@ -69,16 +85,23 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
     }
   };
 
-  if (submitted) {
+  // ── Condition C: Pending Review ──
+  if (isSubmitted || accountStatus === "pending") {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-            <UserCheck className="w-10 h-10 text-green-600" />
+          <div className="w-20 h-20 rounded-full bg-[#D4A853]/10 flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-[#D4A853]" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{isRTL ? "تم إرسال طلبك!" : "Application Submitted!"}</h1>
-          <p className="text-gray-500 mb-8">{isRTL ? "سيتم مراجعة طلبك وإخطارك بالبريد الإلكتروني." : "Your application is under review. You'll be notified by email."}</p>
-          <Button variant="outline" className="gap-2 text-gray-600" onClick={signOut}>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRTL ? "حسابك قيد المراجعة" : "Your Profile is Under Review"}
+          </h1>
+          <p className="text-gray-500 mb-8 leading-relaxed">
+            {isRTL
+              ? "⏳ ملفك الشخصي قيد المراجعة من قبل الإدارة. سيتم إخطارك فور الموافقة."
+              : "⏳ Your profile is currently under review by the administration. You will be notified once approved."}
+          </p>
+          <Button variant="outline" className="gap-2 text-gray-600" onClick={signOut} data-testid="button-pending-signout">
             <LogOut className="w-4 h-4" />
             {isRTL ? "تسجيل الخروج" : "Sign Out"}
           </Button>
@@ -87,6 +110,42 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser }: {
     );
   }
 
+  // ── Condition B: Ready to Submit ──
+  if (isProfileComplete) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-lg text-center">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+            <UserCheck className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{isRTL ? `عمل رائع، ${doctorName}!` : `Great job, ${doctorName}!`}</h1>
+          <p className="text-gray-500 mb-2">
+            {isRTL
+              ? "ملفك الشخصي مكتمل. أرسله لفريق الإدارة للمراجعة لبدء قبول المواعيد."
+              : "Your profile is complete. Submit it to the admin team for review to start accepting appointments."}
+          </p>
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+            <Button
+              className="gap-2 bg-[#D4A853] text-[#0F172A]"
+              onClick={handleSubmit}
+              disabled={submitting}
+              data-testid="button-submit-for-review"
+            >
+              {submitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : (isRTL ? "إرسال للمراجعة" : "Submit for Review")}
+            </Button>
+            <Link href="/edit-profile">
+              <Button variant="outline" className="gap-2 text-gray-600">
+                {isRTL ? "تعديل الملف" : "Edit Profile"}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Condition A: Incomplete ──
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-lg text-center">
@@ -1323,7 +1382,7 @@ export default function Dashboard() {
   const doctorName = user?.name ?? "Doctor";
 
   if (user?.role === "doctor" && accountStatus === "incomplete") {
-    return <IncompleteScreen doctorName={doctorName} signOut={signOut} isRTL={isRTL} refreshUser={refreshUser} />;
+    return <IncompleteScreen doctorName={doctorName} signOut={signOut} isRTL={isRTL} refreshUser={refreshUser} accountStatus={accountStatus} />;
   }
 
   if (user?.role === "doctor" && (accountStatus === "pending" || accountStatus === "rejected")) {

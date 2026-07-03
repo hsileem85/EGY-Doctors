@@ -556,6 +556,7 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
     cityId: doctorsTable.cityId,
     areaId: doctorsTable.areaId,
     accountStatus: doctorsTable.accountStatus,
+    isSubmittedForReview: doctorsTable.isSubmittedForReview,
     onboardingStatus: doctorsTable.onboardingStatus,
     availabilityPeriod: doctorsTable.availabilityPeriod,
     availabilityFrom: doctorsTable.availabilityFrom,
@@ -587,6 +588,7 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
     ...doc,
     name: doc.nameEn,
     bio: doc.bioEn ?? "",
+    isSubmittedForReview: doc.isSubmittedForReview ?? false,
     clinics: clinics.map((c) => ({
       ...c,
       name: c.nameEn,
@@ -874,7 +876,7 @@ router.post("/doctors/profile/submit-for-review", async (req, res): Promise<void
     return;
   }
 
-  await db.update(doctorsTable).set({ accountStatus: "pending" }).where(eq(doctorsTable.id, row.id));
+  await db.update(doctorsTable).set({ accountStatus: "pending", isSubmittedForReview: true }).where(eq(doctorsTable.id, row.id));
 
   db.insert(adminNotificationsTable).values({
     type: "new_doctor",

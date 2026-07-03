@@ -93,6 +93,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 
   let doctorId: number | null = null;
   let accountStatus: string | null = null;
+  let isSubmittedForReview = false;
   if (d.role === "doctor") {
     const [doc] = await db.insert(doctorsTable).values({
       userId: user.id,
@@ -105,6 +106,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     }).returning();
     doctorId = doc.id;
     accountStatus = doc.accountStatus;
+    isSubmittedForReview = doc.isSubmittedForReview ?? false;
 
     // Doctor starts as incomplete — no email/notification until they submit for review
   }
@@ -135,6 +137,7 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       role: user.role,
       doctorId,
       accountStatus,
+      isSubmittedForReview,
       siteLanguage: user.siteLanguage,
       notificationLanguage: user.notificationLanguage,
       notifyViaEmail: user.notifyViaEmail,
@@ -177,13 +180,15 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
 
   let doctorId: number | null = null;
   let accountStatus: string | null = null;
+  let isSubmittedForReview = false;
   if (user.role === "doctor") {
-    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus })
+    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus, isSubmittedForReview: doctorsTable.isSubmittedForReview })
       .from(doctorsTable)
       .where(eq(doctorsTable.userId, user.id)).limit(1);
     if (doc) {
       doctorId = doc.id;
       accountStatus = doc.accountStatus;
+      isSubmittedForReview = doc.isSubmittedForReview ?? false;
     }
   }
 
@@ -199,6 +204,7 @@ router.post("/auth/signin", async (req, res): Promise<void> => {
       role: user.role,
       doctorId,
       accountStatus,
+      isSubmittedForReview,
       assistantClinicId: user.assistantClinicId ?? null,
       assistantDoctorId: user.assistantDoctorId ?? null,
       siteLanguage: user.siteLanguage,
@@ -285,13 +291,15 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   let doctorId: number | null = null;
   let accountStatus: string | null = null;
   let image: string | null = null;
+  let isSubmittedForReview = false;
   if (user.role === "doctor") {
-    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus, image: doctorsTable.image })
+    const [doc] = await db.select({ id: doctorsTable.id, accountStatus: doctorsTable.accountStatus, isSubmittedForReview: doctorsTable.isSubmittedForReview, image: doctorsTable.image })
       .from(doctorsTable)
       .where(eq(doctorsTable.userId, user.id)).limit(1);
     if (doc) {
       doctorId = doc.id;
       accountStatus = doc.accountStatus;
+      isSubmittedForReview = doc.isSubmittedForReview ?? false;
       image = doc.image ?? null;
     }
   }
@@ -305,6 +313,7 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     role: user.role,
     doctorId,
     accountStatus,
+    isSubmittedForReview,
     image,
     assistantClinicId: user.assistantClinicId ?? null,
     assistantDoctorId: user.assistantDoctorId ?? null,

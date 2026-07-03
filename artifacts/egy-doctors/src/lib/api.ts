@@ -17,6 +17,7 @@ export interface AuthUser {
   role: "patient" | "doctor" | "medical_center" | "admin" | "assistant";
   doctorId?: number | null;
   accountStatus?: string | null;
+  isSubmittedForReview?: boolean | null;
   image?: string | null;
   assistantClinicId?: number | null;
   assistantDoctorId?: number | null;
@@ -86,6 +87,7 @@ export interface ApiDoctor extends AvailabilityConfig {
   reviews: number;
   reviewsCount: number;
   accountStatus: string;
+  isSubmittedForReview?: boolean;
   mapUrl: string;
   distance: string;
   clinics: ApiClinic[];
