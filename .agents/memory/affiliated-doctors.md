@@ -40,3 +40,10 @@ Creating an affiliated doctor also inserts a real `clinics` row (nameEn/address/
 
 ## Public directory endpoint
 `GET /medical-centers/directory` (public, read-only) returns approved centers joined with city name plus aggregated affiliated-doctor names/specialties/count — used to list registered centers on the Home page.
+
+## Two separate doctor-card implementations must be updated together
+The doctor listing UI has two independent card components rendering doctor summaries: `components/DoctorCard.tsx` (Search page) and an inline compact card inside `pages/Home.tsx` (homepage featured-doctors section). Both read the same `ApiDoctor.polyClinic`/`ApiDoctor.affiliatedCenter` fields but each has its own hand-rolled JSX/styling.
+
+**Why:** `DoctorCard.tsx` already showed a poly-clinic/medical-center affiliation badge, but the Home.tsx compact card did not, so a doctor's homepage card silently looked like a private/independent clinic even though Search correctly disclosed the affiliation.
+
+**How to apply:** Any visual/informational change to doctor cards (badges, pricing, contact info, etc.) must be applied to both `DoctorCard.tsx` and the compact card in `Home.tsx` — grep for the field name across `pages/Home.tsx` and `components/DoctorCard.tsx` before considering the change complete.

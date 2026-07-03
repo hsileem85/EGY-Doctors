@@ -559,6 +559,18 @@ export default function Home() {
                         )}
                       </p>
 
+                      {/* Poly clinic / medical center affiliation badge */}
+                      {(doc.polyClinic || doc.affiliatedCenter) && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Building2 className="w-2.5 h-2.5 text-violet-500 shrink-0" />
+                          <span className="text-[10px] font-semibold text-violet-600 truncate">
+                            {doc.polyClinic
+                              ? (isRTL ? (doc.polyClinic.nameAr ?? doc.polyClinic.name) : doc.polyClinic.name)
+                              : (isRTL ? (doc.affiliatedCenter!.nameAr ?? doc.affiliatedCenter!.name) : doc.affiliatedCenter!.name)}
+                          </span>
+                        </div>
+                      )}
+
                       {/* Clinic pills inline */}
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {doc.clinics.length === 0 && (
