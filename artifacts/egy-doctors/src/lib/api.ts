@@ -872,7 +872,7 @@ export interface MedicalCenterPublicProfile {
   cityName: string | null;
   cityNameAr: string | null;
   specialties: { name: string | null; nameAr: string | null }[];
-  doctors: { id: number; name: string; nameAr: string | null }[];
+  doctors: { id: number; name: string; nameAr: string | null; specialtyName: string | null; specialtyNameAr: string | null }[];
   doctorsCount: number;
   services: CenterServiceType[];
 }

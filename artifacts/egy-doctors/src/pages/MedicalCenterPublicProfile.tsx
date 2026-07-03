@@ -204,15 +204,23 @@ export default function MedicalCenterPublicProfile() {
                     </p>
                   ) : (
                     <div className="flex flex-col gap-3">
-                      {center.doctors.map((doctor) => (
-                        <Link key={doctor.id} href={`/profile/${doctor.id}`}>
-                          <div className="rounded-xl border border-gray-200 hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5 transition-colors p-4 cursor-pointer">
-                            <p className="font-semibold text-gray-900">
-                              {isRTL && doctor.nameAr ? doctor.nameAr : doctor.name}
-                            </p>
-                          </div>
-                        </Link>
-                      ))}
+                      {center.doctors.map((doctor) => {
+                        const specialtyName = isRTL && doctor.specialtyNameAr ? doctor.specialtyNameAr : doctor.specialtyName;
+                        return (
+                          <Link key={doctor.id} href={`/profile/${doctor.id}`}>
+                            <div className="rounded-xl border border-gray-200 hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5 transition-colors p-4 cursor-pointer flex items-center gap-2 flex-wrap">
+                              {specialtyName && (
+                                <Badge className="bg-[#D4A853]/10 text-[#8B6914] border-[#D4A853]/30 hover:bg-[#D4A853]/20">
+                                  {specialtyName}
+                                </Badge>
+                              )}
+                              <p className="font-semibold text-gray-900">
+                                {isRTL && doctor.nameAr ? doctor.nameAr : doctor.name}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Building2, Save, ArrowLeft, CheckCircle2, Globe, Facebook, Instagram, MapPin, LocateFixed, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ export default function MedicalCenterProfile() {
   const isRTL = dir === "rtl";
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const qc = useQueryClient();
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [centerId, setCenterId] = useState<number | null>(null);
@@ -115,6 +117,10 @@ export default function MedicalCenterProfile() {
         lng: form.lng ? parseFloat(form.lng) : null,
         services: form.services,
       });
+      void qc.invalidateQueries({ queryKey: ["medicalCentersDirectory"] });
+      if (centerId != null) {
+        void qc.invalidateQueries({ queryKey: ["medicalCenterPublicProfile", String(centerId)] });
+      }
       toast({
         title: isRTL ? "تم الحفظ!" : "Profile Saved!",
         description: isRTL ? "تم حفظ بيانات مركزك بنجاح." : "Your center profile has been saved.",

@@ -524,7 +524,13 @@ router.get("/medical-centers/:id", async (req, res): Promise<void> => {
   res.json({
     ...rest,
     specialties,
-    doctors: doctors.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr })),
+    doctors: doctors.map(d => ({
+      id: d.id,
+      name: d.name,
+      nameAr: d.nameAr,
+      specialtyName: d.specialtyName,
+      specialtyNameAr: d.specialtyNameAr,
+    })),
     doctorsCount: doctors.length,
     services: center.services ?? [],
   });
