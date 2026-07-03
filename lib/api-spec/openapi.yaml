@@ -434,6 +434,18 @@ paths:
       responses:
         "204":
           description: No Content
+  /admin/reports:
+    get:
+      operationId: getReports
+      tags: [admin]
+      summary: Get admin analytics reports
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportsResponse"
 components:
   schemas:
     HealthStatus:
@@ -702,3 +714,121 @@ components:
         - body
         - isRead
         - createdAt
+    ReportsResponse:
+      type: object
+      properties:
+        overview:
+          type: object
+          properties:
+            totalUsers: { type: integer }
+            totalDoctors: { type: integer }
+            totalPatients: { type: integer }
+            totalMedicalCenters: { type: integer }
+            totalAppointments: { type: integer }
+            totalReviews: { type: integer }
+            totalClinics: { type: integer }
+            totalPayments: { type: integer }
+            totalRevenue: { type: number }
+          required:
+            - totalUsers
+            - totalDoctors
+            - totalPatients
+            - totalMedicalCenters
+            - totalAppointments
+            - totalReviews
+            - totalClinics
+            - totalPayments
+            - totalRevenue
+        doctorsByStatus:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        doctorsBySpecialty:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        doctorsByCity:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        doctorsBySubscription:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        appointmentsByStatus:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        appointmentsByMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        reviewsByRating:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        centersByCity:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+        paymentsByMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+              revenue: { type: number }
+            required: [label, count, revenue]
+        recentSignups:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              count: { type: integer }
+            required: [label, count]
+      required:
+        - overview
+        - doctorsByStatus
+        - doctorsBySpecialty
+        - doctorsByCity
+        - doctorsBySubscription
+        - appointmentsByStatus
+        - appointmentsByMonth
+        - reviewsByRating
+        - centersByCity
+        - paymentsByMonth
+        - recentSignups

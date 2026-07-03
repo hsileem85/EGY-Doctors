@@ -233,6 +233,83 @@ export interface AdminNotification {
   createdAt: string;
 }
 
+export type ReportsResponseOverview = {
+  totalUsers: number;
+  totalDoctors: number;
+  totalPatients: number;
+  totalMedicalCenters: number;
+  totalAppointments: number;
+  totalReviews: number;
+  totalClinics: number;
+  totalPayments: number;
+  totalRevenue: number;
+};
+
+export type ReportsResponseDoctorsByStatusItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseDoctorsBySpecialtyItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseDoctorsByCityItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseDoctorsBySubscriptionItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseAppointmentsByStatusItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseAppointmentsByMonthItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseReviewsByRatingItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponseCentersByCityItem = {
+  label: string;
+  count: number;
+};
+
+export type ReportsResponsePaymentsByMonthItem = {
+  label: string;
+  count: number;
+  revenue: number;
+};
+
+export type ReportsResponseRecentSignupsItem = {
+  label: string;
+  count: number;
+};
+
+export interface ReportsResponse {
+  overview: ReportsResponseOverview;
+  doctorsByStatus: ReportsResponseDoctorsByStatusItem[];
+  doctorsBySpecialty: ReportsResponseDoctorsBySpecialtyItem[];
+  doctorsByCity: ReportsResponseDoctorsByCityItem[];
+  doctorsBySubscription: ReportsResponseDoctorsBySubscriptionItem[];
+  appointmentsByStatus: ReportsResponseAppointmentsByStatusItem[];
+  appointmentsByMonth: ReportsResponseAppointmentsByMonthItem[];
+  reviewsByRating: ReportsResponseReviewsByRatingItem[];
+  centersByCity: ReportsResponseCentersByCityItem[];
+  paymentsByMonth: ReportsResponsePaymentsByMonthItem[];
+  recentSignups: ReportsResponseRecentSignupsItem[];
+}
+
 export type ListDoctorsParams = {
 status?: string;
 };

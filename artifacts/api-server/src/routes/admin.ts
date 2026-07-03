@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { eq, max, inArray, desc } from "drizzle-orm";
+import { eq, max, inArray, desc, count, sql, gte } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, servicesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, servicesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable, appointmentsTable, reviewsTable, paymentsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -917,6 +917,119 @@ router.delete("/admin/vouchers/:id", requireAdmin, async (req, res): Promise<voi
   if (!deleted) { res.status(404).json({ error: "Voucher not found" }); return; }
   req.log.info({ id }, "Voucher deleted");
   res.json({ message: "Voucher deleted." });
+});
+
+/* ─── GET /admin/reports ─── */
+router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Overview counts
+  const [usersRow] = await db.select({ total: count() }).from(usersTable);
+  const [doctorsRow] = await db.select({ total: count() }).from(doctorsTable);
+  const [patientsRow] = await db.select({ total: count() }).from(usersTable).where(eq(usersTable.role, "patient"));
+  const [centersRow] = await db.select({ total: count() }).from(medicalCentersTable);
+  const [appointmentsRow] = await db.select({ total: count() }).from(appointmentsTable);
+  const [reviewsRow] = await db.select({ total: count() }).from(reviewsTable);
+  const [clinicsRow] = await db.select({ total: count() }).from(clinicsTable);
+  const [paymentsRow] = await db.select({ total: count() }).from(paymentsTable);
+  const [revenueRow] = await db.select({ total: sql<number>`coalesce(sum(${paymentsTable.amount}),0)` }).from(paymentsTable).where(eq(paymentsTable.status, "PAID"));
+
+  // Doctors by status
+  const doctorsByStatus = await db
+    .select({ status: doctorsTable.accountStatus, count: count() })
+    .from(doctorsTable)
+    .groupBy(doctorsTable.accountStatus);
+
+  // Doctors by specialty
+  const doctorsBySpecialty = await db
+    .select({ specialtyName: specialtiesTable.name, count: count() })
+    .from(doctorsTable)
+    .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .groupBy(specialtiesTable.name)
+    .orderBy(desc(count()));
+
+  // Doctors by city
+  const doctorsByCity = await db
+    .select({ cityName: citiesTable.name, count: count() })
+    .from(doctorsTable)
+    .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
+    .groupBy(citiesTable.name)
+    .orderBy(desc(count()));
+
+  // Doctors by subscription status
+  const doctorsBySubscription = await db
+    .select({ status: doctorsTable.subscriptionStatus, count: count() })
+    .from(doctorsTable)
+    .groupBy(doctorsTable.subscriptionStatus);
+
+  // Appointments by status
+  const appointmentsByStatus = await db
+    .select({ status: appointmentsTable.status, count: count() })
+    .from(appointmentsTable)
+    .groupBy(appointmentsTable.status);
+
+  // Appointments by month (last 6 months)
+  const appointmentsByMonth = await db
+    .select({ month: sql<string>`to_char(${appointmentsTable.createdAt}, 'YYYY-MM')`, count: count() })
+    .from(appointmentsTable)
+    .where(gte(appointmentsTable.createdAt, sql<Date>`now() - interval '6 months'`))
+    .groupBy(sql`to_char(${appointmentsTable.createdAt}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${appointmentsTable.createdAt}, 'YYYY-MM')`);
+
+  // Reviews rating distribution
+  const reviewsByRating = await db
+    .select({ rating: reviewsTable.rating, count: count() })
+    .from(reviewsTable)
+    .groupBy(reviewsTable.rating)
+    .orderBy(reviewsTable.rating);
+
+  // Medical centers by city
+  const centersByCity = await db
+    .select({ cityName: citiesTable.name, count: count() })
+    .from(medicalCentersTable)
+    .leftJoin(citiesTable, eq(medicalCentersTable.cityId, citiesTable.id))
+    .groupBy(citiesTable.name)
+    .orderBy(desc(count()));
+
+  // Payments by month (last 6 months)
+  const paymentsByMonth = await db
+    .select({ month: sql<string>`to_char(${paymentsTable.createdAt}, 'YYYY-MM')`, count: count(), revenue: sql<number>`coalesce(sum(${paymentsTable.amount}),0)` })
+    .from(paymentsTable)
+    .where(gte(paymentsTable.createdAt, sql<Date>`now() - interval '6 months'`))
+    .groupBy(sql`to_char(${paymentsTable.createdAt}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${paymentsTable.createdAt}, 'YYYY-MM')`);
+
+  // Recent signups by role (last 30 days)
+  const recentSignups = await db
+    .select({ role: usersTable.role, count: count() })
+    .from(usersTable)
+    .where(gte(usersTable.createdAt, thirtyDaysAgo))
+    .groupBy(usersTable.role);
+
+  res.json({
+    overview: {
+      totalUsers: usersRow.total,
+      totalDoctors: doctorsRow.total,
+      totalPatients: patientsRow.total,
+      totalMedicalCenters: centersRow.total,
+      totalAppointments: appointmentsRow.total,
+      totalReviews: reviewsRow.total,
+      totalClinics: clinicsRow.total,
+      totalPayments: paymentsRow.total,
+      totalRevenue: revenueRow.total,
+    },
+    doctorsByStatus: doctorsByStatus.map((r) => ({ label: r.status, count: Number(r.count) })),
+    doctorsBySpecialty: doctorsBySpecialty.map((r) => ({ label: r.specialtyName ?? "Unspecified", count: Number(r.count) })),
+    doctorsByCity: doctorsByCity.map((r) => ({ label: r.cityName ?? "Unspecified", count: Number(r.count) })),
+    doctorsBySubscription: doctorsBySubscription.map((r) => ({ label: r.status, count: Number(r.count) })),
+    appointmentsByStatus: appointmentsByStatus.map((r) => ({ label: r.status, count: Number(r.count) })),
+    appointmentsByMonth: appointmentsByMonth.map((r) => ({ label: r.month, count: Number(r.count) })),
+    reviewsByRating: reviewsByRating.map((r) => ({ label: String(r.rating), count: Number(r.count) })),
+    centersByCity: centersByCity.map((r) => ({ label: r.cityName ?? "Unspecified", count: Number(r.count) })),
+    paymentsByMonth: paymentsByMonth.map((r) => ({ label: r.month, count: Number(r.count), revenue: Number(r.revenue) })),
+    recentSignups: recentSignups.map((r) => ({ label: r.role, count: Number(r.count) })),
+  });
 });
 
 export default router;

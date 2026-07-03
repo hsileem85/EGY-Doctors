@@ -478,3 +478,62 @@ export const DeleteAreaParams = zod.object({
 })
 
 
+/**
+ * @summary Get admin analytics reports
+ */
+export const GetReportsResponse = zod.object({
+  "overview": zod.object({
+  "totalUsers": zod.number(),
+  "totalDoctors": zod.number(),
+  "totalPatients": zod.number(),
+  "totalMedicalCenters": zod.number(),
+  "totalAppointments": zod.number(),
+  "totalReviews": zod.number(),
+  "totalClinics": zod.number(),
+  "totalPayments": zod.number(),
+  "totalRevenue": zod.number()
+}),
+  "doctorsByStatus": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "doctorsBySpecialty": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "doctorsByCity": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "doctorsBySubscription": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "appointmentsByStatus": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "appointmentsByMonth": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "reviewsByRating": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "centersByCity": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})),
+  "paymentsByMonth": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number(),
+  "revenue": zod.number()
+})),
+  "recentSignups": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+}))
+})
+
+

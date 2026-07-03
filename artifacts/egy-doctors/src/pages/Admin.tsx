@@ -1,7 +1,22 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link, useSearch, useLocation } from "wouter";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts";
 import {
   useListDoctors,
   useApproveDoctor,
@@ -26,12 +41,14 @@ import {
   useListAdminNotifications,
   useMarkAdminNotificationRead,
   useClearAdminNotifications,
+  useGetReports,
   getListAdminNotificationsQueryKey,
   getListDoctorsQueryKey,
   getListSpecialtiesQueryKey,
   getListCitiesQueryKey,
   getListAreasQueryKey,
   getListServicesQueryKey,
+  getGetReportsQueryKey,
   type Doctor,
   type AdminNotification,
 } from "@workspace/api-client-react";
@@ -82,6 +99,7 @@ import {
   Save,
   DollarSign,
   ClipboardList,
+  BarChart3,
 } from "lucide-react";
 import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter } from "@/lib/api";
 
@@ -210,6 +228,7 @@ function useInvalidateAdmin() {
     qc.invalidateQueries({ queryKey: getListCitiesQueryKey() });
     qc.invalidateQueries({ queryKey: getListAreasQueryKey() });
     qc.invalidateQueries({ queryKey: getListServicesQueryKey() });
+    qc.invalidateQueries({ queryKey: getGetReportsQueryKey() });
   };
 }
 
@@ -337,6 +356,7 @@ const tabs = [
   { id: "cities", label: "Cities", labelAr: "المحافظات", icon: MapPinHouse },
   { id: "areas", label: "Areas", labelAr: "المناطق", icon: MapPin },
   { id: "services", label: "Services", labelAr: "الخدمات", icon: ClipboardList },
+  { id: "reports", label: "Reports", labelAr: "التقارير", icon: BarChart3 },
   { id: "contact", label: "Contact Info", labelAr: "معلومات التواصل", icon: Globe },
   { id: "billing", label: "Billing", labelAr: "الاشتراكات", icon: DollarSign },
 ] as const;
@@ -425,6 +445,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         {activeTab === "cities" && <CitiesSection lang={lang} />}
         {activeTab === "areas" && <AreasSection lang={lang} />}
         {activeTab === "services" && <ServicesSection lang={lang} />}
+        {activeTab === "reports" && <ReportsSection lang={lang} />}
         {activeTab === "contact" && <ContactInfoSection lang={lang} />}
         {activeTab === "billing" && <BillingManagementSection lang={lang} />}
       </div>
@@ -2061,6 +2082,218 @@ function CentersSection({ lang }: { lang: string }) {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/* ─── ReportsSection ─── */
+
+const CHART_COLORS = ["#D4A853", "#0F172A", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
+
+function ReportsSection({ lang }: { lang: string }) {
+  const isRTL = lang === "ar";
+  const { data, isLoading } = useGetReports();
+
+  const r = data;
+
+  const overviewCards = useMemo(() => {
+    if (!r) return [];
+    return [
+      { label: isRTL ? "إجمالي المستخدمين" : "Total Users", value: r.overview.totalUsers, color: "text-blue-600" },
+      { label: isRTL ? "الأطباء" : "Doctors", value: r.overview.totalDoctors, color: "text-emerald-600" },
+      { label: isRTL ? "المرضى" : "Patients", value: r.overview.totalPatients, color: "text-indigo-600" },
+      { label: isRTL ? "المراكز الطبية" : "Medical Centers", value: r.overview.totalMedicalCenters, color: "text-amber-600" },
+      { label: isRTL ? "الحجوزات" : "Appointments", value: r.overview.totalAppointments, color: "text-teal-600" },
+      { label: isRTL ? "التقييمات" : "Reviews", value: r.overview.totalReviews, color: "text-rose-600" },
+      { label: isRTL ? "العيادات" : "Clinics", value: r.overview.totalClinics, color: "text-cyan-600" },
+      { label: isRTL ? "الدفعات" : "Payments", value: r.overview.totalPayments, color: "text-violet-600" },
+      { label: isRTL ? "إجمالي الإيرادات" : "Total Revenue", value: r.overview.totalRevenue.toLocaleString(), color: "text-green-600", suffix: " EGP" },
+    ];
+  }, [r, isRTL]);
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-gray-500">{isRTL ? "جاري التحميل..." : "Loading reports..."}</div>;
+  }
+
+  if (!r) {
+    return <div className="p-8 text-center text-gray-500">{isRTL ? "لا توجد بيانات" : "No data available"}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {overviewCards.map((card) => (
+          <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-sm text-gray-500">{card.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${card.color}`}>
+              {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
+              {card.suffix || ""}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Doctors by Specialty */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "الأطباء حسب التخصص" : "Doctors by Specialty"}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={r.doctorsBySpecialty.slice(0, 10)} layout="vertical" margin={{ left: 16, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#D4A853" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Doctors by City */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "الأطباء حسب المدينة" : "Doctors by City"}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={r.doctorsByCity.slice(0, 10)} margin={{ left: 16, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#0F172A" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Doctors by Status — Pie */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "الأطباء حسب الحالة" : "Doctors by Status"}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={r.doctorsByStatus} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={80} label>
+                  {r.doctorsByStatus.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Appointments by Status — Pie */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "الحجوزات حسب الحالة" : "Appointments by Status"}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={r.appointmentsByStatus} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={80} label>
+                  {r.appointmentsByStatus.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Appointments & Payments Over Time */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "الحجوزات والدفعات شهرياً" : "Appointments & Payments (Monthly)"}
+          </h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={r.appointmentsByMonth.map((a) => {
+                  const p = r.paymentsByMonth.find((pm) => pm.label === a.label);
+                  return { label: a.label, appointments: a.count, payments: p?.count ?? 0, revenue: p?.revenue ?? 0 };
+                })}
+                margin={{ left: 16, right: 16 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="appointments" stroke="#3B82F6" strokeWidth={2} dot={false} name={isRTL ? "الحجوزات" : "Appointments"} />
+                <Line yAxisId="right" type="monotone" dataKey="payments" stroke="#D4A853" strokeWidth={2} dot={false} name={isRTL ? "الدفعات" : "Payments"} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Reviews by Rating */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "التقييمات حسب التقييم" : "Reviews by Rating"}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={r.reviewsByRating} margin={{ left: 16, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#10B981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Centers by City */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "المراكز الطبية حسب المدينة" : "Medical Centers by City"}
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={r.centersByCity.slice(0, 10)} layout="vertical" margin={{ left: 16, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent Signups */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+            {isRTL ? "التسجيلات الجديدة (آخر 30 يوماً)" : "Recent Signups (Last 30 Days)"}
+          </h3>
+          {r.recentSignups.length === 0 ? (
+            <p className="text-gray-500 text-sm">{isRTL ? "لا توجد تسجيلات جديدة" : "No recent signups"}</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              {r.recentSignups.map((s) => (
+                <div key={s.label} className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 uppercase">{s.label}</p>
+                  <p className="text-xl font-bold text-gray-900">{s.count}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
