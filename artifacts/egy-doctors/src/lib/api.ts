@@ -858,6 +858,8 @@ export interface MedicalCenterDirectoryEntry {
   bioAr: string | null;
   address: string | null;
   phone: string | null;
+  lat: number | null;
+  lng: number | null;
   cityName: string | null;
   cityNameAr: string | null;
   specialties: { name: string | null; nameAr: string | null }[];

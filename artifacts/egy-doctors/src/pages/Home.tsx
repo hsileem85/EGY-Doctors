@@ -39,6 +39,16 @@ import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, CENTE
 type SortOption = "nearest" | "rating" | "fee";
 type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const STATIC_STATS = [
   { key: "clinics", label: "Verified Clinics",  labelAr: "عيادة موثقة" },
   { key: "govs",    label: "Governorates",      labelAr: "محافظة" },
@@ -762,6 +772,49 @@ export default function Home() {
                           <Users className="w-3 h-3" />
                           {center.doctorsCount} {isRTL ? "طبيب" : center.doctorsCount === 1 ? "doctor" : "doctors"}
                         </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {(center.address || center.cityName) && (
+                          <a
+                            href={
+                              center.lat != null && center.lng != null
+                                ? `https://www.google.com/maps/dir/?api=1&destination=${center.lat},${center.lng}`
+                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([center.address, center.cityName].filter(Boolean).join(", "))}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md px-2 py-0.5 font-medium transition-colors cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MapPin className="h-2.5 w-2.5 shrink-0" />
+                            {center.address
+                              ? `${center.address}${center.cityName ? `, ${isRTL && center.cityNameAr ? center.cityNameAr : center.cityName}` : ""}`
+                              : isRTL && center.cityNameAr
+                              ? center.cityNameAr
+                              : center.cityName}
+                          </a>
+                        )}
+                        {userCoords && center.lat != null && center.lng != null && (() => {
+                          const dKm = haversineKm(userCoords.lat, userCoords.lng, center.lat, center.lng);
+                          const dLabel = dKm < 1 ? `${Math.round(dKm * 1000)} m` : `${dKm.toFixed(1)} km`;
+                          return (
+                            <span className="inline-flex items-center gap-0.5 text-[11px] bg-emerald-50 text-emerald-700 rounded-md px-2 py-0.5 font-medium">
+                              <Navigation className="h-2.5 w-2.5 shrink-0" />
+                              {dLabel}
+                            </span>
+                          );
+                        })()}
+                        {center.phone && (
+                          <a
+                            href={`tel:${center.phone}`}
+                            className="inline-flex items-center gap-0.5 text-[11px] bg-green-50 hover:bg-green-100 text-green-700 rounded-md px-2 py-0.5 font-medium transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Phone className="h-2.5 w-2.5 shrink-0" />
+                            {center.phone}
+                          </a>
+                        )}
                       </div>
 
                       {center.specialties.length > 0 && (
