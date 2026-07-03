@@ -39,6 +39,7 @@ export default function AuthPage() {
   const { signIn, signUp } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
   const [userType, setUserType] = useState<UserType>("patient");
@@ -211,30 +212,11 @@ export default function AuthPage() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
-        <Card className="w-full max-w-md text-center py-10 border-[#D4A853]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
-          <CardContent className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 bg-[#D4A853]/20 rounded-full flex items-center justify-center mb-2 border border-[#D4A853]/30">
-              <CheckCircle2 className="w-10 h-10 text-[#D4A853]" />
-            </div>
-            <h2 className="text-2xl font-bold text-white">
-              {isRTL ? "تم بنجاح!" : "Success!"}
-            </h2>
-            <p className="text-gray-400 mb-6">
-              {isRTL
-                ? "مرحباً بك في EGY Doctors. سيتم إعادة التوجيه إلى لوحة التحكم."
-                : "Welcome to EGY Doctors. You will be redirected to your dashboard."}
-            </p>
-            <Button
-              className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold"
-              onClick={() => setLocation(redirectPath)}
-            >
-              {isRTL ? "الذهاب إلى لوحة التحكم" : "Go to Dashboard"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthSuccessScreen
+        isRTL={isRTL}
+        redirectPath={redirectPath}
+        onNavigate={() => setLocation(redirectPath)}
+      />
     );
   }
 
@@ -757,14 +739,23 @@ export default function AuthPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signupConfirm" className="text-gray-300">{tl.confirmPassword}</Label>
-                      <Input
-                        id="signupConfirm"
-                        type={showPassword ? "text" : "password"}
-                        value={signupData.confirmPassword}
-                        onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                        className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="signupConfirm"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={signupData.confirmPassword}
+                          onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                          className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20 pe-10"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-500 hover:text-[#D4A853] transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
 
                     {error && (
@@ -793,6 +784,55 @@ export default function AuthPage() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AuthSuccessScreen({
+  isRTL,
+  redirectPath,
+  onNavigate,
+}: {
+  isRTL: boolean;
+  redirectPath: string;
+  onNavigate: () => void;
+}) {
+  const [countdown, setCountdown] = useState(3);
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      onNavigate();
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, onNavigate]);
+
+  return (
+    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4A853]/10 rounded-full blur-[120px]" />
+      <Card className="w-full max-w-md text-center py-10 border-[#D4A853]/20 bg-[#1E293B]/80 backdrop-blur-sm shadow-2xl relative z-10">
+        <CardContent className="flex flex-col items-center gap-4">
+          <div className="w-20 h-20 bg-[#D4A853]/20 rounded-full flex items-center justify-center mb-2 border border-[#D4A853]/30">
+            <CheckCircle2 className="w-10 h-10 text-[#D4A853]" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">
+            {isRTL ? "تم بنجاح!" : "Success!"}
+          </h2>
+          <p className="text-gray-400 mb-2">
+            {isRTL
+              ? "مرحباً بك في EGY Doctors. سيتم إعادة التوجيه إلى لوحة التحكم خلال..."
+              : "Welcome to EGY Doctors. Redirecting to your dashboard in..."}
+          </p>
+          <div className="text-3xl font-bold text-[#D4A853] mb-4">{countdown}</div>
+          <Button
+            className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold"
+            onClick={onNavigate}
+          >
+            {isRTL ? "الذهاب الآن" : "Go Now"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
