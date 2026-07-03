@@ -920,25 +920,75 @@ router.delete("/admin/vouchers/:id", requireAdmin, async (req, res): Promise<voi
 });
 
 /* ─── GET /admin/reports ─── */
-router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/reports", requireAdmin, async (req, res): Promise<void> => {
+  const q = req.query;
+  const doctorId = q.doctorId ? Number(q.doctorId) : undefined;
+  const medicalCenterId = q.medicalCenterId ? Number(q.medicalCenterId) : undefined;
+  const cityId = q.cityId ? Number(q.cityId) : undefined;
+  const areaId = q.areaId ? Number(q.areaId) : undefined;
+  const dateFrom = q.dateFrom ? new Date(String(q.dateFrom)) : undefined;
+  const dateTo = q.dateTo ? new Date(String(q.dateTo)) : undefined;
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Overview counts
-  const [usersRow] = await db.select({ total: count() }).from(usersTable);
-  const [doctorsRow] = await db.select({ total: count() }).from(doctorsTable);
-  const [patientsRow] = await db.select({ total: count() }).from(usersTable).where(eq(usersTable.role, "patient"));
-  const [centersRow] = await db.select({ total: count() }).from(medicalCentersTable);
-  const [appointmentsRow] = await db.select({ total: count() }).from(appointmentsTable);
+  // Build appointment WHERE conditions
+  const apptConditions = [];
+  if (doctorId) apptConditions.push(eq(appointmentsTable.doctorId, doctorId));
+  if (dateFrom) apptConditions.push(gte(appointmentsTable.createdAt, dateFrom));
+  if (dateTo) apptConditions.push(sql`${appointmentsTable.createdAt} <= ${dateTo}`);
+
+  // Build doctor WHERE conditions
+  const doctorConditions = [];
+  if (doctorId) doctorConditions.push(eq(doctorsTable.id, doctorId));
+  if (cityId) doctorConditions.push(eq(doctorsTable.cityId, cityId));
+  if (areaId) doctorConditions.push(eq(doctorsTable.areaId, areaId));
+
+  // Build medical center WHERE conditions
+  const centerConditions = [];
+  if (medicalCenterId) centerConditions.push(eq(medicalCentersTable.id, medicalCenterId));
+  if (cityId) centerConditions.push(eq(medicalCentersTable.cityId, cityId));
+
+  // Overview counts (filtered)
+  const [doctorsRow] = await db
+    .select({ total: count() })
+    .from(doctorsTable)
+    .where(doctorConditions.length > 0 ? sql.join(doctorConditions, sql` and `) : undefined);
+
+  const [centersRow] = await db
+    .select({ total: count() })
+    .from(medicalCentersTable)
+    .where(centerConditions.length > 0 ? sql.join(centerConditions, sql` and `) : undefined);
+
+  const [appointmentsRow] = await db
+    .select({ total: count() })
+    .from(appointmentsTable)
+    .where(apptConditions.length > 0 ? sql.join(apptConditions, sql` and `) : undefined);
+
   const [reviewsRow] = await db.select({ total: count() }).from(reviewsTable);
-  const [clinicsRow] = await db.select({ total: count() }).from(clinicsTable);
+
+  const [clinicsRow] = await db
+    .select({ total: count() })
+    .from(clinicsTable)
+    .where(
+      doctorId ? eq(clinicsTable.doctorId, doctorId) :
+      undefined
+    );
+
   const [paymentsRow] = await db.select({ total: count() }).from(paymentsTable);
-  const [revenueRow] = await db.select({ total: sql<number>`coalesce(sum(${paymentsTable.amount}),0)` }).from(paymentsTable).where(eq(paymentsTable.status, "PAID"));
+  const [revenueRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${paymentsTable.amount}),0)` })
+    .from(paymentsTable)
+    .where(eq(paymentsTable.status, "PAID"));
+
+  const [usersRow] = await db.select({ total: count() }).from(usersTable);
+  const [patientsRow] = await db.select({ total: count() }).from(usersTable).where(eq(usersTable.role, "patient"));
 
   // Doctors by status
   const doctorsByStatus = await db
     .select({ status: doctorsTable.accountStatus, count: count() })
     .from(doctorsTable)
+    .where(doctorConditions.length > 0 ? sql.join(doctorConditions, sql` and `) : undefined)
     .groupBy(doctorsTable.accountStatus);
 
   // Doctors by specialty
@@ -946,6 +996,7 @@ router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
     .select({ specialtyName: specialtiesTable.name, count: count() })
     .from(doctorsTable)
     .leftJoin(specialtiesTable, eq(doctorsTable.specialtyId, specialtiesTable.id))
+    .where(doctorConditions.length > 0 ? sql.join(doctorConditions, sql` and `) : undefined)
     .groupBy(specialtiesTable.name)
     .orderBy(desc(count()));
 
@@ -954,6 +1005,7 @@ router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
     .select({ cityName: citiesTable.name, count: count() })
     .from(doctorsTable)
     .leftJoin(citiesTable, eq(doctorsTable.cityId, citiesTable.id))
+    .where(doctorConditions.length > 0 ? sql.join(doctorConditions, sql` and `) : undefined)
     .groupBy(citiesTable.name)
     .orderBy(desc(count()));
 
@@ -961,19 +1013,21 @@ router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
   const doctorsBySubscription = await db
     .select({ status: doctorsTable.subscriptionStatus, count: count() })
     .from(doctorsTable)
+    .where(doctorConditions.length > 0 ? sql.join(doctorConditions, sql` and `) : undefined)
     .groupBy(doctorsTable.subscriptionStatus);
 
   // Appointments by status
   const appointmentsByStatus = await db
     .select({ status: appointmentsTable.status, count: count() })
     .from(appointmentsTable)
+    .where(apptConditions.length > 0 ? sql.join(apptConditions, sql` and `) : undefined)
     .groupBy(appointmentsTable.status);
 
-  // Appointments by month (last 6 months)
+  // Appointments by month
   const appointmentsByMonth = await db
     .select({ month: sql<string>`to_char(${appointmentsTable.createdAt}, 'YYYY-MM')`, count: count() })
     .from(appointmentsTable)
-    .where(gte(appointmentsTable.createdAt, sql<Date>`now() - interval '6 months'`))
+    .where(apptConditions.length > 0 ? sql.join(apptConditions, sql` and `) : undefined)
     .groupBy(sql`to_char(${appointmentsTable.createdAt}, 'YYYY-MM')`)
     .orderBy(sql`to_char(${appointmentsTable.createdAt}, 'YYYY-MM')`);
 
@@ -989,14 +1043,14 @@ router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
     .select({ cityName: citiesTable.name, count: count() })
     .from(medicalCentersTable)
     .leftJoin(citiesTable, eq(medicalCentersTable.cityId, citiesTable.id))
+    .where(centerConditions.length > 0 ? sql.join(centerConditions, sql` and `) : undefined)
     .groupBy(citiesTable.name)
     .orderBy(desc(count()));
 
-  // Payments by month (last 6 months)
+  // Payments by month
   const paymentsByMonth = await db
     .select({ month: sql<string>`to_char(${paymentsTable.createdAt}, 'YYYY-MM')`, count: count(), revenue: sql<number>`coalesce(sum(${paymentsTable.amount}),0)` })
     .from(paymentsTable)
-    .where(gte(paymentsTable.createdAt, sql<Date>`now() - interval '6 months'`))
     .groupBy(sql`to_char(${paymentsTable.createdAt}, 'YYYY-MM')`)
     .orderBy(sql`to_char(${paymentsTable.createdAt}, 'YYYY-MM')`);
 
@@ -1007,17 +1061,27 @@ router.get("/admin/reports", requireAdmin, async (_req, res): Promise<void> => {
     .where(gte(usersTable.createdAt, thirtyDaysAgo))
     .groupBy(usersTable.role);
 
+  // Appointment status breakdown for confirmed vs rejected
+  const confirmedCount = appointmentsByStatus.find(s => s.status === "confirmed")?.count ?? 0;
+  const rejectedCount = appointmentsByStatus.find(s => s.status === "cancelled")?.count ?? 0;
+  const pendingCount = appointmentsByStatus.find(s => s.status === "pending")?.count ?? 0;
+  const completedCount = appointmentsByStatus.find(s => s.status === "completed")?.count ?? 0;
+
   res.json({
     overview: {
       totalUsers: usersRow.total,
-      totalDoctors: doctorsRow.total,
+      totalDoctors: doctorsRow?.total ?? 0,
       totalPatients: patientsRow.total,
-      totalMedicalCenters: centersRow.total,
-      totalAppointments: appointmentsRow.total,
+      totalMedicalCenters: centersRow?.total ?? 0,
+      totalAppointments: appointmentsRow?.total ?? 0,
       totalReviews: reviewsRow.total,
-      totalClinics: clinicsRow.total,
+      totalClinics: clinicsRow?.total ?? 0,
       totalPayments: paymentsRow.total,
       totalRevenue: revenueRow.total,
+      confirmedAppointments: Number(confirmedCount),
+      rejectedAppointments: Number(rejectedCount),
+      pendingAppointments: Number(pendingCount),
+      completedAppointments: Number(completedCount),
     },
     doctorsByStatus: doctorsByStatus.map((r) => ({ label: r.status, count: Number(r.count) })),
     doctorsBySpecialty: doctorsBySpecialty.map((r) => ({ label: r.specialtyName ?? "Unspecified", count: Number(r.count) })),

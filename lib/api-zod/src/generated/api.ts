@@ -481,6 +481,15 @@ export const DeleteAreaParams = zod.object({
 /**
  * @summary Get admin analytics reports
  */
+export const GetReportsQueryParams = zod.object({
+  "doctorId": zod.coerce.number().optional(),
+  "medicalCenterId": zod.coerce.number().optional(),
+  "cityId": zod.coerce.number().optional(),
+  "areaId": zod.coerce.number().optional(),
+  "dateFrom": zod.date().optional(),
+  "dateTo": zod.date().optional()
+})
+
 export const GetReportsResponse = zod.object({
   "overview": zod.object({
   "totalUsers": zod.number(),
@@ -491,7 +500,11 @@ export const GetReportsResponse = zod.object({
   "totalReviews": zod.number(),
   "totalClinics": zod.number(),
   "totalPayments": zod.number(),
-  "totalRevenue": zod.number()
+  "totalRevenue": zod.number(),
+  "confirmedAppointments": zod.number(),
+  "rejectedAppointments": zod.number(),
+  "pendingAppointments": zod.number(),
+  "completedAppointments": zod.number()
 }),
   "doctorsByStatus": zod.array(zod.object({
   "label": zod.string(),

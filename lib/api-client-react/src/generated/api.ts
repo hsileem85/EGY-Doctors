@@ -28,6 +28,7 @@ import type {
   CityInput,
   CityUpdate,
   Doctor,
+  GetReportsParams,
   HealthStatus,
   ListAreasParams,
   ListDoctorsParams,
@@ -1958,20 +1959,27 @@ export const useDeleteArea = <TError = ErrorType<unknown>,
       return useMutation(getDeleteAreaMutationOptions(options));
     }
 
-export const getGetReportsUrl = () => {
+export const getGetReportsUrl = (params?: GetReportsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/reports`
+  return stringifiedParams.length > 0 ? `/api/admin/reports?${stringifiedParams}` : `/api/admin/reports`
 }
 
 /**
  * @summary Get admin analytics reports
  */
-export const getReports = async ( options?: RequestInit): Promise<ReportsResponse> => {
+export const getReports = async (params?: GetReportsParams, options?: RequestInit): Promise<ReportsResponse> => {
 
-  return customFetch<ReportsResponse>(getGetReportsUrl(),
+  return customFetch<ReportsResponse>(getGetReportsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1984,23 +1992,23 @@ export const getReports = async ( options?: RequestInit): Promise<ReportsRespons
 
 
 
-export const getGetReportsQueryKey = () => {
+export const getGetReportsQueryKey = (params?: GetReportsParams,) => {
     return [
-    `/api/admin/reports`
+    `/api/admin/reports`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetReportsQueryOptions = <TData = Awaited<ReturnType<typeof getReports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetReportsQueryOptions = <TData = Awaited<ReturnType<typeof getReports>>, TError = ErrorType<unknown>>(params?: GetReportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetReportsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReports>>> = ({ signal }) => getReports({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReports>>> = ({ signal }) => getReports(params, { signal, ...requestOptions });
 
 
 
@@ -2018,11 +2026,11 @@ export type GetReportsQueryError = ErrorType<unknown>
  */
 
 export function useGetReports<TData = Awaited<ReturnType<typeof getReports>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetReportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetReportsQueryOptions(options)
+  const queryOptions = getGetReportsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

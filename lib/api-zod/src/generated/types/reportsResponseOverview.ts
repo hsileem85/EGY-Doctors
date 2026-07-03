@@ -16,4 +16,8 @@ export type ReportsResponseOverview = {
   totalClinics: number;
   totalPayments: number;
   totalRevenue: number;
+  confirmedAppointments: number;
+  rejectedAppointments: number;
+  pendingAppointments: number;
+  completedAppointments: number;
 };

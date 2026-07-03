@@ -16,6 +16,7 @@ export * from './city';
 export * from './cityInput';
 export * from './cityUpdate';
 export * from './doctor';
+export * from './getReportsParams';
 export * from './healthStatus';
 export * from './listAreasParams';
 export * from './listDoctorsParams';

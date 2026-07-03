@@ -439,6 +439,33 @@ paths:
       operationId: getReports
       tags: [admin]
       summary: Get admin analytics reports
+      parameters:
+        - name: doctorId
+          in: query
+          schema:
+            type: integer
+        - name: medicalCenterId
+          in: query
+          schema:
+            type: integer
+        - name: cityId
+          in: query
+          schema:
+            type: integer
+        - name: areaId
+          in: query
+          schema:
+            type: integer
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: OK
@@ -729,6 +756,10 @@ components:
             totalClinics: { type: integer }
             totalPayments: { type: integer }
             totalRevenue: { type: number }
+            confirmedAppointments: { type: integer }
+            rejectedAppointments: { type: integer }
+            pendingAppointments: { type: integer }
+            completedAppointments: { type: integer }
           required:
             - totalUsers
             - totalDoctors
@@ -739,6 +770,10 @@ components:
             - totalClinics
             - totalPayments
             - totalRevenue
+            - confirmedAppointments
+            - rejectedAppointments
+            - pendingAppointments
+            - completedAppointments
         doctorsByStatus:
           type: array
           items:

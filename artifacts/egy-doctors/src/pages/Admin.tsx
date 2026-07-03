@@ -52,6 +52,7 @@ import {
   type Doctor,
   type AdminNotification,
 } from "@workspace/api-client-react";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2092,7 +2093,64 @@ const CHART_COLORS = ["#D4A853", "#0F172A", "#3B82F6", "#10B981", "#F59E0B", "#E
 
 function ReportsSection({ lang }: { lang: string }) {
   const isRTL = lang === "ar";
-  const { data, isLoading } = useGetReports();
+
+  const [doctorId, setDoctorId] = useState("");
+  const [medicalCenterId, setMedicalCenterId] = useState("");
+  const [cityId, setCityId] = useState("");
+  const [areaId, setAreaId] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const params = useMemo(() => {
+    const p: {
+      doctorId?: number;
+      medicalCenterId?: number;
+      cityId?: number;
+      areaId?: number;
+      dateFrom?: string;
+      dateTo?: string;
+    } = {};
+    if (doctorId) p.doctorId = Number(doctorId);
+    if (medicalCenterId) p.medicalCenterId = Number(medicalCenterId);
+    if (cityId) p.cityId = Number(cityId);
+    if (areaId) p.areaId = Number(areaId);
+    if (dateFrom) p.dateFrom = dateFrom;
+    if (dateTo) p.dateTo = dateTo;
+    return Object.keys(p).length > 0 ? p : undefined;
+  }, [doctorId, medicalCenterId, cityId, areaId, dateFrom, dateTo]);
+
+  const { data, isLoading } = useGetReports(params);
+  const { data: doctors = [] } = useListDoctors();
+  const { data: cities = [] } = useListCities();
+  const { data: areas = [] } = useListAreas();
+  const { data: centers = [] } = useQuery<AdminMedicalCenter[]>({ queryKey: ["adminMedicalCenters"], queryFn: getAdminMedicalCenters });
+
+  const doctorOptions = useMemo(
+    () => doctors.map((d) => ({ value: String(d.id), label: d.name ?? String(d.id) })),
+    [doctors],
+  );
+  const cityOptions = useMemo(
+    () => cities.map((c) => ({ value: String(c.id), label: c.nameAr ?? c.name ?? String(c.id) })),
+    [cities],
+  );
+  const areaOptions = useMemo(
+    () => areas.map((a) => ({ value: String(a.id), label: a.nameAr ?? a.name ?? String(a.id) })),
+    [areas],
+  );
+  const centerOptions = useMemo(
+    () => centers.map((c) => ({ value: String(c.id), label: c.nameAr ?? c.name ?? String(c.id) })),
+    [centers],
+  );
+
+  const hasFilters = !!(doctorId || medicalCenterId || cityId || areaId || dateFrom || dateTo);
+  const clearFilters = () => {
+    setDoctorId("");
+    setMedicalCenterId("");
+    setCityId("");
+    setAreaId("");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   const r = data;
 
@@ -2108,6 +2166,10 @@ function ReportsSection({ lang }: { lang: string }) {
       { label: isRTL ? "العيادات" : "Clinics", value: r.overview.totalClinics, color: "text-cyan-600" },
       { label: isRTL ? "الدفعات" : "Payments", value: r.overview.totalPayments, color: "text-violet-600" },
       { label: isRTL ? "إجمالي الإيرادات" : "Total Revenue", value: r.overview.totalRevenue.toLocaleString(), color: "text-green-600", suffix: " EGP" },
+      { label: isRTL ? "الحجوزات المؤكدة" : "Confirmed", value: r.overview.confirmedAppointments, color: "text-emerald-600" },
+      { label: isRTL ? "المعلقة" : "Cancelled", value: r.overview.rejectedAppointments, color: "text-red-600" },
+      { label: isRTL ? "قيد التنفيذ" : "Pending", value: r.overview.pendingAppointments, color: "text-yellow-600" },
+      { label: isRTL ? "المنتهية" : "Completed", value: r.overview.completedAppointments, color: "text-blue-600" },
     ];
   }, [r, isRTL]);
 
@@ -2121,6 +2183,60 @@ function ReportsSection({ lang }: { lang: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">{isRTL ? "عوامل التصفية" : "Filter Reports"}</h3>
+          {hasFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="text-xs">
+              {isRTL ? "إزالة التصفية" : "Clear filters"}
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <SearchableCombobox
+            value={doctorId}
+            onValueChange={setDoctorId}
+            options={doctorOptions}
+            placeholder={isRTL ? "اختر الطبيب..." : "Select doctor..."}
+            searchPlaceholder={isRTL ? "بحث عن الطبيب..." : "Search doctor..."}
+            emptyMessage={isRTL ? "لا يوجد طبب" : "No doctors found"}
+          />
+          <SearchableCombobox
+            value={medicalCenterId}
+            onValueChange={setMedicalCenterId}
+            options={centerOptions}
+            placeholder={isRTL ? "اختر مركز طبي..." : "Select medical center..."}
+            searchPlaceholder={isRTL ? "بحث عن مركز..." : "Search center..."}
+            emptyMessage={isRTL ? "لا يوجد مركز" : "No centers found"}
+          />
+          <SearchableCombobox
+            value={cityId}
+            onValueChange={setCityId}
+            options={cityOptions}
+            placeholder={isRTL ? "اختر المدينة..." : "Select city..."}
+            searchPlaceholder={isRTL ? "بحث عن المدينة..." : "Search city..."}
+            emptyMessage={isRTL ? "لا توجد مدينة" : "No cities found"}
+          />
+          <SearchableCombobox
+            value={areaId}
+            onValueChange={setAreaId}
+            options={areaOptions}
+            placeholder={isRTL ? "اختر المنطقة..." : "Select area..."}
+            searchPlaceholder={isRTL ? "بحث عن المنطقة..." : "Search area..."}
+            emptyMessage={isRTL ? "لا توجد منطقة" : "No areas found"}
+          />
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{isRTL ? "من تاريخ" : "From date"}</label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{isRTL ? "إلى تاريخ" : "To date"}</label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="text-sm" />
+          </div>
+        </div>
+      </div>
+
       {/* Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {overviewCards.map((card) => (

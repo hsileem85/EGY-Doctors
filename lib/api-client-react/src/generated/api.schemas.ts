@@ -243,6 +243,10 @@ export type ReportsResponseOverview = {
   totalClinics: number;
   totalPayments: number;
   totalRevenue: number;
+  confirmedAppointments: number;
+  rejectedAppointments: number;
+  pendingAppointments: number;
+  completedAppointments: number;
 };
 
 export type ReportsResponseDoctorsByStatusItem = {
@@ -316,5 +320,14 @@ status?: string;
 
 export type ListAreasParams = {
 cityId?: number;
+};
+
+export type GetReportsParams = {
+doctorId?: number;
+medicalCenterId?: number;
+cityId?: number;
+areaId?: number;
+dateFrom?: string;
+dateTo?: string;
 };
 
