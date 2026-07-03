@@ -27,6 +27,10 @@ export interface AuthUser {
   notifyViaWhatsApp?: boolean | null;
 }
 
+export type DayKey = "Sat" | "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri";
+export type ClinicScheduleMap = Record<string, { active: boolean; from: string; to: string }>;
+export type DoctorScheduleMap = Record<string, { from: string; to: string }>;
+
 export interface ApiClinic {
   id: number;
   name: string;
@@ -43,6 +47,7 @@ export interface ApiClinic {
   areaName: string;
   lat?: number | null;
   lng?: number | null;
+  schedule?: ClinicScheduleMap | null;
 }
 
 export interface ApiReview {
@@ -95,6 +100,7 @@ export interface ApiDoctor {
     cityName?: string | null;
     services?: CenterServiceType[] | null;
   } | null;
+  schedule?: DoctorScheduleMap | null;
 }
 
 export interface ApiSpecialty {
@@ -329,6 +335,7 @@ export function addClinic(data: {
   areaId?: number;
   lat?: number;
   lng?: number;
+  schedule?: ClinicScheduleMap | null;
 }): Promise<ApiClinic> {
   return request("/doctor/clinics", { method: "POST", body: JSON.stringify(data) });
 }
@@ -346,6 +353,7 @@ export function updateClinic(id: number, data: {
   areaId?: number;
   lat?: number;
   lng?: number;
+  schedule?: ClinicScheduleMap | null;
 }): Promise<ApiClinic> {
   return request(`/doctor/clinics/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }

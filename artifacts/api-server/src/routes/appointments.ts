@@ -1,10 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable } from "@workspace/db";
 import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from "../lib/email";
 
 const router: IRouter = Router();
+
+const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 function serializeRow(r: typeof appointmentsTable.$inferSelect) {
   return {
@@ -12,6 +14,40 @@ function serializeRow(r: typeof appointmentsTable.$inferSelect) {
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
     updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : r.updatedAt,
   };
+}
+
+/** Parses a "9:00 AM" / "14:30" style time string into minutes-since-midnight, or null if unparseable. */
+function parseTimeToMinutes(time: string): number | null {
+  const ampm = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (ampm) {
+    let h = parseInt(ampm[1], 10);
+    const m = parseInt(ampm[2], 10);
+    const isPM = ampm[3].toUpperCase() === "PM";
+    if (h === 12) h = 0;
+    if (isPM) h += 12;
+    return h * 60 + m;
+  }
+  const h24 = time.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (h24) {
+    return parseInt(h24[1], 10) * 60 + parseInt(h24[2], 10);
+  }
+  return null;
+}
+
+/** Returns true if `time` falls within an active window of `schedule` for the weekday of `dateStr` (YYYY-MM-DD). */
+function isWithinSchedule(
+  schedule: Record<string, { active?: boolean; from: string; to: string }>,
+  dateStr: string,
+  time: string,
+): boolean {
+  const dayKey = DAY_KEYS[new Date(dateStr + "T00:00:00Z").getUTCDay()];
+  const window = schedule[dayKey];
+  if (!window || window.active === false) return false;
+  const t = parseTimeToMinutes(time);
+  const from = parseTimeToMinutes(window.from);
+  const to = parseTimeToMinutes(window.to);
+  if (t === null || from === null || to === null) return false;
+  return t >= from && t < to;
 }
 
 /* ─── POST /appointments ─── */
@@ -34,6 +70,44 @@ router.post("/appointments", async (req, res): Promise<void> => {
   }
 
   const d = parsed.data;
+
+  // ── Reject double-booking: same doctor/clinic/date/time already taken (not cancelled) ──
+  const conflictConditions = [
+    eq(appointmentsTable.doctorId, d.doctorId),
+    eq(appointmentsTable.appointmentDate, d.appointmentDate),
+    eq(appointmentsTable.appointmentTime, d.appointmentTime),
+    ne(appointmentsTable.status, "cancelled"),
+  ];
+  if (d.clinicId) conflictConditions.push(eq(appointmentsTable.clinicId, d.clinicId));
+  const [conflict] = await db.select({ id: appointmentsTable.id })
+    .from(appointmentsTable)
+    .where(and(...conflictConditions))
+    .limit(1);
+  if (conflict) {
+    res.status(409).json({ error: "This time slot is no longer available" });
+    return;
+  }
+
+  // ── Reject bookings outside the doctor/clinic's configured schedule, when one is configured ──
+  let scheduleRaw: string | null = null;
+  if (d.clinicId) {
+    const [clinic] = await db.select({ schedule: clinicsTable.schedule })
+      .from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
+    scheduleRaw = clinic?.schedule ?? null;
+  } else {
+    const [doc] = await db.select({ schedule: doctorsTable.schedule })
+      .from(doctorsTable).where(eq(doctorsTable.id, d.doctorId)).limit(1);
+    scheduleRaw = doc?.schedule ?? null;
+  }
+  if (scheduleRaw) {
+    try {
+      const schedule = JSON.parse(scheduleRaw) as Record<string, { active?: boolean; from: string; to: string }>;
+      if (!isWithinSchedule(schedule, d.appointmentDate, d.appointmentTime)) {
+        res.status(400).json({ error: "This time is outside the doctor's available schedule" });
+        return;
+      }
+    } catch { /* malformed schedule — fall through and allow booking */ }
+  }
 
   // ── Follow-up detection + confirmation method ──
   let isFollowUp = false;

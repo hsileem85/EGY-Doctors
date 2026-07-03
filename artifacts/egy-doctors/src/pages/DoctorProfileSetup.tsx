@@ -212,7 +212,9 @@ export default function DoctorProfileSetup() {
           followUpDays: c.followUpDays != null ? String(c.followUpDays) : "15",
           followUpPrice: c.followUpPrice != null ? String(c.followUpPrice) : "0",
           bookingConfirmationMethod: (c.bookingConfirmationMethod === "manual" ? "manual" : "automatic") as "automatic" | "manual",
-          schedule: defaultSchedule(),
+          schedule: c.schedule
+            ? { ...defaultSchedule(), ...(c.schedule as Partial<ClinicSchedule>) }
+            : defaultSchedule(),
         };
       });
       setClinics(hydrated);
@@ -296,6 +298,7 @@ export default function DoctorProfileSetup() {
           areaId: areaId && !isNaN(areaId) ? areaId : undefined,
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
           lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
+          schedule: clinic.schedule,
         };
         if (isNaN(numId)) {
           return apiAddClinic(data);
@@ -371,6 +374,7 @@ export default function DoctorProfileSetup() {
           areaId: areaId && !isNaN(areaId) ? areaId : undefined,
           lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
           lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
+          schedule: clinic.schedule,
         };
         if (isNaN(numId)) {
           return apiAddClinic(data);

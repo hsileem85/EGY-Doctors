@@ -18,6 +18,7 @@ export const clinicsTable = pgTable("clinics", {
   bookingConfirmationMethod: text("booking_confirmation_method").notNull().default("automatic"),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
+  schedule: text("schedule"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

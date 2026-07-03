@@ -7,34 +7,77 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctor, bookAppointment, type ApiClinic } from "@/lib/api";
+import { getDoctor, getAppointments, bookAppointment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
 
-function buildSchedule() {
-  const schedule: Record<string, string[]> = {};
+const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const SLOT_INTERVAL_MINUTES = 30;
+const SCHEDULE_HORIZON_DAYS = 30;
+
+/** Parses a "9:00 AM" / "14:30" style time string into minutes-since-midnight, or null if unparseable. */
+function parseTimeToMinutes(time: string): number | null {
+  const ampm = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (ampm) {
+    let h = parseInt(ampm[1], 10);
+    const m = parseInt(ampm[2], 10);
+    const isPM = ampm[3].toUpperCase() === "PM";
+    if (h === 12) h = 0;
+    if (isPM) h += 12;
+    return h * 60 + m;
+  }
+  const h24 = time.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (h24) {
+    return parseInt(h24[1], 10) * 60 + parseInt(h24[2], 10);
+  }
+  return null;
+}
+
+function formatMinutesAsLabel(mins: number): string {
+  let h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const isPM = h >= 12;
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, "0")} ${isPM ? "PM" : "AM"}`;
+}
+
+/**
+ * Builds a { "YYYY-MM-DD": ["9:00 AM", ...] } map for the next `SCHEDULE_HORIZON_DAYS` days,
+ * strictly from the doctor/clinic's configured schedule, excluding already-booked slots.
+ */
+function buildSchedule(
+  scheduleSource: ClinicScheduleMap | DoctorScheduleMap | null | undefined,
+  bookedByDate: Map<string, Set<string>>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  if (!scheduleSource) return result;
+
   const today = new Date();
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-  const timeSets = [
-    ["9:00 AM", "10:30 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"],
-    ["9:30 AM", "11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"],
-    ["10:00 AM", "12:30 PM", "2:30 PM", "4:30 PM"],
-    ["8:00 AM", "9:00 AM", "11:30 AM", "2:00 PM", "5:00 PM", "7:00 PM"],
-    ["9:00 AM", "10:00 AM", "1:00 PM", "3:30 PM", "5:30 PM"],
-    ["10:30 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:30 PM"],
-    ["9:00 AM", "11:00 AM", "1:30 PM", "4:00 PM"],
-    ["8:30 AM", "10:30 AM", "12:00 PM", "2:30 PM", "5:00 PM", "7:00 PM"],
-    ["9:00 AM", "11:30 AM", "1:00 PM", "3:00 PM", "5:00 PM"],
-    ["10:00 AM", "12:00 PM", "2:00 PM", "4:30 PM", "6:00 PM"],
-    ["9:00 AM", "10:00 AM", "12:30 PM", "3:00 PM", "5:30 PM"],
-    ["8:00 AM", "9:30 AM", "11:00 AM", "1:00 PM", "4:00 PM", "6:00 PM"],
-    ["9:00 AM", "10:30 AM", "2:00 PM", "3:30 PM", "5:00 PM"],
-    ["10:00 AM", "11:30 AM", "1:30 PM", "4:00 PM", "6:30 PM"],
-  ];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < SCHEDULE_HORIZON_DAYS; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
-    schedule[fmt(d)] = timeSets[i % timeSets.length];
+    const dateStr = d.toISOString().split("T")[0];
+    const dayKey = DAY_KEYS[d.getDay()];
+    const window = scheduleSource[dayKey] as { active?: boolean; from: string; to: string } | undefined;
+    if (!window || window.active === false || !window.from || !window.to) continue;
+
+    const from = parseTimeToMinutes(window.from);
+    const to = parseTimeToMinutes(window.to);
+    if (from === null || to === null || from >= to) continue;
+
+    const booked = bookedByDate.get(dateStr);
+    const isToday = i === 0;
+    const nowMinutes = today.getHours() * 60 + today.getMinutes();
+
+    const slots: string[] = [];
+    for (let m = from; m < to; m += SLOT_INTERVAL_MINUTES) {
+      if (isToday && m <= nowMinutes) continue;
+      const label = formatMinutesAsLabel(m);
+      if (booked?.has(label)) continue;
+      slots.push(label);
+    }
+    if (slots.length > 0) result[dateStr] = slots;
   }
-  return schedule;
+  return result;
 }
 
 function fmtDateInfo(dateStr: string, lang: string) {
@@ -120,8 +163,38 @@ export default function DoctorProfile() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const schedule = useMemo(() => buildSchedule(), []);
+  const isVirtualClinic = !selectedClinic || selectedClinic.id <= 0;
+  const scheduleSource: ClinicScheduleMap | DoctorScheduleMap | null | undefined = isVirtualClinic
+    ? doctor?.schedule
+    : selectedClinic?.schedule;
+
+  const { data: existingAppointments } = useQuery({
+    queryKey: ["appointments-for-booking", doctor?.id, isVirtualClinic ? null : selectedClinic?.id],
+    queryFn: () =>
+      getAppointments(
+        isVirtualClinic
+          ? { doctorId: doctor!.id }
+          : { doctorId: doctor!.id, clinicId: selectedClinic!.id },
+      ),
+    enabled: !!doctor && bookingStep !== "clinic",
+  });
+
+  const bookedByDate = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const appt of existingAppointments ?? []) {
+      if (appt.status === "cancelled") continue;
+      if (!map.has(appt.appointmentDate)) map.set(appt.appointmentDate, new Set());
+      map.get(appt.appointmentDate)!.add(appt.appointmentTime);
+    }
+    return map;
+  }, [existingAppointments]);
+
+  const schedule = useMemo(
+    () => buildSchedule(scheduleSource, bookedByDate),
+    [scheduleSource, bookedByDate],
+  );
   const availableDates = useMemo(() => Object.keys(schedule).sort(), [schedule]);
+  const hasNoConfiguredSchedule = bookingStep !== "clinic" && !scheduleSource;
 
   useMemo(() => {
     if (autoClinic && bookingStep === "clinic") {
@@ -377,25 +450,51 @@ export default function DoctorProfile() {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {availableDates.map((dateStr) => {
-                    const { label, sub } = fmtDateInfo(dateStr, lang);
-                    const slotCount = schedule[dateStr]?.length || 0;
-                    return (
-                      <button
-                        key={dateStr}
-                        onClick={() => handleDateSelect(dateStr)}
-                        className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 hover:text-[#D4A853] transition-all cursor-pointer text-center"
-                      >
-                        <span className="text-sm font-bold">{label}</span>
-                        <span className="text-xs text-gray-500 mt-0.5">{sub}</span>
-                        <span className="text-[10px] text-gray-400 mt-1">
-                          {slotCount} {lang === "ar" ? "مواعيد" : "slots"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {hasNoConfiguredSchedule ? (
+                  <div className="text-center py-10">
+                    <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-gray-700">
+                      {isRTL ? "لا يوجد مواعيد متاحة حالياً" : "No availability configured yet"}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
+                      {isRTL
+                        ? "لم يقم الطبيب بتحديد مواعيد العمل بعد. يرجى المحاولة لاحقاً."
+                        : "This doctor hasn't set up their availability yet. Please check back later."}
+                    </p>
+                  </div>
+                ) : availableDates.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-gray-700">
+                      {isRTL ? "لا توجد مواعيد متاحة قريباً" : "No open slots in the coming weeks"}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
+                      {isRTL
+                        ? "جميع المواعيد المتاحة محجوزة حالياً. يرجى المحاولة لاحقاً."
+                        : "All available slots are currently booked. Please check back later."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {availableDates.map((dateStr) => {
+                      const { label, sub } = fmtDateInfo(dateStr, lang);
+                      const slotCount = schedule[dateStr]?.length || 0;
+                      return (
+                        <button
+                          key={dateStr}
+                          onClick={() => handleDateSelect(dateStr)}
+                          className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 hover:border-[#D4A853] hover:bg-[#D4A853]/5 hover:text-[#D4A853] transition-all cursor-pointer text-center"
+                        >
+                          <span className="text-sm font-bold">{label}</span>
+                          <span className="text-xs text-gray-500 mt-0.5">{sub}</span>
+                          <span className="text-[10px] text-gray-400 mt-1">
+                            {slotCount} {lang === "ar" ? "مواعيد" : "slots"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

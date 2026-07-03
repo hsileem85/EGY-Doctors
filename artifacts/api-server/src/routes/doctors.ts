@@ -273,6 +273,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     specialtyId: doctorsTable.specialtyId,
     cityId: doctorsTable.cityId,
     areaId: doctorsTable.areaId,
+    schedule: doctorsTable.schedule,
     specialtyName: specialtiesTable.name,
     specialtyNameAr: specialtiesTable.nameAr,
     cityName: citiesTable.name,
@@ -322,6 +323,8 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       areaId: clinicsTable.areaId,
       lat: clinicsTable.lat,
       lng: clinicsTable.lng,
+      schedule: clinicsTable.schedule,
+      bookingConfirmationMethod: clinicsTable.bookingConfirmationMethod,
       areaName: areasTable.name,
     })
     .from(clinicsTable)
@@ -405,6 +408,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
           services: row.affiliatedCenterServices ?? [],
         }
       : null,
+    schedule: row.schedule ? JSON.parse(row.schedule) : null,
     clinics: enrichedClinics.map((c) => ({
       id: c.id,
       name: c.nameEn ?? "",
@@ -417,6 +421,8 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       areaName: c.areaName ?? "",
       lat: c.lat ?? null,
       lng: c.lng ?? null,
+      schedule: c.schedule ? JSON.parse(c.schedule) : null,
+      bookingConfirmationMethod: (c.bookingConfirmationMethod as "automatic" | "manual" | null) ?? "automatic",
     })),
     reviewList: reviews.map((r) => ({
       id: r.id,
@@ -538,6 +544,7 @@ router.get("/doctor/profile", async (req, res): Promise<void> => {
     clinics: clinics.map((c) => ({
       ...c,
       name: c.nameEn,
+      schedule: c.schedule ? JSON.parse(c.schedule) : null,
     })),
   });
 });
@@ -646,6 +653,7 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     areaId: z.coerce.number().optional().nullable(),
     lat: z.coerce.number().optional().nullable(),
     lng: z.coerce.number().optional().nullable(),
+    schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() })).optional().nullable(),
   });
 
   const parsed = Schema.safeParse(req.body);
@@ -654,15 +662,16 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: nameEnVal, nameAr: nameArVal, ...rest } = parsed.data;
+  const { name: nameEnVal, nameAr: nameArVal, schedule: scheduleVal, ...rest } = parsed.data;
   const [clinic] = await db.insert(clinicsTable).values({
     doctorId: doc.id,
     nameEn: nameEnVal,
     name: nameArVal ?? null,
+    schedule: scheduleVal !== undefined ? (scheduleVal ? JSON.stringify(scheduleVal) : null) : null,
     ...rest,
   }).returning();
 
-  res.status(201).json({ ...clinic, name: clinic.nameEn });
+  res.status(201).json({ ...clinic, name: clinic.nameEn, schedule: clinic.schedule ? JSON.parse(clinic.schedule) : null });
 });
 
 /* ─── PUT /doctor/clinics/:id  (update clinic — requires JWT) ─── */
@@ -694,14 +703,16 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
     areaId: z.coerce.number().optional().nullable(),
     lat: z.coerce.number().optional().nullable(),
     lng: z.coerce.number().optional().nullable(),
+    schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() })).optional().nullable(),
   });
   const parsed = Schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message }); return; }
 
-  const { name: nameEnVal, nameAr: nameArVal, ...rest } = parsed.data;
+  const { name: nameEnVal, nameAr: nameArVal, schedule: scheduleVal, ...rest } = parsed.data;
   const updateData: Record<string, unknown> = { ...rest };
   if (nameEnVal !== undefined) updateData.nameEn = nameEnVal;
   if (nameArVal !== undefined) updateData.name = nameArVal;
+  if (scheduleVal !== undefined) updateData.schedule = scheduleVal ? JSON.stringify(scheduleVal) : null;
 
   const [updated] = await db.update(clinicsTable)
     .set(updateData)
@@ -709,7 +720,7 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
     .returning();
 
   if (!updated) { res.status(404).json({ error: "Clinic not found" }); return; }
-  res.json({ ...updated, name: updated.nameEn });
+  res.json({ ...updated, name: updated.nameEn, schedule: updated.schedule ? JSON.parse(updated.schedule) : null });
 });
 
 /* ─── DELETE /doctor/clinics/:id  (remove clinic — requires JWT) ─── */
