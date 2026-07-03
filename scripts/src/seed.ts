@@ -34,6 +34,22 @@ const specialties = [
   { name: "Endocrinology", nameAr: "الغدد الصماء", displayOrder: 14 },
   { name: "General Medicine", nameAr: "الطب العام", displayOrder: 15 },
   { name: "Dentistry", nameAr: "طب الأسنان", displayOrder: 16 },
+  { name: "Pulmonology", nameAr: "أمراض الصدر", displayOrder: 17 },
+  { name: "Nephrology", nameAr: "أمراض الكلى", displayOrder: 18 },
+  { name: "Rheumatology", nameAr: "الروماتيزم", displayOrder: 19 },
+  { name: "Hematology", nameAr: "أمراض الدم", displayOrder: 20 },
+  { name: "Allergy & Immunology", nameAr: "الحساسية والمناعة", displayOrder: 21 },
+  { name: "Plastic Surgery", nameAr: "جراحة التجميل", displayOrder: 22 },
+  { name: "Vascular Surgery", nameAr: "جراحة الأوعية الدموية", displayOrder: 23 },
+  { name: "Neurosurgery", nameAr: "جراحة المخ والأعصاب", displayOrder: 24 },
+  { name: "Family Medicine", nameAr: "طب الأسرة", displayOrder: 25 },
+  { name: "Emergency Medicine", nameAr: "الطوارئ", displayOrder: 26 },
+  { name: "Anesthesiology", nameAr: "التخدير", displayOrder: 27 },
+  { name: "Physical Medicine", nameAr: "العلاج الطبيعي", displayOrder: 28 },
+  { name: "Infectious Diseases", nameAr: "الأمراض المعدية", displayOrder: 29 },
+  { name: "Obesity & Bariatric Surgery", nameAr: "جراحة السمنة", displayOrder: 30 },
+  { name: "IVF & Reproductive Medicine", nameAr: "أطفال الأنابيب", displayOrder: 31 },
+  { name: "Pain Management", nameAr: "علاج الألم", displayOrder: 32 },
 ];
 
 console.log("🌱 Seeding specialties...");
@@ -50,16 +66,35 @@ const specialtyMap = Object.fromEntries(
 const allSpecs = await db.select().from(specialtiesTable);
 for (const s of allSpecs) specialtyMap[s.name] = s.id;
 
-/* ── Cities ── */
+/* ── Cities ── — All 27 Egyptian governorates ── */
 const cities = [
   { name: "Cairo", nameAr: "القاهرة", displayOrder: 1 },
   { name: "Alexandria", nameAr: "الإسكندرية", displayOrder: 2 },
   { name: "Giza", nameAr: "الجيزة", displayOrder: 3 },
-  { name: "Mansoura", nameAr: "المنصورة", displayOrder: 4 },
-  { name: "Assiut", nameAr: "أسيوط", displayOrder: 5 },
-  { name: "Tanta", nameAr: "طنطا", displayOrder: 6 },
-  { name: "Zagazig", nameAr: "الزقازيق", displayOrder: 7 },
-  { name: "Port Said", nameAr: "بورسعيد", displayOrder: 8 },
+  { name: "Qalyubia", nameAr: "القليوبية", displayOrder: 4 },
+  { name: "Port Said", nameAr: "بورسعيد", displayOrder: 5 },
+  { name: "Suez", nameAr: "السويس", displayOrder: 6 },
+  { name: "Gharbia", nameAr: "الغربية", displayOrder: 7 },
+  { name: "Dakahlia", nameAr: "الدقهلية", displayOrder: 8 },
+  { name: "Kafr El-Sheikh", nameAr: "كفر الشيخ", displayOrder: 9 },
+  { name: "Sharqia", nameAr: "الشرقية", displayOrder: 10 },
+  { name: "Monufia", nameAr: "المنوفية", displayOrder: 11 },
+  { name: "Qena", nameAr: "قنا", displayOrder: 12 },
+  { name: "Sohag", nameAr: "سوهاج", displayOrder: 13 },
+  { name: "Minya", nameAr: "المنيا", displayOrder: 14 },
+  { name: "Beni Suef", nameAr: "بني سويف", displayOrder: 15 },
+  { name: "Assiut", nameAr: "أسيوط", displayOrder: 16 },
+  { name: "Faiyum", nameAr: "الفيوم", displayOrder: 17 },
+  { name: "Aswan", nameAr: "أسوان", displayOrder: 18 },
+  { name: "Damietta", nameAr: "دمياط", displayOrder: 19 },
+  { name: "Beheira", nameAr: "البحيرة", displayOrder: 20 },
+  { name: "Ismailia", nameAr: "الإسماعيلية", displayOrder: 21 },
+  { name: "Luxor", nameAr: "الأقصر", displayOrder: 22 },
+  { name: "Red Sea", nameAr: "البحر الأحمر", displayOrder: 23 },
+  { name: "New Valley", nameAr: "الوادي الجديد", displayOrder: 24 },
+  { name: "Matrouh", nameAr: "مطروح", displayOrder: 25 },
+  { name: "North Sinai", nameAr: "شمال سيناء", displayOrder: 26 },
+  { name: "South Sinai", nameAr: "جنوب سيناء", displayOrder: 27 },
 ];
 
 console.log("🌍 Seeding cities...");
@@ -73,26 +108,109 @@ const cityMap = Object.fromEntries(insertedCities.map((c) => [c.name, c.id]));
 const allCities = await db.select().from(citiesTable);
 for (const c of allCities) cityMap[c.name] = c.id;
 
-/* ── Areas ── */
+/* ── Areas ── — Key districts per governorate ── */
 const areas = [
-  // Cairo
+  // Cairo (8 areas)
   { cityName: "Cairo", name: "Maadi", nameAr: "المعادي", displayOrder: 1 },
   { cityName: "Cairo", name: "Heliopolis", nameAr: "مصر الجديدة", displayOrder: 2 },
   { cityName: "Cairo", name: "Nasr City", nameAr: "مدينة نصر", displayOrder: 3 },
   { cityName: "Cairo", name: "Zamalek", nameAr: "الزمالك", displayOrder: 4 },
   { cityName: "Cairo", name: "Downtown Cairo", nameAr: "وسط البلد", displayOrder: 5 },
   { cityName: "Cairo", name: "New Cairo", nameAr: "القاهرة الجديدة", displayOrder: 6 },
-  { cityName: "Cairo", name: "6th October", nameAr: "السادس من أكتوبر", displayOrder: 7 },
-  // Alexandria
+  { cityName: "Cairo", name: "Garden City", nameAr: "حي الجازيرة", displayOrder: 7 },
+  { cityName: "Cairo", name: "El Sayeda Zeinab", nameAr: "السيدة زينب", displayOrder: 8 },
+  // Alexandria (6 areas)
   { cityName: "Alexandria", name: "Smouha", nameAr: "سموحة", displayOrder: 1 },
   { cityName: "Alexandria", name: "Stanley", nameAr: "ستانلي", displayOrder: 2 },
   { cityName: "Alexandria", name: "Roushdy", nameAr: "روشدي", displayOrder: 3 },
   { cityName: "Alexandria", name: "Gleem", nameAr: "جليم", displayOrder: 4 },
-  // Giza
+  { cityName: "Alexandria", name: "Montazah", nameAr: "المنتزه", displayOrder: 5 },
+  { cityName: "Alexandria", name: "Agami", nameAr: "العجمة", displayOrder: 6 },
+  // Giza (6 areas)
   { cityName: "Giza", name: "Dokki", nameAr: "الدقي", displayOrder: 1 },
   { cityName: "Giza", name: "Mohandessin", nameAr: "المهندسين", displayOrder: 2 },
   { cityName: "Giza", name: "Agouza", nameAr: "العجوزة", displayOrder: 3 },
   { cityName: "Giza", name: "Haram", nameAr: "الهرم", displayOrder: 4 },
+  { cityName: "Giza", name: "Imbaba", nameAr: "امبابة", displayOrder: 5 },
+  { cityName: "Giza", name: "6th October", nameAr: "السادس من أكتوبر", displayOrder: 6 },
+  // Qalyubia (3 areas)
+  { cityName: "Qalyubia", name: "Shubra El-Kheima", nameAr: "شبرا الخيمة", displayOrder: 1 },
+  { cityName: "Qalyubia", name: "Banha", nameAr: "بنها", displayOrder: 2 },
+  { cityName: "Qalyubia", name: "Qalyub", nameAr: "القليوب", displayOrder: 3 },
+  // Port Said (2 areas)
+  { cityName: "Port Said", name: "Port Fouad", nameAr: "بور فعيد", displayOrder: 1 },
+  { cityName: "Port Said", name: "Al-Manakh", nameAr: "المناخ", displayOrder: 2 },
+  // Suez (2 areas)
+  { cityName: "Suez", name: "Arbaeen", nameAr: "أربعين", displayOrder: 1 },
+  { cityName: "Suez", name: "Ganayen", nameAr: "الجناين", displayOrder: 2 },
+  // Gharbia (3 areas)
+  { cityName: "Gharbia", name: "Tanta", nameAr: "طنطا", displayOrder: 1 },
+  { cityName: "Gharbia", name: "Mahalla", nameAr: "المحلة", displayOrder: 2 },
+  { cityName: "Gharbia", name: "Kafr El-Zayat", nameAr: "كفر الزيات", displayOrder: 3 },
+  // Dakahlia (3 areas)
+  { cityName: "Dakahlia", name: "Mansoura", nameAr: "المنصورة", displayOrder: 1 },
+  { cityName: "Dakahlia", name: "Talkha", nameAr: "تلخا", displayOrder: 2 },
+  { cityName: "Dakahlia", name: "Mit Ghamr", nameAr: "ميت غمر", displayOrder: 3 },
+  // Kafr El-Sheikh (2 areas)
+  { cityName: "Kafr El-Sheikh", name: "Kafr El-Sheikh City", nameAr: "مدينة كفر الشيخ", displayOrder: 1 },
+  { cityName: "Kafr El-Sheikh", name: "Desouk", nameAr: "دسوق", displayOrder: 2 },
+  // Sharqia (3 areas)
+  { cityName: "Sharqia", name: "Zagazig", nameAr: "الزقازيق", displayOrder: 1 },
+  { cityName: "Sharqia", name: "10th of Ramadan", nameAr: "العاشر من رمضان", displayOrder: 2 },
+  { cityName: "Sharqia", name: "Belbeis", nameAr: "بلبيس", displayOrder: 3 },
+  // Monufia (3 areas)
+  { cityName: "Monufia", name: "Shebin El-Kom", nameAr: "شبين الكوم", displayOrder: 1 },
+  { cityName: "Monufia", name: "Ashmoun", nameAr: "أشمون", displayOrder: 2 },
+  { cityName: "Monufia", name: "Menouf", nameAr: "منوف", displayOrder: 3 },
+  // Qena (2 areas)
+  { cityName: "Qena", name: "Qena City", nameAr: "مدينة قنا", displayOrder: 1 },
+  { cityName: "Qena", name: "Nag Hammadi", nameAr: "نجع حمادي", displayOrder: 2 },
+  // Sohag (2 areas)
+  { cityName: "Sohag", name: "Sohag City", nameAr: "مدينة سوهاج", displayOrder: 1 },
+  { cityName: "Sohag", name: "Akhmim", nameAr: "أخميم", displayOrder: 2 },
+  // Minya (2 areas)
+  { cityName: "Minya", name: "Minya City", nameAr: "مدينة المنيا", displayOrder: 1 },
+  { cityName: "Minya", name: "Mallawi", nameAr: "ملاوي", displayOrder: 2 },
+  // Beni Suef (2 areas)
+  { cityName: "Beni Suef", name: "Beni Suef City", nameAr: "مدينة بني سويف", displayOrder: 1 },
+  { cityName: "Beni Suef", name: "Wasta", nameAr: "الواسطى", displayOrder: 2 },
+  // Assiut (2 areas)
+  { cityName: "Assiut", name: "Assiut City", nameAr: "مدينة أسيوط", displayOrder: 1 },
+  { cityName: "Assiut", name: "Dayrout", nameAr: "ديروط", displayOrder: 2 },
+  // Faiyum (2 areas)
+  { cityName: "Faiyum", name: "Faiyum City", nameAr: "مدينة الفيوم", displayOrder: 1 },
+  { cityName: "Faiyum", name: "Tamiya", nameAr: "تامية", displayOrder: 2 },
+  // Aswan (2 areas)
+  { cityName: "Aswan", name: "Aswan City", nameAr: "مدينة أسوان", displayOrder: 1 },
+  { cityName: "Aswan", name: "Kom Ombo", nameAr: "كوم أمبو", displayOrder: 2 },
+  // Damietta (2 areas)
+  { cityName: "Damietta", name: "Damietta City", nameAr: "مدينة دمياط", displayOrder: 1 },
+  { cityName: "Damietta", name: "New Damietta", nameAr: "دمياط الجديدة", displayOrder: 2 },
+  // Beheira (3 areas)
+  { cityName: "Beheira", name: "Damanhur", nameAr: "دمنهور", displayOrder: 1 },
+  { cityName: "Beheira", name: "Kafr El-Dawwar", nameAr: "كفر الدوار", displayOrder: 2 },
+  { cityName: "Beheira", name: "Rashid", nameAr: "رشيد", displayOrder: 3 },
+  // Ismailia (2 areas)
+  { cityName: "Ismailia", name: "Ismailia City", nameAr: "مدينة الإسماعيلية", displayOrder: 1 },
+  { cityName: "Ismailia", name: "Fayed", nameAr: "فايد", displayOrder: 2 },
+  // Luxor (2 areas)
+  { cityName: "Luxor", name: "Luxor City", nameAr: "مدينة الأقصر", displayOrder: 1 },
+  { cityName: "Luxor", name: "Armant", nameAr: "أرمنت", displayOrder: 2 },
+  // Red Sea (2 areas)
+  { cityName: "Red Sea", name: "Hurghada", nameAr: "الغردقة", displayOrder: 1 },
+  { cityName: "Red Sea", name: "Safaga", nameAr: "سفاجا", displayOrder: 2 },
+  // New Valley (2 areas)
+  { cityName: "New Valley", name: "Kharga", nameAr: "الخارجة", displayOrder: 1 },
+  { cityName: "New Valley", name: "Dakhla", nameAr: "الداخلة", displayOrder: 2 },
+  // Matrouh (2 areas)
+  { cityName: "Matrouh", name: "Marsa Matrouh", nameAr: "مرسى مطروح", displayOrder: 1 },
+  { cityName: "Matrouh", name: "Siwa Oasis", nameAr: "سيوة", displayOrder: 2 },
+  // North Sinai (2 areas)
+  { cityName: "North Sinai", name: "Arish", nameAr: "العريش", displayOrder: 1 },
+  { cityName: "North Sinai", name: "Bir El-Abed", nameAr: "بير العبد", displayOrder: 2 },
+  // South Sinai (2 areas)
+  { cityName: "South Sinai", name: "Sharm El-Sheikh", nameAr: "شرم الشيخ", displayOrder: 1 },
+  { cityName: "South Sinai", name: "Dahab", nameAr: "ذهب", displayOrder: 2 },
 ];
 
 console.log("📍 Seeding areas...");
