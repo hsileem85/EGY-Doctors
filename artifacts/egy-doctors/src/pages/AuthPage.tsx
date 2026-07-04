@@ -93,10 +93,15 @@ export default function AuthPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("tab") === "signup") setActiveTab("signup");
     const typeParam = params.get("type");
-    if (typeParam === "doctor" || typeParam === "medical" || typeParam === "patient") {
+    // Doctor sign-up must always use the WhatsApp-OTP-gated /register flow.
+    if (typeParam === "doctor") {
+      setLocation("/register");
+      return;
+    }
+    if (typeParam === "medical" || typeParam === "patient") {
       setUserType(typeParam as UserType);
     }
-  }, []);
+  }, [setLocation]);
 
   const getRedirectFromRole = (role: string, isNewSignup: boolean) => {
     if (role === "admin") return "/admin";
@@ -130,12 +135,16 @@ export default function AuthPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    // Doctor accounts must never be created here — enforce the OTP-gated flow.
+    if (userType === "doctor") {
+      setLocation("/register");
+      return;
+    }
     if (signupData.password !== signupData.confirmPassword) {
       setError(isRTL ? "كلمات المرور غير متطابقة" : "Passwords do not match");
       return;
     }
     setIsLoading(true);
-    const selectedSpecialty = apiSpecialties.find(s => s.name === signupData.specialty);
     const selectedCity = apiCities.find(c => c.name === signupData.location);
 
     try {
@@ -148,7 +157,6 @@ export default function AuthPage() {
         role: userType === "medical" ? "medical_center" : userType,
         nationalId: signupData.nationalId || undefined,
         syndicateNumber: signupData.syndicateMembership || undefined,
-        specialtyId: userType === "doctor" ? selectedSpecialty?.id : undefined,
         cityId: selectedCity?.id,
       });
       const path = getRedirectFromRole(result.user.role, true);
@@ -254,7 +262,15 @@ export default function AuthPage() {
   const TypeButton = ({ type, icon: Icon, label }: { type: UserType; icon: typeof User; label: string }) => (
     <button
       type="button"
-      onClick={() => setUserType(type)}
+      onClick={() => {
+        // Doctor sign-up must go through the dedicated WhatsApp-OTP-gated
+        // registration flow (/register). Never create a doctor account inline.
+        if (type === "doctor") {
+          setLocation("/register");
+          return;
+        }
+        setUserType(type);
+      }}
       className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-lg border text-xs font-medium transition-all ${
         userType === type
           ? "border-[#D4A853] bg-[#D4A853]/10 text-[#D4A853] shadow-sm shadow-[#D4A853]/10"

@@ -329,7 +329,7 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
   try {
     await sendEmail(
       to,
-      "🎉 Your EGY Doctors account has been approved!",
+      "🎉 Your EGY Doctors account has been approved — one step left to go live",
       `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
         <div style="text-align:center;margin-bottom:24px">
@@ -337,16 +337,19 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
         </div>
         <h2 style="color:#0F172A;font-size:20px">Welcome, Dr. ${doctorName}!</h2>
         <p style="color:#475569;line-height:1.6">
-          Great news — your <strong>EGY Doctors</strong> account has been <strong>approved</strong>! You can now access your full dashboard and start receiving appointments from patients.
+          Great news — your <strong>EGY Doctors</strong> application has been <strong>approved</strong> by our review team. You now have access to your dashboard.
         </p>
-        <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:16px;margin:24px 0">
-          <p style="color:#166534;margin:0;font-size:14px">
-            ✅ Your profile is now live and visible to patients searching for doctors in your specialty.
+        <div style="background:#FEF9F0;border:1px solid #D4A853;border-radius:8px;padding:16px;margin:24px 0">
+          <p style="color:#92400E;margin:0 0 8px;font-size:14px;font-weight:600">
+            ⚠️ One step left: your profile is not visible to patients yet.
+          </p>
+          <p style="color:#92400E;margin:0;font-size:14px;line-height:1.6">
+            To activate your account and appear in patient searches, please log in and <strong>subscribe to a billing plan</strong>. Your profile goes live the moment your subscription is active.
           </p>
         </div>
         <div style="text-align:center;margin:32px 0">
           <a href="https://egydoctors.com/dashboard" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
-            Go to My Dashboard
+            Log In & Subscribe
           </a>
         </div>
         <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px">
