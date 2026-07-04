@@ -223,7 +223,7 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-                <span className="text-xs font-medium text-gray-300 tracking-wide">
+                <span className="text-xs text-gray-300 tracking-wide font-light">
                   {isRTL ? "المنصة الطبية الأولى في مصر" : "Egypt's #1 Medical Booking Platform"}
                 </span>
               </div>
@@ -234,7 +234,7 @@ export default function Home() {
                   <span className="text-[8px] text-gray-400 font-medium leading-none">
                     {isRTL ? "الموقع الحالي" : "Current Location"}
                   </span>
-                  <span className="text-[10px] font-bold tracking-wide">
+                  <span className="text-[10px] tracking-wide font-light">
                     {isDetecting
                       ? (isRTL ? "جاري التحديد..." : "Detecting...")
                       : locationName || (isRTL ? "غير محدد" : "Unknown")}
@@ -243,7 +243,7 @@ export default function Home() {
                 <button
                   onClick={() => detectLocation()}
                   disabled={isDetecting}
-                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] font-semibold tracking-wide uppercase transition-colors disabled:opacity-50"
+                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] tracking-wide uppercase transition-colors disabled:opacity-50 font-light"
                 >
                   {isDetecting
                     ? isRTL ? "..." : "..."
