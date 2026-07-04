@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,8 +29,13 @@ import TermsOfService from "@/pages/TermsOfService";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
+  const [path] = useLocation();
   if (isLoading) return null;
-  if (!user) return <Redirect to="/" />;
+  if (!user) {
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const target = `${path}${search}`;
+    return <Redirect to={`/auth?redirect=${encodeURIComponent(target)}`} />;
+  }
   return <Component />;
 }
 

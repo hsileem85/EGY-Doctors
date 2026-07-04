@@ -107,13 +107,30 @@ export default function AuthPage() {
     return "/";
   };
 
+  /**
+   * Roles are only allowed to be redirected to their own dashboard base path
+   * (e.g. from an email deep link like /dashboard?tab=billing). This prevents
+   * an arbitrary `redirect` query param from sending a user to a route that
+   * doesn't belong to their role.
+   */
+  const getSafeRedirect = (role: string, isNewSignup: boolean) => {
+    const roleBase = getRedirectFromRole(role, isNewSignup);
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("redirect");
+    if (requested && requested.startsWith("/") && !requested.startsWith("//")) {
+      const requestedPath = requested.split("?")[0].split("#")[0];
+      if (requestedPath === roleBase) return requested;
+    }
+    return roleBase;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
     try {
       const result = await signIn(buildPhone(loginCountryCode, loginData.phone), loginData.password);
-      const path = getRedirectFromRole(result.user.role, false);
+      const path = getSafeRedirect(result.user.role, false);
       if (result.user.role === "patient" || result.user.role === "admin") {
         setLocation(path);
       } else {
@@ -151,7 +168,7 @@ export default function AuthPage() {
         specialtyId: userType === "doctor" ? selectedSpecialty?.id : undefined,
         cityId: selectedCity?.id,
       });
-      const path = getRedirectFromRole(result.user.role, true);
+      const path = getSafeRedirect(result.user.role, true);
       if (result.user.role === "patient") {
         setLocation(path);
       } else {
