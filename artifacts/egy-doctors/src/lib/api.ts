@@ -314,8 +314,8 @@ export function getMyDoctorProfile(): Promise<ApiDoctor & { clinics: ApiClinic[]
 export function updateDoctorProfile(data: {
   name?: string;
   nameAr?: string;
-  bio?: string;
-  bioAr?: string;
+  bio: string;
+  bioAr: string;
   image?: string;
   specialtyId?: number;
   cityId?: number;
@@ -334,19 +334,19 @@ export function updateDoctorProfile(data: {
 }
 
 export function addClinic(data: {
-  name: string;
+  name?: string;
   nameAr?: string;
-  address?: string;
+  address: string;
   mapUrl?: string;
-  phone?: string;
+  phone: string;
   fee?: number;
   followUpDays?: number;
   followUpPrice?: number;
-  bookingConfirmationMethod?: "automatic" | "manual";
-  areaId?: number;
-  lat?: number;
-  lng?: number;
-  schedule?: ClinicScheduleMap | null;
+  bookingConfirmationMethod: "automatic" | "manual";
+  areaId: number;
+  lat: number;
+  lng: number;
+  schedule: ClinicScheduleMap;
 } & AvailabilityConfig): Promise<ApiClinic> {
   return request("/doctor/clinics", { method: "POST", body: JSON.stringify(data) });
 }
@@ -354,17 +354,17 @@ export function addClinic(data: {
 export function updateClinic(id: number, data: {
   name?: string;
   nameAr?: string;
-  address?: string;
+  address: string;
   mapUrl?: string;
-  phone?: string;
+  phone: string;
   fee?: number;
   followUpDays?: number;
   followUpPrice?: number;
-  bookingConfirmationMethod?: "automatic" | "manual";
-  areaId?: number;
-  lat?: number;
-  lng?: number;
-  schedule?: ClinicScheduleMap | null;
+  bookingConfirmationMethod: "automatic" | "manual";
+  areaId: number;
+  lat: number;
+  lng: number;
+  schedule: ClinicScheduleMap;
 } & AvailabilityConfig): Promise<ApiClinic> {
   return request(`/doctor/clinics/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }

@@ -269,6 +269,15 @@ export default function DoctorProfileSetup() {
   };
 
   const handleSave = async () => {
+    const errs = validationErrors();
+    if (errs.length > 0) {
+      toast({
+        title: isRTL ? "معلومات ناقصة" : "Missing Information",
+        description: errs[0],
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       const selectedSpecialty = apiSpecialties.find(s => s.name === profile.specialty);
@@ -280,8 +289,8 @@ export default function DoctorProfileSetup() {
 
       await updateDoctorProfile({
         name: profile.fullName || undefined,
-        bio: profile.bio || undefined,
-        bioAr: profile.bioAr || undefined,
+        bio: profile.bio,
+        bioAr: profile.bioAr,
         image: imagePreview || undefined,
         specialtyId: selectedSpecialty?.id,
         cityId: firstClinicCity?.id,
@@ -299,21 +308,21 @@ export default function DoctorProfileSetup() {
 
       await Promise.all(clinics.map(clinic => {
         const numId = parseInt(clinic.id, 10);
-        const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
+        const areaId = parseInt(clinic.areaId, 10);
         const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
         const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
         const sessionsPerHourVal = clinic.sessionsPerHour ? parseInt(clinic.sessionsPerHour, 10) : undefined;
         const data = {
-          name: clinic.name || `Clinic`,
-          address: clinic.address || undefined,
-          phone: clinic.phone || undefined,
+          name: clinic.name || undefined,
+          address: clinic.address,
+          phone: clinic.phone,
           fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
           followUpDays: followUpDaysVal && !isNaN(followUpDaysVal) ? followUpDaysVal : undefined,
           followUpPrice: followUpPriceVal !== undefined && !isNaN(followUpPriceVal) ? followUpPriceVal : undefined,
           bookingConfirmationMethod: clinic.bookingConfirmationMethod,
-          areaId: areaId && !isNaN(areaId) ? areaId : undefined,
-          lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
-          lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
+          areaId,
+          lat: parseFloat(clinic.lat),
+          lng: parseFloat(clinic.lng),
           schedule: clinic.schedule,
           availabilityPeriod: clinic.availabilityPeriod,
           availabilityFrom: clinic.availabilityPeriod === "custom" && clinic.availabilityFrom ? clinic.availabilityFrom : null,
@@ -348,9 +357,32 @@ export default function DoctorProfileSetup() {
     }
   };
 
-  const isProfileComplete = profile.specialty !== "" && clinics.some(c => c.areaId !== "");
+  const validationErrors = (): string[] => {
+    const errs: string[] = [];
+    if (!profile.bio.trim()) errs.push(isRTL ? "النبذة (إنجليزي) مطلوبة" : "Biography (English) is required");
+    if (!profile.bioAr.trim()) errs.push(isRTL ? "النبذة (عربي) مطلوبة" : "Biography (Arabic) is required");
+    for (const c of clinics) {
+      if (!c.areaId) errs.push(isRTL ? "المنطقة مطلوبة لكل عيادة" : "Area is required for every clinic");
+      if (!c.address.trim()) errs.push(isRTL ? "عنوان العيادة مطلوب" : "Clinic address is required");
+      if (!c.phone.trim()) errs.push(isRTL ? "رقم هاتف العيادة مطلوب" : "Clinic phone number is required");
+      if (!c.lat.trim() || isNaN(parseFloat(c.lat))) errs.push(isRTL ? "موقع العيادة (خط العرض) مطلوب" : "Clinic location (latitude) is required");
+      if (!c.lng.trim() || isNaN(parseFloat(c.lng))) errs.push(isRTL ? "موقع العيادة (خط الطول) مطلوب" : "Clinic location (longitude) is required");
+    }
+    return errs;
+  };
+
+  const isProfileComplete = profile.specialty !== "" && clinics.some(c => c.areaId !== "") && validationErrors().length === 0;
 
   const handleSaveAndSubmit = async () => {
+    const errs = validationErrors();
+    if (errs.length > 0) {
+      toast({
+        title: isRTL ? "معلومات ناقصة" : "Missing Information",
+        description: errs[0],
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const selectedSpecialty = apiSpecialties.find(s => s.name === profile.specialty);
@@ -361,8 +393,8 @@ export default function DoctorProfileSetup() {
 
       await updateDoctorProfile({
         name: profile.fullName || undefined,
-        bio: profile.bio || undefined,
-        bioAr: profile.bioAr || undefined,
+        bio: profile.bio,
+        bioAr: profile.bioAr,
         image: imagePreview || undefined,
         specialtyId: selectedSpecialty?.id,
         cityId: firstClinicCity?.id,
@@ -380,21 +412,21 @@ export default function DoctorProfileSetup() {
 
       await Promise.all(clinics.map(clinic => {
         const numId = parseInt(clinic.id, 10);
-        const areaId = clinic.areaId ? parseInt(clinic.areaId, 10) : undefined;
+        const areaId = parseInt(clinic.areaId, 10);
         const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
         const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
         const sessionsPerHourVal = clinic.sessionsPerHour ? parseInt(clinic.sessionsPerHour, 10) : undefined;
         const data = {
-          name: clinic.name || `Clinic`,
-          address: clinic.address || undefined,
-          phone: clinic.phone || undefined,
+          name: clinic.name || undefined,
+          address: clinic.address,
+          phone: clinic.phone,
           fee: clinic.fee ? parseFloat(clinic.fee) : undefined,
           followUpDays: followUpDaysVal && !isNaN(followUpDaysVal) ? followUpDaysVal : undefined,
           followUpPrice: followUpPriceVal !== undefined && !isNaN(followUpPriceVal) ? followUpPriceVal : undefined,
           bookingConfirmationMethod: clinic.bookingConfirmationMethod,
-          areaId: areaId && !isNaN(areaId) ? areaId : undefined,
-          lat: clinic.lat ? parseFloat(clinic.lat) : undefined,
-          lng: clinic.lng ? parseFloat(clinic.lng) : undefined,
+          areaId,
+          lat: parseFloat(clinic.lat),
+          lng: parseFloat(clinic.lng),
           schedule: clinic.schedule,
           availabilityPeriod: clinic.availabilityPeriod,
           availabilityFrom: clinic.availabilityPeriod === "custom" && clinic.availabilityFrom ? clinic.availabilityFrom : null,
@@ -553,7 +585,7 @@ export default function DoctorProfileSetup() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-500 font-medium">
-                        {isRTL ? "النبذة (إنجليزي)" : "Biography (English)"}
+                        {isRTL ? "النبذة (إنجليزي)" : "Biography (English)"} <span className="text-red-500">*</span>
                       </Label>
                       <Textarea
                         value={profile.bio}
@@ -569,7 +601,7 @@ export default function DoctorProfileSetup() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-500 font-medium">
-                        {isRTL ? "النبذة (عربي)" : "Biography (Arabic)"}
+                        {isRTL ? "النبذة (عربي)" : "Biography (Arabic)"} <span className="text-red-500">*</span>
                       </Label>
                       <Textarea
                         value={profile.bioAr}
@@ -696,7 +728,7 @@ export default function DoctorProfileSetup() {
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>{t.profileSetup.clinicName}</Label>
+                              <Label>{t.profileSetup.clinicName} <span className="text-gray-400 font-normal">({isRTL ? "اختياري" : "optional"})</span></Label>
                               <Input
                                 value={clinic.name}
                                 onChange={e => updateClinic(clinic.id, { name: e.target.value })}
@@ -705,7 +737,7 @@ export default function DoctorProfileSetup() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>{isRTL ? "المحافظة" : "City / Governorate"}</Label>
+                              <Label>{isRTL ? "المحافظة" : "City / Governorate"} <span className="text-red-500">*</span></Label>
                               <SearchableCombobox
                                 value={clinic.cityName}
                                 onValueChange={v => updateClinic(clinic.id, { cityName: v, areaId: "" })}
@@ -716,7 +748,7 @@ export default function DoctorProfileSetup() {
                               />
                             </div>
                             <div className="space-y-2 md:col-span-2">
-                              <Label>{isRTL ? "المنطقة" : "Area"}</Label>
+                              <Label>{isRTL ? "المنطقة" : "Area"} <span className="text-red-500">*</span></Label>
                               <SearchableCombobox
                                 value={clinic.areaId}
                                 onValueChange={v => updateClinic(clinic.id, { areaId: v })}
@@ -734,7 +766,7 @@ export default function DoctorProfileSetup() {
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label>{t.profileSetup.clinicAddress}</Label>
+                            <Label>{t.profileSetup.clinicAddress} <span className="text-red-500">*</span></Label>
                             <Input
                               value={clinic.address}
                               onChange={e => updateClinic(clinic.id, { address: e.target.value })}
@@ -744,7 +776,7 @@ export default function DoctorProfileSetup() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>{isRTL ? "رقم هاتف العيادة" : "Clinic Phone Number"}</Label>
+                            <Label>{isRTL ? "رقم هاتف العيادة" : "Clinic Phone Number"} <span className="text-red-500">*</span></Label>
                             <Input
                               value={clinic.phone}
                               onChange={e => updateClinic(clinic.id, { phone: e.target.value })}
@@ -758,7 +790,7 @@ export default function DoctorProfileSetup() {
                           <div className="space-y-2">
                             <Label className="flex items-center gap-2">
                               <MapPin className="h-4 w-4 text-primary" />
-                              {isRTL ? "موقع العيادة على الخريطة" : "Clinic Location on Map"}
+                              {isRTL ? "موقع العيادة على الخريطة" : "Clinic Location on Map"} <span className="text-red-500">*</span>
                             </Label>
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
@@ -791,7 +823,7 @@ export default function DoctorProfileSetup() {
 
                           {/* Fee */}
                           <div className="space-y-2 w-full md:w-1/2">
-                            <Label>{t.profileSetup.consultationFee}</Label>
+                            <Label>{t.profileSetup.consultationFee} <span className="text-gray-400 font-normal">({isRTL ? "اختياري" : "optional"})</span></Label>
                             <div className="relative">
                               <Input
                                 type="number"
@@ -816,7 +848,7 @@ export default function DoctorProfileSetup() {
 
                           {/* Booking Confirmation Mode */}
                           <div className="space-y-2">
-                            <Label>{isRTL ? "طريقة تأكيد الحجز" : "Booking Confirmation"}</Label>
+                            <Label>{isRTL ? "طريقة تأكيد الحجز" : "Booking Confirmation"} <span className="text-red-500">*</span></Label>
                             <div className="flex gap-3">
                               <button
                                 type="button"
@@ -851,7 +883,7 @@ export default function DoctorProfileSetup() {
                           {/* Follow-up Settings */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>{isRTL ? "مدة المتابعة (أيام)" : "Follow-up Window (days)"}</Label>
+                              <Label>{isRTL ? "مدة المتابعة (أيام)" : "Follow-up Window (days)"} <span className="text-gray-400 font-normal">({isRTL ? "اختياري" : "optional"})</span></Label>
                               <div className="relative">
                                 <Input
                                   type="number"
@@ -867,7 +899,7 @@ export default function DoctorProfileSetup() {
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <Label>{isRTL ? "سعر المتابعة" : "Follow-up Price"}</Label>
+                              <Label>{isRTL ? "سعر المتابعة" : "Follow-up Price"} <span className="text-gray-400 font-normal">({isRTL ? "اختياري" : "optional"})</span></Label>
                               <div className="relative">
                                 <Input
                                   type="number"
@@ -893,7 +925,7 @@ export default function DoctorProfileSetup() {
                         <div className="space-y-3">
                           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
                             <Clock className="w-3.5 h-3.5" />
-                            {isRTL ? "جدول العيادة الأسبوعي" : "Weekly Schedule for This Clinic"}
+                            {isRTL ? "جدول العيادة الأسبوعي" : "Weekly Schedule for This Clinic"} <span className="text-red-500">*</span>
                           </p>
                           {DAYS.map(day => (
                             <div
@@ -949,7 +981,7 @@ export default function DoctorProfileSetup() {
                         {/* Availability window + slot frequency */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                           <div className="space-y-2">
-                            <Label>{isRTL ? "مدة إتاحة الحجز" : "Booking Availability Period"}</Label>
+                            <Label>{isRTL ? "مدة إتاحة الحجز" : "Booking Availability Period"} <span className="text-red-500">*</span></Label>
                             <Select
                               value={clinic.availabilityPeriod}
                               onValueChange={v => updateClinic(clinic.id, { availabilityPeriod: v as AvailabilityPeriod })}
@@ -986,7 +1018,7 @@ export default function DoctorProfileSetup() {
                             )}
                           </div>
                           <div className="space-y-2">
-                            <Label>{isRTL ? "عدد الجلسات في الساعة" : "Sessions per Hour"}</Label>
+                            <Label>{isRTL ? "عدد الجلسات في الساعة" : "Sessions per Hour"} <span className="text-red-500">*</span></Label>
                             <Select
                               value={clinic.sessionsPerHour}
                               onValueChange={v => updateClinic(clinic.id, { sessionsPerHour: v })}

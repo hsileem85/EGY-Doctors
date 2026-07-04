@@ -615,8 +615,8 @@ router.put("/doctor/profile", async (req, res): Promise<void> => {
   const Schema = z.object({
     name: z.string().min(1).optional(),
     nameAr: z.string().optional().nullable(),
-    bio: z.string().optional().nullable(),
-    bioAr: z.string().optional().nullable(),
+    bio: z.string().min(1, "Biography (English) is required"),
+    bioAr: z.string().min(1, "Biography (Arabic) is required"),
     image: z.string().optional().nullable(),
     specialtyId: z.coerce.number().optional().nullable(),
     cityId: z.coerce.number().optional().nullable(),
@@ -689,23 +689,23 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
   }
 
   const Schema = z.object({
-    name: z.string().min(1),
+    name: z.string().min(1).optional().nullable(),
     nameAr: z.string().optional().nullable(),
-    address: z.string().optional().nullable(),
+    address: z.string().min(1, "Clinic address is required"),
     mapUrl: z.string().optional().nullable(),
-    phone: z.string().optional().nullable(),
+    phone: z.string().min(1, "Clinic phone number is required"),
     fee: z.coerce.number().optional().nullable(),
     followUpDays: z.coerce.number().int().min(0).optional().nullable(),
     followUpPrice: z.coerce.number().int().min(0).optional().nullable(),
-    bookingConfirmationMethod: z.enum(["automatic", "manual"]).optional(),
-    areaId: z.coerce.number().optional().nullable(),
-    lat: z.coerce.number().optional().nullable(),
-    lng: z.coerce.number().optional().nullable(),
-    schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() })).optional().nullable(),
-    availabilityPeriod: z.enum(availabilityPeriodEnum).optional().nullable(),
+    bookingConfirmationMethod: z.enum(["automatic", "manual"]),
+    areaId: z.coerce.number({ message: "Area is required" }),
+    lat: z.coerce.number({ message: "Clinic location (latitude) is required" }),
+    lng: z.coerce.number({ message: "Clinic location (longitude) is required" }),
+    schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() }), { message: "Weekly schedule is required" }),
+    availabilityPeriod: z.enum(availabilityPeriodEnum, { message: "Booking availability period is required" }),
     availabilityFrom: z.string().optional().nullable(),
     availabilityTo: z.string().optional().nullable(),
-    sessionsPerHour: z.coerce.number().int().min(1).max(12).optional().nullable(),
+    sessionsPerHour: z.coerce.number().int().min(1).max(12, { message: "Sessions per hour is required" }),
   });
 
   const parsed = Schema.safeParse(req.body);
@@ -717,7 +717,7 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
   const { name: nameEnVal, nameAr: nameArVal, schedule: scheduleVal, ...rest } = parsed.data;
   const [clinic] = await db.insert(clinicsTable).values({
     doctorId: doc.id,
-    nameEn: nameEnVal,
+    nameEn: nameEnVal ?? "Clinic",
     name: nameArVal ?? null,
     schedule: scheduleVal !== undefined ? (scheduleVal ? JSON.stringify(scheduleVal) : null) : null,
     ...rest,
@@ -756,23 +756,23 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
   if (!doc) { res.status(404).json({ error: "Doctor not found" }); return; }
 
   const Schema = z.object({
-    name: z.string().min(1).optional(),
+    name: z.string().min(1).optional().nullable(),
     nameAr: z.string().optional().nullable(),
-    address: z.string().optional().nullable(),
+    address: z.string().min(1, "Clinic address is required").optional(),
     mapUrl: z.string().optional().nullable(),
-    phone: z.string().optional().nullable(),
+    phone: z.string().min(1, "Clinic phone number is required").optional(),
     fee: z.coerce.number().optional().nullable(),
     followUpDays: z.coerce.number().int().min(0).optional().nullable(),
     followUpPrice: z.coerce.number().int().min(0).optional().nullable(),
     bookingConfirmationMethod: z.enum(["automatic", "manual"]).optional(),
-    areaId: z.coerce.number().optional().nullable(),
-    lat: z.coerce.number().optional().nullable(),
-    lng: z.coerce.number().optional().nullable(),
-    schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() })).optional().nullable(),
-    availabilityPeriod: z.enum(availabilityPeriodEnum).optional().nullable(),
+    areaId: z.coerce.number({ message: "Area is required" }).optional(),
+    lat: z.coerce.number({ message: "Clinic location (latitude) is required" }).optional(),
+    lng: z.coerce.number({ message: "Clinic location (longitude) is required" }).optional(),
+    schedule: z.record(z.object({ active: z.boolean(), from: z.string(), to: z.string() }), { message: "Weekly schedule is required" }).optional().nullable(),
+    availabilityPeriod: z.enum(availabilityPeriodEnum, { message: "Booking availability period is required" }).optional().nullable(),
     availabilityFrom: z.string().optional().nullable(),
     availabilityTo: z.string().optional().nullable(),
-    sessionsPerHour: z.coerce.number().int().min(1).max(12).optional().nullable(),
+    sessionsPerHour: z.coerce.number().int().min(1).max(12, { message: "Sessions per hour is required" }).optional().nullable(),
   });
   const parsed = Schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message }); return; }
