@@ -1361,7 +1361,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (user?.siteLanguage) setLang(user.siteLanguage);
   }, [user?.siteLanguage]);
-  const [activeTab, setActiveTab] = useState<Tab>("appointments");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    return tabParam === "billing" ? "billing" : "appointments";
+  });
   const qc = useQueryClient();
 
   const accountStatus = user?.accountStatus ?? "approved";

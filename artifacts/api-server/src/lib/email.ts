@@ -327,9 +327,10 @@ export async function sendReceiptEmail(
 
 export async function sendDoctorApprovedEmail(to: string, doctorName: string): Promise<void> {
   try {
+    const base = process.env.APP_URL ?? "https://egydoctors.com";
     await sendEmail(
       to,
-      "🎉 Your EGY Doctors account has been approved!",
+      "🎉 Your EGY Doctors account has been approved — subscribe to activate it",
       `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
         <div style="text-align:center;margin-bottom:24px">
@@ -337,16 +338,19 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
         </div>
         <h2 style="color:#0F172A;font-size:20px">Welcome, Dr. ${doctorName}!</h2>
         <p style="color:#475569;line-height:1.6">
-          Great news — your <strong>EGY Doctors</strong> account has been <strong>approved</strong>! You can now access your full dashboard and start receiving appointments from patients.
+          Great news — your <strong>EGY Doctors</strong> account has been <strong>approved</strong>! You can now access your dashboard and finish setting up your profile.
         </p>
-        <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:8px;padding:16px;margin:24px 0">
-          <p style="color:#166534;margin:0;font-size:14px">
-            ✅ Your profile is now live and visible to patients searching for doctors in your specialty.
+        <div style="background:#FEF9F0;border:1px solid #D4A853;border-radius:8px;padding:16px;margin:24px 0">
+          <p style="color:#92400E;margin:0;font-size:14px">
+            ⚠️ One last step: your account is <strong>not yet active</strong>. To appear on the platform and be discoverable by patients searching for doctors, you need to <strong>subscribe to a plan</strong>.
           </p>
         </div>
+        <p style="color:#475569;line-height:1.6">
+          Once you subscribe, your profile will go live immediately and you'll start receiving appointments from patients in your specialty and area.
+        </p>
         <div style="text-align:center;margin:32px 0">
-          <a href="https://egydoctors.com/dashboard" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
-            Go to My Dashboard
+          <a href="${base}/dashboard?tab=billing" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
+            Subscribe to Activate My Account
           </a>
         </div>
         <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px">
