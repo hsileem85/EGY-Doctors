@@ -885,8 +885,6 @@ router.post("/doctors/profile/submit-for-review", async (req, res): Promise<void
     userId: payload.sub,
   }).catch(() => {});
 
-  // Mock admin notification email (development-only simulation).
-  req.log.info(`[EMAIL SENT to admin@egydoctors.com] Subject: New Doctor Profile Pending Review - ${row.nameEn}`);
   req.log.info({ doctorId: row.id }, "Doctor submitted profile for review");
   res.json({ message: "Your profile has been submitted for review. You will be notified by email once approved." });
 });

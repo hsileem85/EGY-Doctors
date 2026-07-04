@@ -8,4 +8,3 @@
 - [Booking schedule source of truth](booking-schedule-source-of-truth.md) — availability (schedule, period, sessions/hour) must sync clinics+doctors rows and validate server-side; never generate slots client-side.
 - [Duplicate legacy workflows](duplicate-legacy-workflows.md) — stale non-artifact-named workflows can conflict on ports with canonical `artifacts/...` workflows; remove the stale one, not the canonical one.
 - [Orval + js-yaml v5](orval-js-yaml.md) — pin js-yaml override to `>=4.2.0 <5` in pnpm-workspace.yaml or OpenAPI codegen breaks.
-- [Onboarding mock notifications & OTP gate](onboarding-mock-notifications.md) — doctor journey simulates WhatsApp OTP (dev code 1234) + exact-format email/WhatsApp log lines; signup catch must not blanket-set success.
