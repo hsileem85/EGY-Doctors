@@ -1616,34 +1616,6 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm shadow-gray-200/50">
-                  <CardHeader className="flex flex-row items-center justify-between border-b bg-gray-50/50 rounded-t-xl pb-4">
-                    <CardTitle className="text-lg">{t.dashboard.recentPublications}</CardTitle>
-                    <Link href="/dashboard/publish">
-                      <Button size="sm" className="gap-1"><Plus className="w-4 h-4" />{t.dashboard.newPublication}</Button>
-                    </Link>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="divide-y">
-                      {[
-                        { icon: <FileText className="w-5 h-5" />, color: "bg-blue-50 text-blue-600", title: "Understanding Heart Disease Risks", type: "Article", date: "Today" },
-                        { icon: <Video className="w-5 h-5" />, color: "bg-red-50 text-red-600", title: "Healthy Diet for Blood Pressure", type: "Video", date: "Yesterday" },
-                        { icon: <MessageSquare className="w-5 h-5" />, color: "bg-yellow-50 text-yellow-600", title: "Drink 8 glasses of water daily", type: "Advice", date: "Oct 28" },
-                      ].map((item, i) => (
-                        <div key={i} className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.color}`}>{item.icon}</div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{item.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-[10px] h-5">{item.type}</Badge>
-                              <span className="text-xs text-gray-500">{item.date}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
               </>
             )}
 
