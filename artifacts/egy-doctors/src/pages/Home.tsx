@@ -228,7 +228,7 @@ export default function Home() {
                 </span>
               </div>
               {/* Location indicator */}
-              <div className="inline-flex items-center gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm">
+              <div className="inline-flex gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm justify-start items-center font-light text-[15px]">
                 <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
                 <div className="flex flex-col">
                   <span className="text-[8px] text-gray-400 font-medium leading-none">
