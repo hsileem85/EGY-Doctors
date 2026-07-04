@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
-import { Stethoscope, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Stethoscope, Eye, EyeOff, CheckCircle2, MessageCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,12 +24,19 @@ function stripArTitle(value: string): string {
   return value.replace(/^د[.\s/]+/, "").trimStart();
 }
 
+/** Static development OTP for the mock WhatsApp verification gate. */
+const DEV_OTP = "1234";
+
 export default function DoctorRegister() {
   const { t, lang } = useLanguage();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -63,8 +71,35 @@ export default function DoctorRegister() {
   const selectedSpecialty = apiSpecialties.find(s => s.name === formData.specialty);
   const selectedCity = apiCities.find(c => c.name === formData.location);
 
-  const handleRegister = async () => {
+  // Step 2 submit: does NOT create the account. Sends a (mock) WhatsApp OTP
+  // and advances to the verification gate. The account is only created after
+  // the doctor enters the correct OTP on step 3.
+  const handleRequestOtp = () => {
     if (!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.agreeTerms) return;
+    setOtp("");
+    setOtpError(false);
+    // Mock WhatsApp OTP delivery (development-only static code `1234`).
+    console.info(`[WhatsApp OTP sent] code ${DEV_OTP} to ${formData.phone}`);
+    toast({
+      title: t.register.otpSent,
+      description: t.register.otpDesc(formData.phone),
+      className: "bg-[#25D366]/10 text-[#128C7E] border-[#25D366]/20",
+    });
+    setStep(3);
+  };
+
+  // Step 3 submit: only after the correct OTP does account creation run.
+  const handleVerifyOtp = async () => {
+    if (otp.trim() !== DEV_OTP) {
+      setOtpError(true);
+      toast({
+        title: t.register.otpInvalid,
+        variant: "destructive",
+      });
+      return;
+    }
+    setOtpError(false);
+    setIsVerifying(true);
     try {
       await apiSignUp({
         name: formData.fullName,
@@ -80,9 +115,29 @@ export default function DoctorRegister() {
         syndicateNumber: formData.syndicateMembership || undefined,
       });
       setIsSuccess(true);
-    } catch {
-      setIsSuccess(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      toast({
+        title: lang === "ar" ? "تعذر إنشاء الحساب" : "Could not create account",
+        description: msg || (lang === "ar"
+          ? "قد يكون رقم الهاتف أو البريد الإلكتروني مستخدماً بالفعل. يرجى المحاولة مجدداً."
+          : "This phone number or email may already be registered. Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
     }
+  };
+
+  const handleResendOtp = () => {
+    setOtp("");
+    setOtpError(false);
+    console.info(`[WhatsApp OTP sent] code ${DEV_OTP} to ${formData.phone}`);
+    toast({
+      title: t.register.otpResent,
+      description: t.register.otpDesc(formData.phone),
+      className: "bg-[#25D366]/10 text-[#128C7E] border-[#25D366]/20",
+    });
   };
 
   if (isSuccess) {
@@ -119,7 +174,7 @@ export default function DoctorRegister() {
         <CardHeader className="text-center pb-2">
           <h1 className="text-2xl font-bold text-gray-900">{t.register.title}</h1>
           <p className="text-sm text-gray-500 mt-2 font-medium">
-            {t.register.stepIndicator(step, 2)}: {step === 1 ? t.register.step1 : t.register.step2}
+            {t.register.stepIndicator(step, 3)}: {step === 1 ? t.register.step1 : step === 2 ? t.register.step2 : t.register.step3}
           </p>
         </CardHeader>
 
@@ -210,7 +265,7 @@ export default function DoctorRegister() {
           )}
 
           {step === 2 && (
-            <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleRegister(); }}>
+            <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleRequestOtp(); }}>
               <div className="space-y-2">
                 <Label>{t.register.specialty}</Label>
                 <SpecialtyCombobox
@@ -296,6 +351,56 @@ export default function DoctorRegister() {
                   {t.register.register}
                 </Button>
               </div>
+            </form>
+          )}
+
+          {step === 3 && (
+            <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleVerifyOtp(); }}>
+              <div className="flex flex-col items-center text-center gap-3 mb-2">
+                <div className="w-14 h-14 rounded-full bg-[#25D366]/10 flex items-center justify-center">
+                  <MessageCircle className="w-7 h-7 text-[#128C7E]" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">{t.register.otpTitle}</h2>
+                <p className="text-sm text-gray-500">{t.register.otpDesc(formData.phone)}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="otp">{t.register.otpLabel}</Label>
+                <Input
+                  id="otp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={otp}
+                  onChange={e => { setOtp(e.target.value.replace(/\D/g, "")); setOtpError(false); }}
+                  placeholder={t.register.otpPlaceholder}
+                  className={otpError ? "border-red-500 focus-visible:ring-red-500 text-center tracking-[0.5em] text-lg" : "text-center tracking-[0.5em] text-lg"}
+                  data-testid="input-register-otp"
+                />
+                {otpError && <p className="text-sm text-red-500">{t.register.otpInvalid}</p>}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button type="button" variant="outline" className="w-1/3" onClick={() => setStep(2)} data-testid="button-otp-back">
+                  {t.register.back}
+                </Button>
+                <Button
+                  type="submit"
+                  className="w-2/3"
+                  disabled={!otp.trim() || isVerifying}
+                  data-testid="button-verify-otp"
+                >
+                  {isVerifying ? (lang === "ar" ? "جاري التحقق..." : "Verifying...") : t.register.otpVerify}
+                </Button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                className="w-full text-center text-sm text-primary hover:underline mt-2"
+                data-testid="button-resend-otp"
+              >
+                {t.register.otpResend}
+              </button>
             </form>
           )}
 

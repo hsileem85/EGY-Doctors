@@ -1,0 +1,18 @@
+IMPORTANT: Approximately 80% of the End-to-End Doctor Registration and Onboarding workflow is already implemented in the codebase. DO NOT build this from scratch or overwrite existing working modules. 
+
+Please audit the existing code and ONLY add, fix, or refine the necessary logic to ensure it strictly follows this exact User Journey:
+
+### Phase 1: Registration & WhatsApp OTP (Audit & Refine)
+* **Check existing Sign Up Form:** Ensure that clicking "Sign Up" does NOT immediately create the account. 
+* **Add OTP Gate:** Implement a mock WhatsApp OTP step. When initial details are submitted, display a UI toast/console log ("WhatsApp OTP sent") and require the user to enter a static OTP (`1234` for development).
+* **Finalize:** Only upon entering `1234` should the existing account creation and login logic execute.
+
+### Phase 2: Profile Completion & Submission (Review & Enforce Logic)
+* **Check Onboarding State:** Audit the Welcome/Dashboard screen. Verify that the "Complete your profile" state is active for new doctors.
+* **Enforce Validation:** Ensure the logic strictly checks that a profile is ONLY "Ready for Review" if the `Biography` is filled AND `clinics.length > 0`.
+* **Add Submission Trigger:** If conditions are met, ensure the "Submit for Review" button appears, calls the endpoint to set `isSubmittedForReview: true`, and logs a mock email to the backend console: `[EMAIL SENT to admin@egydoctors.com] Subject: New Doctor Profile Pending Review - [Doctor Name]`.
+
+### Phase 3: Admin Review & Result Notification (Add Mock Notifications)
+* **Audit Admin Action:** Verify that the Admin Dashboard can successfully "Approve" or "Reject" the pending profile (updating `isApproved`).
+* **Add Mock WhatsApp Alert:** Inject a simulated WhatsApp message (via backend console.log or UI toast) to the doctor's phone number exactly when the admin makes a decision.
+* **Enforce Message Content:** If Rejected, notify them. If Approved, the simulated message MUST include this exact text: "Your profile has been approved. However, to activate your clinic and appear in public searches, you must now log in and subscribe to a billing plan."

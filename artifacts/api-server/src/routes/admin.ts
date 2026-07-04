@@ -179,7 +179,7 @@ router.patch("/admin/doctors/:id/approve", async (req, res): Promise<void> => {
     return;
   }
 
-  const [user] = await db.select({ email: usersTable.email, name: usersTable.name })
+  const [user] = await db.select({ email: usersTable.email, name: usersTable.name, phone: usersTable.phone })
     .from(usersTable)
     .where(eq(usersTable.id, doctor.userId))
     .limit(1);
@@ -187,6 +187,9 @@ router.patch("/admin/doctors/:id/approve", async (req, res): Promise<void> => {
   if (user?.email) {
     sendDoctorApprovedEmail(user.email, user.name).catch(() => {});
   }
+
+  // Mock WhatsApp approval alert to the doctor's phone (development-only simulation).
+  req.log.info(`[WHATSAPP SENT to ${user?.phone ?? "unknown"}] Your profile has been approved. However, to activate your clinic and appear in public searches, you must now log in and subscribe to a billing plan.`);
 
   res.json(stringifyRow(doctor));
 });
@@ -209,6 +212,14 @@ router.patch("/admin/doctors/:id/reject", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Doctor not found" });
     return;
   }
+
+  const [user] = await db.select({ phone: usersTable.phone })
+    .from(usersTable)
+    .where(eq(usersTable.id, doctor.userId))
+    .limit(1);
+
+  // Mock WhatsApp rejection alert to the doctor's phone (development-only simulation).
+  req.log.info(`[WHATSAPP SENT to ${user?.phone ?? "unknown"}] We're sorry, your doctor profile was not approved. Please contact support at admin@egydoctors.com for more details.`);
 
   res.json(stringifyRow(doctor));
 });

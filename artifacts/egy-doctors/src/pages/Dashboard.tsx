@@ -62,14 +62,9 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser, accountStat
   const clinics = profile?.clinics ?? [];
   const isSubmitted = profile?.isSubmittedForReview ?? false;
 
-  // Determine if profile is "complete" (has at least 1 clinic + mandatory fields)
-  const hasMandatoryFields = !!(
-    profile?.specialtyId &&
-    profile?.name &&
-    profile?.bio &&
-    profile?.fee
-  );
-  const isProfileComplete = clinics.length > 0 && hasMandatoryFields;
+  // Profile is "Ready for Review" ONLY if the biography is filled AND at
+  // least one clinic exists (per the onboarding journey requirements).
+  const isProfileComplete = !!profile?.bio?.trim() && clinics.length > 0;
 
   const handleSubmit = async () => {
     setSubmitting(true);
