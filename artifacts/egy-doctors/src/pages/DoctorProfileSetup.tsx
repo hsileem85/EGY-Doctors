@@ -64,7 +64,7 @@ type Clinic = {
 
 function makeClinic(overrides?: Partial<Clinic>): Clinic {
   return {
-    id: Math.random().toString(36).slice(2),
+    id: `new-${Math.random().toString(36).slice(2)}`,
     name: "",
     cityName: "",
     areaId: "",
@@ -246,9 +246,8 @@ export default function DoctorProfileSetup() {
   };
 
   const removeClinic = (id: string) => {
-    const numId = parseInt(id, 10);
-    if (!isNaN(numId)) {
-      setDeletedDbIds(prev => [...prev, numId]);
+    if (/^\d+$/.test(id)) {
+      setDeletedDbIds(prev => [...prev, parseInt(id, 10)]);
     }
     setClinics(prev => {
       const next = prev.filter(c => c.id !== id);
@@ -307,7 +306,8 @@ export default function DoctorProfileSetup() {
       await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
 
       await Promise.all(clinics.map(clinic => {
-        const numId = parseInt(clinic.id, 10);
+        const isExistingClinic = /^\d+$/.test(clinic.id);
+        const numId = isExistingClinic ? parseInt(clinic.id, 10) : NaN;
         const areaId = parseInt(clinic.areaId, 10);
         const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
         const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
@@ -329,7 +329,7 @@ export default function DoctorProfileSetup() {
           availabilityTo: clinic.availabilityPeriod === "custom" && clinic.availabilityTo ? clinic.availabilityTo : null,
           sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : undefined,
         };
-        if (isNaN(numId)) {
+        if (!isExistingClinic || isNaN(numId)) {
           return apiAddClinic(data);
         } else {
           return apiUpdateClinic(numId, data);
@@ -411,7 +411,8 @@ export default function DoctorProfileSetup() {
       await Promise.all(deletedDbIds.map(id => apiDeleteClinic(id)));
 
       await Promise.all(clinics.map(clinic => {
-        const numId = parseInt(clinic.id, 10);
+        const isExistingClinic = /^\d+$/.test(clinic.id);
+        const numId = isExistingClinic ? parseInt(clinic.id, 10) : NaN;
         const areaId = parseInt(clinic.areaId, 10);
         const followUpDaysVal = clinic.followUpDays ? parseInt(clinic.followUpDays, 10) : undefined;
         const followUpPriceVal = clinic.followUpPrice !== "" ? parseInt(clinic.followUpPrice, 10) : undefined;
@@ -433,7 +434,7 @@ export default function DoctorProfileSetup() {
           availabilityTo: clinic.availabilityPeriod === "custom" && clinic.availabilityTo ? clinic.availabilityTo : null,
           sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : undefined,
         };
-        if (isNaN(numId)) {
+        if (!isExistingClinic || isNaN(numId)) {
           return apiAddClinic(data);
         } else {
           return apiUpdateClinic(numId, data);
