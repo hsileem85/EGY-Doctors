@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil } from "lucide-react";
+import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +56,38 @@ export default function PatientDashboard() {
   const upcoming = appointments
     .filter(a => a.appointmentDate >= today && a.status !== "cancelled")
     .sort((a, b) => a.appointmentDate.localeCompare(b.appointmentDate));
+
+  const addToCalendar = (apt: ApiAppointment) => {
+    const [year, month, day] = apt.appointmentDate.split("-").map(Number);
+    const [hour, minute] = (apt.appointmentTime ?? "09:00").split(":").map(Number);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dtStart = `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`;
+    const endHour = hour + 1 > 23 ? 23 : hour + 1;
+    const dtEnd = `${year}${pad(month)}${pad(day)}T${pad(endHour)}${pad(minute)}00`;
+    const doctorLabel = apt.doctorName ?? `Doctor #${apt.doctorId}`;
+    const specialtyLabel = apt.specialty ? ` (${apt.specialty})` : "";
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//EGY Doctors//EN",
+      "BEGIN:VEVENT",
+      `UID:apt-${apt.id}@egydoctors.com`,
+      `DTSTAMP:${dtStart}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
+      `SUMMARY:Appointment with ${doctorLabel}${specialtyLabel}`,
+      `DESCRIPTION:Appointment with ${doctorLabel}${specialtyLabel} on ${apt.appointmentDate} at ${apt.appointmentTime ?? ""}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `appointment-${apt.id}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const recentActivity = appointments
     .filter(a => a.appointmentDate < today)
@@ -222,7 +254,7 @@ export default function PatientDashboard() {
                                     : apt.status}
                                 </Badge>
                               </div>
-                              <div className="flex gap-2">
+                              <div className="flex flex-wrap gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -241,6 +273,15 @@ export default function PatientDashboard() {
                                 >
                                   <X className="h-3 w-3" />
                                   {isRTL ? "إلغاء" : "Cancel"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                  onClick={() => addToCalendar(apt)}
+                                >
+                                  <CalendarPlus className="h-3 w-3" />
+                                  {isRTL ? "أضف للتقويم" : "Add to Calendar"}
                                 </Button>
                               </div>
                             </div>
