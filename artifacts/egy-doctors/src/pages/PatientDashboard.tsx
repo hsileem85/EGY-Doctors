@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus } from "lucide-react";
+import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus, ChevronDown } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -57,26 +58,49 @@ export default function PatientDashboard() {
     .filter(a => a.appointmentDate >= today && a.status !== "cancelled")
     .sort((a, b) => a.appointmentDate.localeCompare(b.appointmentDate));
 
-  const addToCalendar = (apt: ApiAppointment) => {
+  const addToCalendar = (apt: ApiAppointment, reminderMinutes: number | null) => {
     const [year, month, day] = apt.appointmentDate.split("-").map(Number);
     const [hour, minute] = (apt.appointmentTime ?? "09:00").split(":").map(Number);
     const pad = (n: number) => String(n).padStart(2, "0");
-    const dtStart = `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`;
+    // Use TZID=Africa/Cairo so all calendar apps honour the local appointment time
+    const dtLocal = `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`;
     const endHour = hour + 1 > 23 ? 23 : hour + 1;
-    const dtEnd = `${year}${pad(month)}${pad(day)}T${pad(endHour)}${pad(minute)}00`;
+    const dtLocalEnd = `${year}${pad(month)}${pad(day)}T${pad(endHour)}${pad(minute)}00`;
+    // DTSTAMP must be current UTC time
+    const now = new Date();
+    const dtStamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
     const doctorLabel = apt.doctorName ?? `Doctor #${apt.doctorId}`;
     const specialtyLabel = apt.specialty ? ` (${apt.specialty})` : "";
+    const valarm = reminderMinutes !== null ? [
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:Reminder: appointment with ${doctorLabel}`,
+      `TRIGGER:-PT${reminderMinutes}M`,
+      "END:VALARM",
+    ] : [];
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "PRODID:-//EGY Doctors//EN",
+      "CALSCALE:GREGORIAN",
+      // VTIMEZONE for Africa/Cairo — UTC+2 year-round (no DST since 2011)
+      "BEGIN:VTIMEZONE",
+      "TZID:Africa/Cairo",
+      "BEGIN:STANDARD",
+      "DTSTART:19700101T000000",
+      "TZOFFSETFROM:+0200",
+      "TZOFFSETTO:+0200",
+      "TZNAME:EET",
+      "END:STANDARD",
+      "END:VTIMEZONE",
       "BEGIN:VEVENT",
       `UID:apt-${apt.id}@egydoctors.com`,
-      `DTSTAMP:${dtStart}`,
-      `DTSTART:${dtStart}`,
-      `DTEND:${dtEnd}`,
+      `DTSTAMP:${dtStamp}`,
+      `DTSTART;TZID=Africa/Cairo:${dtLocal}`,
+      `DTEND;TZID=Africa/Cairo:${dtLocalEnd}`,
       `SUMMARY:Appointment with ${doctorLabel}${specialtyLabel}`,
       `DESCRIPTION:Appointment with ${doctorLabel}${specialtyLabel} on ${apt.appointmentDate} at ${apt.appointmentTime ?? ""}`,
+      ...valarm,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
@@ -274,15 +298,40 @@ export default function PatientDashboard() {
                                   <X className="h-3 w-3" />
                                   {isRTL ? "إلغاء" : "Cancel"}
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                  onClick={() => addToCalendar(apt)}
-                                >
-                                  <CalendarPlus className="h-3 w-3" />
-                                  {isRTL ? "أضف للتقويم" : "Add to Calendar"}
-                                </Button>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                    >
+                                      <CalendarPlus className="h-3 w-3" />
+                                      {isRTL ? "أضف للتقويم" : "Add to Calendar"}
+                                      <ChevronDown className="h-3 w-3 opacity-60" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-52 p-2" align="start">
+                                    <p className="text-xs font-medium text-gray-500 px-2 pb-1">
+                                      {isRTL ? "تنبيه قبل الموعد" : "Remind me before"}
+                                    </p>
+                                    {[
+                                      { label: isRTL ? "بدون تنبيه" : "No reminder",  minutes: null },
+                                      { label: isRTL ? "قبل ١٥ دقيقة" : "15 minutes",  minutes: 15 },
+                                      { label: isRTL ? "قبل ٣٠ دقيقة" : "30 minutes",  minutes: 30 },
+                                      { label: isRTL ? "قبل ساعة"     : "1 hour",       minutes: 60 },
+                                      { label: isRTL ? "قبل ساعتين"   : "2 hours",      minutes: 120 },
+                                      { label: isRTL ? "قبل يوم"      : "1 day",        minutes: 1440 },
+                                    ].map(opt => (
+                                      <button
+                                        key={String(opt.minutes)}
+                                        className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 text-gray-700"
+                                        onClick={() => addToCalendar(apt, opt.minutes)}
+                                      >
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                  </PopoverContent>
+                                </Popover>
                               </div>
                             </div>
                           ))}
