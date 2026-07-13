@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Search, MapPin, Phone, ChevronRight } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Search, MapPin, Phone, ChevronRight, Navigation, LocateFixed, Stethoscope } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
@@ -15,6 +15,18 @@ import {
   type MedicalCenterDirectoryEntry,
   type ApiService,
 } from "@/lib/api";
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const VET_CATEGORIES = [
   {
@@ -89,9 +101,77 @@ export default function EgyVet() {
   const [_, navigate] = useLocation();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   const [serviceFilters, setServiceFilters] = useState<Set<number>>(new Set());
+
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [locationName, setLocationName] = useState("");
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearMeActive, setNearMeActive] = useState(false);
+  const [locationToast, setLocationToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setLocationToast(msg);
+    setTimeout(() => setLocationToast(null), 4000);
+  }
+
+  const detectLocation = useCallback(
+    (activateNearMe = false) => {
+      if (!navigator.geolocation) {
+        showToast(
+          isRTL
+            ? "المتصفح لا يدعم تحديد الموقع"
+            : "Geolocation is not supported by your browser",
+        );
+        return;
+      }
+      setIsDetecting(true);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { latitude, longitude } = pos.coords;
+            setUserCoords({ lat: latitude, lng: longitude });
+            if (activateNearMe) setNearMeActive(true);
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+              { headers: { "Accept-Language": isRTL ? "ar" : "en" } },
+            );
+            const data = await res.json();
+            const addr = data.address ?? {};
+            const sub =
+              addr.suburb ?? addr.neighbourhood ?? addr.quarter ?? addr.village ?? "";
+            const city =
+              addr.city ?? addr.town ?? addr.state_district ?? addr.county ?? "";
+            setLocationName(
+              [sub, city].filter(Boolean).join(", ") ||
+                data.display_name?.split(",")[0] ||
+                "",
+            );
+          } catch {
+            /* silently keep previous value */
+          } finally {
+            setIsDetecting(false);
+          }
+        },
+        () => {
+          setIsDetecting(false);
+          showToast(
+            isRTL
+              ? "الرجاء السماح بالوصول إلى موقعك أو اكتب منطقتك يدوياً"
+              : "Please allow location access or type your area manually",
+          );
+        },
+        { timeout: 10000 },
+      );
+    },
+    [isRTL],
+  );
+
+  useEffect(() => {
+    detectLocation();
+  }, []);
 
   const { data: vetClinics = [], isLoading } = useQuery<MedicalCenterDirectoryEntry[]>({
     queryKey: ["vetClinics"],
@@ -116,12 +196,13 @@ export default function EgyVet() {
   });
 
   const selectedCityName = useMemo(
-    () => (selectedCityId ? (cities.find((c) => c.id === selectedCityId)?.name ?? null) : null),
+    () =>
+      selectedCityId ? (cities.find((c) => c.id === selectedCityId)?.name ?? null) : null,
     [selectedCityId, cities],
   );
 
   const filteredClinics = useMemo(() => {
-    return vetClinics.filter((clinic) => {
+    let results = vetClinics.filter((clinic) => {
       const q = searchQuery.trim().toLowerCase();
       const matchSearch =
         q === "" ||
@@ -130,12 +211,32 @@ export default function EgyVet() {
       const matchCity =
         !selectedCityName ||
         (clinic.cityName ?? "").toLowerCase() === selectedCityName.toLowerCase();
+      const activeServiceIds = new Set([
+        ...serviceFilters,
+        ...(selectedServiceId !== null ? [selectedServiceId] : []),
+      ]);
       const matchService =
-        serviceFilters.size === 0 ||
-        clinic.services.some((s) => serviceFilters.has(s.id));
+        activeServiceIds.size === 0 ||
+        clinic.services.some((s) => activeServiceIds.has(s.id));
       return matchSearch && matchCity && matchService;
     });
-  }, [vetClinics, searchQuery, selectedCityName, serviceFilters]);
+
+    if (nearMeActive && userCoords) {
+      results = [...results].sort((a, b) => {
+        const da =
+          a.lat != null && a.lng != null
+            ? haversineKm(userCoords.lat, userCoords.lng, a.lat, a.lng)
+            : Infinity;
+        const db =
+          b.lat != null && b.lng != null
+            ? haversineKm(userCoords.lat, userCoords.lng, b.lat, b.lng)
+            : Infinity;
+        return da - db;
+      });
+    }
+
+    return results;
+  }, [vetClinics, searchQuery, selectedCityName, serviceFilters, selectedServiceId, nearMeActive, userCoords]);
 
   function toggleServiceFilter(id: number) {
     setServiceFilters((prev) => {
@@ -151,13 +252,36 @@ export default function EgyVet() {
         {/* ── Header — matches Home.tsx structure ── */}
         <header className="bg-[#0F172A] pt-2 pb-4 px-4 shadow-md">
           <div className="max-w-5xl mx-auto flex flex-col gap-1.5">
-            {/* Top row: badge */}
-            <div className="flex items-center">
+
+            {/* Top row: badge left, location indicator right */}
+            <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2 bg-[#1E293B] border border-[#334155] rounded-full px-4 py-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                 <span className="text-xs text-gray-300 tracking-wide font-light">
                   {isRTL ? "منصة البيطريين الأولى في مصر 🐾" : "Egypt's #1 Veterinary Platform 🐾"}
                 </span>
+              </div>
+
+              {/* Location indicator — identical pattern to Home.tsx */}
+              <div className="inline-flex gap-1 bg-[#1E293B]/80 border border-[#334155] px-2 py-0.5 rounded-full text-white backdrop-blur-sm justify-start items-center font-light text-[15px]">
+                <Navigation className="w-3 h-3 text-[#D4A853] fill-[#D4A853]/20" />
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-gray-400 font-medium leading-none">
+                    {isRTL ? "الموقع الحالي" : "Current Location"}
+                  </span>
+                  <span className="text-[10px] tracking-wide font-light">
+                    {isDetecting
+                      ? isRTL ? "جاري التحديد..." : "Detecting..."
+                      : locationName || (isRTL ? "غير محدد" : "Unknown")}
+                  </span>
+                </div>
+                <button
+                  onClick={() => detectLocation()}
+                  disabled={isDetecting}
+                  className="ml-1 pl-1 border-l border-[#334155] text-[8px] text-[#D4A853] hover:text-[#C49A48] tracking-wide uppercase transition-colors disabled:opacity-50 font-light"
+                >
+                  {isDetecting ? "..." : isRTL ? "تحديث" : "Refresh"}
+                </button>
               </div>
             </div>
 
@@ -197,8 +321,8 @@ export default function EgyVet() {
                   type="text"
                   placeholder={
                     isRTL
-                      ? "ابحث عن عيادة بيطرية أو خدمة..."
-                      : "Search veterinary clinics or services..."
+                      ? "ابحث عن عيادة بيطرية..."
+                      : "Search veterinary clinics..."
                   }
                   className="flex-1 bg-transparent border-none outline-none px-3 text-[#0F172A] text-sm font-medium placeholder:font-normal placeholder:text-gray-400 w-full"
                   value={searchQuery}
@@ -209,8 +333,30 @@ export default function EgyVet() {
               {/* Divider */}
               <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
 
+              {/* Service dropdown */}
+              <div className="flex items-center sm:w-44 h-9 px-3 border-t sm:border-t-0 border-gray-100">
+                <Stethoscope className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <select
+                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
+                  value={selectedServiceId ?? ""}
+                  onChange={(e) =>
+                    setSelectedServiceId(e.target.value ? Number(e.target.value) : null)
+                  }
+                >
+                  <option value="">{isRTL ? "الخدمة" : "Service"}</option>
+                  {vetServices.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {isRTL ? s.nameAr : s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Divider */}
+              <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
+
               {/* City dropdown */}
-              <div className="flex items-center sm:w-36 h-9 px-3 border-t sm:border-t-0 border-gray-100">
+              <div className="flex items-center sm:w-32 h-9 px-3 border-t sm:border-t-0 border-gray-100">
                 <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <select
                   className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
@@ -234,13 +380,15 @@ export default function EgyVet() {
 
               {/* Area dropdown */}
               <div
-                className={`flex items-center sm:w-36 h-9 px-3 border-t sm:border-t-0 border-gray-100 ${!selectedCityId ? "opacity-40 pointer-events-none" : ""}`}
+                className={`flex items-center sm:w-32 h-9 px-3 border-t sm:border-t-0 border-gray-100 ${!selectedCityId ? "opacity-40 pointer-events-none" : ""}`}
               >
                 <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <select
                   className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
                   value={selectedAreaId ?? ""}
-                  onChange={(e) => setSelectedAreaId(e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) =>
+                    setSelectedAreaId(e.target.value ? Number(e.target.value) : null)
+                  }
                   disabled={!selectedCityId}
                 >
                   <option value="">{isRTL ? "المنطقة" : "Area"}</option>
@@ -252,15 +400,56 @@ export default function EgyVet() {
                 </select>
               </div>
 
+              {/* Divider */}
+              <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
+
+              {/* Near Me button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (nearMeActive) {
+                    setNearMeActive(false);
+                  } else {
+                    if (userCoords) {
+                      setNearMeActive(true);
+                    } else {
+                      detectLocation(true);
+                    }
+                  }
+                }}
+                disabled={isDetecting}
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap border-t sm:border-t-0 border-gray-100 ${
+                  nearMeActive
+                    ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                    : "text-slate-600 bg-slate-100 hover:bg-slate-200"
+                }`}
+              >
+                <LocateFixed
+                  className={`w-3.5 h-3.5 shrink-0 ${nearMeActive ? "text-white" : "text-slate-500"}`}
+                />
+                {isRTL ? "بالقرب مني" : "Near Me"}
+                {nearMeActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />
+                )}
+              </button>
+
               {/* Find button */}
               <Button
                 type="submit"
-                className="bg-emerald-500 text-white font-bold rounded-xl sm:rounded-full px-6 h-9 mt-1.5 sm:mt-0 sm:ml-1.5 hover:bg-emerald-600 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm border-none shrink-0 w-full sm:w-auto"
+                className="bg-emerald-500 text-white font-bold rounded-xl sm:rounded-full px-5 h-9 mt-1.5 sm:mt-0 sm:ml-1.5 hover:bg-emerald-600 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm border-none shrink-0 w-full sm:w-auto"
               >
                 {isRTL ? "ابحث" : "Find Clinics"}
               </Button>
             </form>
           </div>
+
+          {/* Location toast */}
+          {locationToast && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm text-center">
+              <LocateFixed className="w-4 h-4 text-emerald-400 shrink-0" />
+              {locationToast}
+            </div>
+          )}
         </header>
 
         {/* ── Veterinary Services Categories ── */}
@@ -390,88 +579,88 @@ export default function EgyVet() {
                   onClick={() => navigate(`/medical-center/${clinic.id}`)}
                   className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group"
                 >
-                    <div className="flex items-start gap-3 mb-3">
-                      {clinic.image ? (
-                        <img
-                          src={clinic.image}
-                          alt={clinic.name}
-                          className="w-12 h-12 rounded-lg object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 text-2xl">
-                          🐾
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-slate-900 text-sm truncate group-hover:text-emerald-600 transition-colors">
-                          {isRTL && clinic.nameAr ? clinic.nameAr : clinic.name}
-                        </h3>
-                        {/* Location / address pill — matches Home.tsx medical center cards */}
-                        {(clinic.address || clinic.cityName) && (
-                          <a
-                            href={
-                              clinic.lat != null && clinic.lng != null
-                                ? `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`
-                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                    [clinic.address, clinic.cityName].filter(Boolean).join(", "),
-                                  )}`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md px-2 py-0.5 font-medium transition-colors cursor-pointer mt-0.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MapPin className="h-2.5 w-2.5 shrink-0" />
-                            {clinic.address
-                              ? `${clinic.address}${clinic.cityName ? `, ${isRTL && clinic.cityNameAr ? clinic.cityNameAr : clinic.cityName}` : ""}`
-                              : isRTL && clinic.cityNameAr
-                                ? clinic.cityNameAr
-                                : clinic.cityName}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-
-                    {(isRTL ? clinic.bioAr : clinic.bio) && (
-                      <p className="text-xs text-gray-500 line-clamp-2 mb-3">
-                        {isRTL ? clinic.bioAr : clinic.bio}
-                      </p>
-                    )}
-
-                    {clinic.services.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {clinic.services.slice(0, 3).map((svc) => (
-                          <span
-                            key={svc.id}
-                            className="text-[10px] bg-emerald-50 text-emerald-700 rounded-full px-2 py-0.5 font-medium"
-                          >
-                            {isRTL ? svc.nameAr : svc.name}
-                          </span>
-                        ))}
-                        {clinic.services.length > 3 && (
-                          <span className="text-[10px] bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
-                            +{clinic.services.length - 3}
-                          </span>
-                        )}
+                  <div className="flex items-start gap-3 mb-3">
+                    {clinic.image ? (
+                      <img
+                        src={clinic.image}
+                        alt={clinic.name}
+                        className="w-12 h-12 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 text-2xl">
+                        🐾
                       </div>
                     )}
-
-                    <div className="flex items-center justify-between">
-                      {clinic.phone ? (
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-slate-900 text-sm truncate group-hover:text-emerald-600 transition-colors">
+                        {isRTL && clinic.nameAr ? clinic.nameAr : clinic.name}
+                      </h3>
+                      {/* Location / address pill — Google Maps link */}
+                      {(clinic.address || clinic.cityName) && (
                         <a
-                          href={`tel:${clinic.phone}`}
-                          className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                          href={
+                            clinic.lat != null && clinic.lng != null
+                              ? `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                  [clinic.address, clinic.cityName].filter(Boolean).join(", "),
+                                )}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md px-2 py-0.5 font-medium transition-colors cursor-pointer mt-0.5"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Phone className="w-3 h-3" />
-                          {clinic.phone}
+                          <MapPin className="h-2.5 w-2.5 shrink-0" />
+                          {clinic.address
+                            ? `${clinic.address}${clinic.cityName ? `, ${isRTL && clinic.cityNameAr ? clinic.cityNameAr : clinic.cityName}` : ""}`
+                            : isRTL && clinic.cityNameAr
+                              ? clinic.cityNameAr
+                              : clinic.cityName}
                         </a>
-                      ) : (
-                        <span />
                       )}
-                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" />
                     </div>
                   </div>
+
+                  {(isRTL ? clinic.bioAr : clinic.bio) && (
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-3">
+                      {isRTL ? clinic.bioAr : clinic.bio}
+                    </p>
+                  )}
+
+                  {clinic.services.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {clinic.services.slice(0, 3).map((svc) => (
+                        <span
+                          key={svc.id}
+                          className="text-[10px] bg-emerald-50 text-emerald-700 rounded-full px-2 py-0.5 font-medium"
+                        >
+                          {isRTL ? svc.nameAr : svc.name}
+                        </span>
+                      ))}
+                      {clinic.services.length > 3 && (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
+                          +{clinic.services.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    {clinic.phone ? (
+                      <a
+                        href={`tel:${clinic.phone}`}
+                        className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Phone className="w-3 h-3" />
+                        {clinic.phone}
+                      </a>
+                    ) : (
+                      <span />
+                    )}
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                  </div>
+                </div>
               ))}
             </div>
           )}
