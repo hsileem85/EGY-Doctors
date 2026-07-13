@@ -69,6 +69,9 @@ export function SearchableSelect({
 
   const hasValue = value != null && value !== "";
 
+  // The mirror text drives the container width — always at least placeholder width
+  const mirrorText = isOpen ? (query || placeholder) : (selectedLabel || placeholder);
+
   return (
     <div
       ref={containerRef}
@@ -76,32 +79,41 @@ export function SearchableSelect({
     >
       {icon && <span className="shrink-0 flex items-center">{icon}</span>}
 
-      <input
-        ref={inputRef}
-        type="text"
-        readOnly={!isOpen}
-        value={isOpen ? query : selectedLabel}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={open}
-        onBlur={handleBlur}
-        placeholder={isOpen ? (selectedLabel || placeholder) : placeholder}
-        className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[#0F172A] font-medium pl-2 text-sm truncate placeholder:font-normal placeholder:text-gray-400 ${
-          isOpen ? "cursor-text" : "cursor-pointer"
-        }`}
-      />
+      {/* Auto-sizing input wrapper: hidden mirror span sets the width, input overlays it */}
+      <div className="relative flex items-center ml-2">
+        <span
+          aria-hidden
+          className="invisible whitespace-pre text-sm font-medium select-none"
+        >
+          {mirrorText}
+        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          readOnly={!isOpen}
+          value={isOpen ? query : selectedLabel}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={open}
+          onBlur={handleBlur}
+          placeholder={isOpen ? (selectedLabel || placeholder) : placeholder}
+          className={`absolute inset-0 w-full bg-transparent border-none outline-none text-[#0F172A] font-medium text-sm placeholder:font-normal placeholder:text-gray-400 ${
+            isOpen ? "cursor-text" : "cursor-pointer"
+          }`}
+        />
+      </div>
 
       {hasValue && !disabled ? (
         <button
           type="button"
           onMouseDown={clearSelection}
-          className="shrink-0 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors ml-0.5"
+          className="shrink-0 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors ml-1.5"
           tabIndex={-1}
         >
           <X className="w-3 h-3" />
         </button>
       ) : (
         <ChevronDown
-          className={`w-3 h-3 shrink-0 text-gray-400 transition-transform ml-0.5 ${isOpen ? "rotate-180" : ""}`}
+          className={`w-3 h-3 shrink-0 text-gray-400 transition-transform ml-1.5 ${isOpen ? "rotate-180" : ""}`}
         />
       )}
 

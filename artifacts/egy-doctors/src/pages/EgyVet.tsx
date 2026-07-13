@@ -257,7 +257,7 @@ export default function EgyVet() {
 
               {/* Service dropdown */}
               <SearchableSelect
-                className="sm:w-44"
+                className=""
                 icon={<Stethoscope className="w-3.5 h-3.5 text-gray-400" />}
                 options={vetServices.map((s) => ({ value: s.id, label: isRTL ? s.nameAr : s.name }))}
                 value={selectedServiceId}
@@ -270,7 +270,7 @@ export default function EgyVet() {
 
               {/* City dropdown */}
               <SearchableSelect
-                className="sm:w-32"
+                className=""
                 icon={<MapPin className="w-3.5 h-3.5 text-gray-400" />}
                 options={cities.map((c) => ({ value: c.id, label: isRTL ? c.nameAr : c.name }))}
                 value={selectedCityId}
@@ -283,7 +283,7 @@ export default function EgyVet() {
 
               {/* Area dropdown */}
               <SearchableSelect
-                className="sm:w-32"
+                className=""
                 icon={<MapPin className="w-3.5 h-3.5 text-gray-400" />}
                 options={areas.map((a) => ({ value: a.id, label: isRTL ? a.nameAr : a.name }))}
                 value={selectedAreaId}
