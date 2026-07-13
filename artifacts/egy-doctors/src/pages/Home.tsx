@@ -323,7 +323,7 @@ export default function Home() {
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
                 >
-                  <option value="">{isRTL ? "أي تخصص" : "Any Specialty"}</option>
+                  <option value="">{isRTL ? "التخصص" : "Specialty"}</option>
                   {specialties.map((s) => (
                     <option key={s.id} value={s.name}>
                       {t.specialties[s.name] ?? s.name}
@@ -346,7 +346,7 @@ export default function Home() {
                     setSelectedAreaId(null);
                   }}
                 >
-                  <option value="">{isRTL ? "المدينة" : "Any City"}</option>
+                  <option value="">{isRTL ? "المدينة" : "City"}</option>
                   {cities.map(c => (
                     <option key={c.id} value={c.id}>{isRTL ? c.nameAr : c.name}</option>
                   ))}
@@ -365,7 +365,7 @@ export default function Home() {
                   onChange={e => setSelectedAreaId(e.target.value ? Number(e.target.value) : null)}
                   disabled={!selectedCityId}
                 >
-                  <option value="">{isRTL ? "المنطقة" : "Any Area"}</option>
+                  <option value="">{isRTL ? "المنطقة" : "Area"}</option>
                   {areas.map(a => (
                     <option key={a.id} value={a.id}>{isRTL ? a.nameAr : a.name}</option>
                   ))}
