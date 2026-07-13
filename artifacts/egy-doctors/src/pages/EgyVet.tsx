@@ -247,6 +247,14 @@ export default function EgyVet() {
     });
   }
 
+  const hasSearchApplied = !!(
+    searchQuery.trim() ||
+    selectedCityId ||
+    selectedAreaId ||
+    selectedServiceId !== null ||
+    nearMeActive
+  );
+
   return (
     <Layout>
       <div className="min-h-screen bg-white font-sans pb-20">
@@ -423,8 +431,8 @@ export default function EgyVet() {
           )}
         </header>
 
-        {/* ── Veterinary Services Categories ── */}
-        <div className="bg-gray-50 py-10">
+        {/* ── Veterinary Services Categories — hidden when search is active ── */}
+        {!hasSearchApplied && <div className="bg-gray-50 py-10">
           <div className="max-w-5xl mx-auto px-4">
             <h2 className="text-lg font-extrabold text-slate-900 mb-1 text-center">
               {isRTL ? "خدماتنا البيطرية" : "Our Veterinary Services"}
@@ -458,7 +466,7 @@ export default function EgyVet() {
               ))}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* ── Certified Veterinary Clinics ── */}
         <div className="max-w-5xl mx-auto px-4 py-10">
@@ -472,8 +480,8 @@ export default function EgyVet() {
             </span>
           </div>
 
-          {/* Service filter chips — vet services only */}
-          {vetServices.length > 0 && (
+          {/* Service filter chips — appear only when search is active */}
+          {vetServices.length > 0 && hasSearchApplied && (
             <div className="flex flex-wrap items-center gap-1.5 mb-5">
               <span className="text-xs font-semibold text-gray-500 me-1">
                 {isRTL ? "فلترة حسب الخدمة:" : "Filter by service:"}
