@@ -89,8 +89,9 @@ export default function Home() {
   const citiesValue = stats ? stats.citiesWithClinics.toLocaleString() : "—";
 
   const filteredMedicalCenters = useMemo(() => {
-    if (centerServiceFilters.size === 0) return medicalCenters;
-    return medicalCenters.filter((c) => c.services?.some((s) => centerServiceFilters.has(s.id)));
+    const nonVet = medicalCenters.filter((c) => c.subType !== "VETERINARY_CLINIC");
+    if (centerServiceFilters.size === 0) return nonVet;
+    return nonVet.filter((c) => c.services?.some((s) => centerServiceFilters.has(s.id)));
   }, [medicalCenters, centerServiceFilters]);
 
   function toggleCenterServiceFilter(value: number) {
