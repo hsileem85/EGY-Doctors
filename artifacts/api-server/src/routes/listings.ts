@@ -20,14 +20,20 @@ router.get("/specialties", async (_req, res): Promise<void> => {
 });
 
 /* ─── GET /services ─── */
-router.get("/services", async (_req, res): Promise<void> => {
+router.get("/services", async (req, res): Promise<void> => {
+  const isVetParam = req.query.isVeterinary as string | undefined;
+
+  const conditions = [eq(servicesTable.isActive, "true")];
+  if (isVetParam === "true") conditions.push(eq(servicesTable.isVeterinary, true));
+  else if (isVetParam === "false") conditions.push(eq(servicesTable.isVeterinary, false));
+
   const rows = await db.select({
     id: servicesTable.id,
     name: servicesTable.name,
     nameAr: servicesTable.nameAr,
     displayOrder: servicesTable.displayOrder,
   }).from(servicesTable)
-    .where(eq(servicesTable.isActive, "true"))
+    .where(conditions.length === 1 ? conditions[0] : and(...conditions))
     .orderBy(servicesTable.displayOrder);
 
   res.json(rows);

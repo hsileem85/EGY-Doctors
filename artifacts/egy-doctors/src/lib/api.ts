@@ -748,8 +748,9 @@ export interface ApiService {
   displayOrder: number;
 }
 
-export function getServices(): Promise<ApiService[]> {
-  return request("/services");
+export function getServices(params?: { isVeterinary?: boolean }): Promise<ApiService[]> {
+  const qs = params?.isVeterinary !== undefined ? `?isVeterinary=${params.isVeterinary}` : "";
+  return request(`/services${qs}`);
 }
 
 export interface MedicalCenterProfile {

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { getMedicalCenterProfile, updateMedicalCenterProfile, getServices, type MedicalCenterProfile, type CenterSubType } from "@/lib/api";
+import { getMedicalCenterProfile, updateMedicalCenterProfile, getServices, type MedicalCenterProfile, type CenterSubType, type ApiService } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 
 const subTypeLabels: Record<CenterSubType, { en: string; ar: string }> = {
@@ -69,7 +69,7 @@ export default function MedicalCenterProfile() {
   const [notApproved, setNotApproved] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
-  const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: getServices });
+  const { data: services = [] } = useQuery<ApiService[]>({ queryKey: ["services", "medical"], queryFn: () => getServices({ isVeterinary: false }) });
 
   useEffect(() => {
     getMedicalCenterProfile()

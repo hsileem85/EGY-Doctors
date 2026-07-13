@@ -80,8 +80,8 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
   });
   const { data: serviceOptions = [] } = useQuery<ApiService[]>({
-    queryKey: ["services"],
-    queryFn: () => getServices(),
+    queryKey: ["services", "medical"],
+    queryFn: () => getServices({ isVeterinary: false }),
     staleTime: 5 * 60 * 1000,
   });
   const clinicsValue = stats ? stats.clinicsCount.toLocaleString() : "—";

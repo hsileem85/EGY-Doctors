@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 export const servicesTable = pgTable("services", {
@@ -7,6 +7,7 @@ export const servicesTable = pgTable("services", {
   nameAr: varchar("name_ar", { length: 100 }).notNull(),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: varchar("is_active", { length: 10 }).notNull().default("true"),
+  isVeterinary: boolean("is_veterinary").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
