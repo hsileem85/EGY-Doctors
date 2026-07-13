@@ -69,7 +69,7 @@ export function Navbar() {
                     lang === "ar" ? (
                       <><span className="text-white">إيجي</span><span className="text-emerald-400"> بيطري 🐾</span></>
                     ) : (
-                      <><span className="text-white">EG</span><span className="text-emerald-400">Y Vet 🐾</span></>
+                      <span className="inline-flex gap-0"><span className="text-white">EG</span><span className="text-emerald-400">Y Vet 🐾</span></span>
                     )
                   ) : (lang === "ar" ? labelAr : labelEn)}
                 </Button>
@@ -221,7 +221,7 @@ export function Navbar() {
                   lang === "ar" ? (
                     <><span className="text-white">إيجي</span><span className="text-emerald-400"> بيطري 🐾</span></>
                   ) : (
-                    <><span className="text-white">EG</span><span className="text-emerald-400">Y Vet 🐾</span></>
+                    <span className="inline-flex gap-0"><span className="text-white">EG</span><span className="text-emerald-400">Y Vet 🐾</span></span>
                   )
                 ) : (lang === "ar" ? labelAr : labelEn)}
               </button>
