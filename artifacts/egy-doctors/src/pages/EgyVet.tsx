@@ -5,6 +5,7 @@ import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   getCities,
   getAreas,
@@ -334,71 +335,41 @@ export default function EgyVet() {
               <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
 
               {/* Service dropdown */}
-              <div className="flex items-center sm:w-44 h-9 px-3 border-t sm:border-t-0 border-gray-100">
-                <Stethoscope className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <select
-                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
-                  value={selectedServiceId ?? ""}
-                  onChange={(e) =>
-                    setSelectedServiceId(e.target.value ? Number(e.target.value) : null)
-                  }
-                >
-                  <option value="">{isRTL ? "الخدمة" : "Service"}</option>
-                  {vetServices.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {isRTL ? s.nameAr : s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                className="sm:w-44"
+                icon={<Stethoscope className="w-3.5 h-3.5 text-gray-400" />}
+                options={vetServices.map((s) => ({ value: s.id, label: isRTL ? s.nameAr : s.name }))}
+                value={selectedServiceId}
+                onChange={(v) => setSelectedServiceId(v ? Number(v) : null)}
+                placeholder={isRTL ? "الخدمة" : "Service"}
+              />
 
               {/* Divider */}
               <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
 
               {/* City dropdown */}
-              <div className="flex items-center sm:w-32 h-9 px-3 border-t sm:border-t-0 border-gray-100">
-                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <select
-                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
-                  value={selectedCityId ?? ""}
-                  onChange={(e) => {
-                    setSelectedCityId(e.target.value ? Number(e.target.value) : null);
-                    setSelectedAreaId(null);
-                  }}
-                >
-                  <option value="">{isRTL ? "المدينة" : "City"}</option>
-                  {cities.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {isRTL ? c.nameAr : c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                className="sm:w-32"
+                icon={<MapPin className="w-3.5 h-3.5 text-gray-400" />}
+                options={cities.map((c) => ({ value: c.id, label: isRTL ? c.nameAr : c.name }))}
+                value={selectedCityId}
+                onChange={(v) => { setSelectedCityId(v ? Number(v) : null); setSelectedAreaId(null); }}
+                placeholder={isRTL ? "المدينة" : "City"}
+              />
 
               {/* Divider */}
               <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
 
               {/* Area dropdown */}
-              <div
-                className={`flex items-center sm:w-32 h-9 px-3 border-t sm:border-t-0 border-gray-100 ${!selectedCityId ? "opacity-40 pointer-events-none" : ""}`}
-              >
-                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <select
-                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
-                  value={selectedAreaId ?? ""}
-                  onChange={(e) =>
-                    setSelectedAreaId(e.target.value ? Number(e.target.value) : null)
-                  }
-                  disabled={!selectedCityId}
-                >
-                  <option value="">{isRTL ? "المنطقة" : "Area"}</option>
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {isRTL ? a.nameAr : a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                className="sm:w-32"
+                icon={<MapPin className="w-3.5 h-3.5 text-gray-400" />}
+                options={areas.map((a) => ({ value: a.id, label: isRTL ? a.nameAr : a.name }))}
+                value={selectedAreaId}
+                onChange={(v) => setSelectedAreaId(v ? Number(v) : null)}
+                placeholder={isRTL ? "المنطقة" : "Area"}
+                disabled={!selectedCityId}
+              />
 
               {/* Divider */}
               <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
