@@ -3,7 +3,7 @@ import {
   Building2, Users, TrendingUp, FileText,
   Settings, Plus, CreditCard, Newspaper, LogOut, BookOpen,
   Stethoscope, Pencil, Trash2, Check, X, UserPlus,
-  Globe, Bell, Mail, MessageSquare as Sms,
+  Globe, Bell, Mail, MessageSquare, Video, PenSquare, Clock,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,10 @@ import {
   getMedicalCenterProfile,
   getAffiliatedDoctors, createAffiliatedDoctor, updateAffiliatedDoctor, deleteAffiliatedDoctor,
   getSpecialties, getPreferences, updatePreferences,
+  getMyMagazinePosts, createMagazinePost, deleteMagazinePost,
   type BillingInfo, type VoucherValidation, type PlanType, type PaymobInitiateResponse,
   type MedicalCenterProfile, type AffiliatedDoctor, type ApiSpecialty, type UserPreferences,
+  type ApiMagazinePost,
 } from "@/lib/api";
 
 type CenterTab = "overview" | "billing" | "publications" | "doctors" | "preferences";
@@ -403,21 +405,203 @@ function PublicationsPaywall({ isRTL, onGoToBilling }: { isRTL: boolean; onGoToB
 }
 
 function CenterPublicationsTab({ isRTL }: { isRTL: boolean }) {
+  const qc = useQueryClient();
+  const [type, setType] = useState<"article" | "tip" | "video">("article");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: posts = [], isLoading } = useQuery<ApiMagazinePost[]>({
+    queryKey: ["myPosts"],
+    queryFn: getMyMagazinePosts,
+  });
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError("");
+    if ((type === "article" || type === "tip") && !content.trim()) {
+      setFormError(isRTL ? "محتوى المنشور مطلوب" : "Content is required");
+      return;
+    }
+    if (type === "video" && !mediaUrl.trim()) {
+      setFormError(isRTL ? "رابط الفيديو مطلوب" : "Video URL is required");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await createMagazinePost({
+        type,
+        title: title.trim() || null,
+        content: type !== "video" ? (content.trim() || null) : null,
+        mediaUrl: type === "video" ? (mediaUrl.trim() || null) : null,
+      });
+      setTitle(""); setContent(""); setMediaUrl("");
+      qc.invalidateQueries({ queryKey: ["myPosts"] });
+      qc.invalidateQueries({ queryKey: ["magazinePosts"] });
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    await deleteMagazinePost(id);
+    qc.invalidateQueries({ queryKey: ["myPosts"] });
+    qc.invalidateQueries({ queryKey: ["magazinePosts"] });
+  }
+
+  const postTypeLabels = {
+    article: isRTL ? "مقال" : "Article",
+    tip: isRTL ? "نصيحة" : "Quick Tip",
+    video: isRTL ? "فيديو" : "Video",
+  };
+
+  const typeColors: Record<string, string> = {
+    article: "bg-blue-50 text-blue-600 border-blue-200",
+    tip: "bg-amber-50 text-amber-600 border-amber-200",
+    video: "bg-red-50 text-red-600 border-red-200",
+  };
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{isRTL ? "المنشورات" : "Publications"}</h1>
         <p className="text-gray-500 text-sm mt-1">{isRTL ? "مقالات وتحديثات مركزك الطبي" : "Articles and updates from your medical center"}</p>
       </div>
-      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-xl border border-gray-200">
-        <Newspaper className="h-12 w-12 text-gray-300 mb-4" />
-        <h3 className="font-semibold text-gray-700 mb-1">{isRTL ? "لا توجد منشورات بعد" : "No publications yet"}</h3>
-        <p className="text-sm text-gray-500 mb-4">{isRTL ? "أضف أول مقال لمركزك الطبي" : "Add your first article for your medical center"}</p>
-        <Button className="bg-[#D4A853] text-[#0F172A] hover:bg-[#C49A48] gap-2">
-          <Plus className="h-4 w-4" />
-          {isRTL ? "نشر مقال" : "New Article"}
-        </Button>
-      </div>
+
+      {/* Create form */}
+      <Card className="mb-6 border-0 shadow-sm">
+        <CardHeader className="border-b bg-gray-50/50 rounded-t-xl pb-4">
+          <CardTitle className="text-base">{isRTL ? "منشور جديد" : "New Post"}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              {(["article", "tip", "video"] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                    type === t ? typeColors[t] : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  {t === "article" ? <FileText className="h-3.5 w-3.5" /> : t === "video" ? <Video className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}
+                  {postTypeLabels[t]}
+                </button>
+              ))}
+            </div>
+
+            {(type === "article" || type === "video") && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  {isRTL ? "العنوان" : "Title"}
+                </label>
+                <input
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder={type === "article" ? (isRTL ? "عنوان المقال" : "Article title") : (isRTL ? "عنوان الفيديو" : "Video title")}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+            )}
+
+            {type !== "video" ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  {type === "tip" ? (isRTL ? "نص النصيحة" : "Tip Content") : (isRTL ? "محتوى المقال" : "Article Content")}
+                  <span className="text-red-400"> *</span>
+                </label>
+                <textarea
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  rows={4}
+                  placeholder={type === "tip" ? (isRTL ? "اكتب نصيحتك هنا..." : "Write your tip here...") : (isRTL ? "اكتب محتوى مقالك هنا..." : "Write your article content here...")}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  {isRTL ? "رابط الفيديو" : "Video URL"}<span className="text-red-400"> *</span>
+                </label>
+                <input
+                  value={mediaUrl}
+                  onChange={e => setMediaUrl(e.target.value)}
+                  placeholder={isRTL ? "الصق رابطاً من يوتيوب أو تيك توك أو إنستغرام أو فيسبوك" : "Paste link from YouTube, TikTok, Instagram, or Facebook"}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+            )}
+
+            {formError && <p className="text-red-500 text-xs">{formError}</p>}
+
+            <Button type="submit" disabled={isSubmitting} size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              {isSubmitting ? (isRTL ? "جارٍ النشر..." : "Publishing...") : (isRTL ? "نشر" : "Publish")}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Posts list */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-gray-50/50 rounded-t-xl pb-4">
+          <CardTitle className="text-base">
+            {isRTL ? "المنشورات" : "Posts"}
+            <span className="text-gray-400 font-normal text-sm ms-2">({posts.length})</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="py-8 text-center text-gray-400 text-sm">{isRTL ? "جار التحميل..." : "Loading..."}</div>
+          ) : posts.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              <PenSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">{isRTL ? "لا توجد منشورات بعد. ابدأ بنشر أول مقال!" : "No posts yet. Publish your first post above!"}</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {posts.map(post => (
+                <div key={post.id} className="flex items-start gap-4 p-4 hover:bg-gray-50 transition-colors">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    post.type === "article" ? "bg-blue-50 text-blue-600" :
+                    post.type === "video" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"
+                  }`}>
+                    {post.type === "article" ? <FileText className="h-4 w-4" /> :
+                     post.type === "video" ? <Video className="h-4 w-4" /> :
+                     <MessageSquare className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {post.title && <h4 className="font-medium text-gray-900 text-sm truncate">{post.title}</h4>}
+                    {post.content && <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">{post.content}</p>}
+                    {post.mediaUrl && <p className="text-blue-500 text-xs mt-0.5 truncate">{post.mediaUrl}</p>}
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Badge variant="outline" className={`text-[10px] h-4 ${typeColors[post.type]}`}>
+                        {postTypeLabels[post.type]}
+                      </Badge>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 shrink-0"
+                    title={isRTL ? "حذف" : "Delete"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -514,7 +698,7 @@ function CenterPreferencesTab({ isRTL }: { isRTL: boolean }) {
               <div className="space-y-2.5">
                 {([
                   { key: "notifyViaEmail" as const, icon: <Mail className="h-4 w-4" />, label: "Email", labelAr: "بريد إلكتروني", note: "", noteAr: "" },
-                  { key: "notifyViaSms" as const, icon: <Sms className="h-4 w-4" />, label: "SMS", labelAr: "رسالة قصيرة", note: "coming soon", noteAr: "قريباً" },
+                  { key: "notifyViaSms" as const, icon: <MessageSquare className="h-4 w-4" />, label: "SMS", labelAr: "رسالة قصيرة", note: "coming soon", noteAr: "قريباً" },
                   { key: "notifyViaWhatsApp" as const, icon: <Bell className="h-4 w-4" />, label: "WhatsApp", labelAr: "واتساب", note: "coming soon", noteAr: "قريباً" },
                 ] as const).map(m => (
                   <label
