@@ -29,72 +29,6 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const VET_CATEGORIES = [
-  {
-    key: "preventive",
-    en: "General & Preventive Care",
-    ar: "الرعاية العامة والوقائية",
-    emoji: "🩺",
-    services: [
-      { en: "General Check-up", ar: "كشف عام" },
-      { en: "Vaccinations", ar: "التطعيمات والتحصينات" },
-      { en: "Deworming & Parasite Control", ar: "علاج الديدان ومكافحة الطفيليات" },
-      { en: "Nutritional Counseling", ar: "استشارات التغذية البيطرية" },
-      { en: "Microchipping", ar: "تركيب الشريحة الإلكترونية" },
-    ],
-  },
-  {
-    key: "diagnostics",
-    en: "Diagnostics & Laboratory",
-    ar: "التشخيص والتحاليل",
-    emoji: "🔬",
-    services: [
-      { en: "X-Ray (Radiology)", ar: "الأشعة السينية" },
-      { en: "Ultrasound", ar: "الأشعة التلفزيونية (السونار)" },
-      { en: "Comprehensive Blood Tests", ar: "تحاليل الدم الشاملة" },
-      { en: "Biopsies & Histopathology", ar: "تحاليل الأنسجة والأورام" },
-    ],
-  },
-  {
-    key: "surgery",
-    en: "Surgery",
-    ar: "الجراحة",
-    emoji: "🏥",
-    services: [
-      { en: "Spaying & Neutering", ar: "عمليات التعقيم والإخصاء" },
-      { en: "General Surgery", ar: "الجراحة العامة" },
-      { en: "Orthopedic Surgery", ar: "جراحة العظام والكسور" },
-      { en: "Soft Tissue Surgery", ar: "جراحة الأنسجة الرخوة" },
-      { en: "Ophthalmic Surgery", ar: "جراحة العيون" },
-    ],
-  },
-  {
-    key: "specialized",
-    en: "Specialized Care",
-    ar: "الرعاية المتخصصة",
-    emoji: "⭐",
-    services: [
-      { en: "Veterinary Dentistry", ar: "طب أسنان الحيوانات" },
-      { en: "Dermatology", ar: "الأمراض الجلدية" },
-      { en: "Internal Medicine", ar: "الباطنة البيطرية" },
-      { en: "Pregnancy & Obstetrics", ar: "متابعة الحمل والولادة" },
-      { en: "Avian & Exotic Animal Medicine", ar: "طب الطيور والحيوانات الغريبة" },
-    ],
-  },
-  {
-    key: "emergency",
-    en: "Emergency & Additional Services",
-    ar: "الطوارئ والخدمات المكملة",
-    emoji: "🚨",
-    services: [
-      { en: "Emergency & Critical Care", ar: "طوارئ وعناية مركزة" },
-      { en: "Pet Grooming", ar: "النظافة والحلاقة (جرومينج)" },
-      { en: "Pet Boarding", ar: "استضافة فندقية للحيوانات" },
-      { en: "Home Visits", ar: "زيارات منزلية" },
-      { en: "Travel Health Certificates", ar: "استخراج شهادات السفر" },
-    ],
-  },
-];
 
 export default function EgyVet() {
   const { dir } = useLanguage();
@@ -246,14 +180,6 @@ export default function EgyVet() {
       return next;
     });
   }
-
-  const hasSearchApplied = !!(
-    searchQuery.trim() ||
-    selectedCityId ||
-    selectedAreaId ||
-    selectedServiceId !== null ||
-    nearMeActive
-  );
 
   return (
     <Layout>
@@ -431,43 +357,6 @@ export default function EgyVet() {
           )}
         </header>
 
-        {/* ── Veterinary Services Categories — hidden when search is active ── */}
-        {!hasSearchApplied && <div className="bg-gray-50 py-10">
-          <div className="max-w-5xl mx-auto px-4">
-            <h2 className="text-lg font-extrabold text-slate-900 mb-1 text-center">
-              {isRTL ? "خدماتنا البيطرية" : "Our Veterinary Services"}
-            </h2>
-            <p className="text-sm text-gray-500 text-center mb-7">
-              {isRTL
-                ? "نوفر طيفاً واسعاً من الرعاية البيطرية المتخصصة"
-                : "A wide range of specialized veterinary care under one roof"}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {VET_CATEGORIES.map((cat) => (
-                <div
-                  key={cat.key}
-                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-emerald-200 transition-all"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-2xl">{cat.emoji}</span>
-                    <h3 className="font-bold text-slate-800 text-sm leading-tight">
-                      {isRTL ? cat.ar : cat.en}
-                    </h3>
-                  </div>
-                  <ul className="space-y-1.5">
-                    {cat.services.map((svc, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
-                        <span className="text-emerald-500 mt-0.5 shrink-0">•</span>
-                        {isRTL ? svc.ar : svc.en}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>}
-
         {/* ── Certified Veterinary Clinics ── */}
         <div className="max-w-5xl mx-auto px-4 py-10">
           <div className="flex items-center justify-between mb-4">
@@ -480,8 +369,8 @@ export default function EgyVet() {
             </span>
           </div>
 
-          {/* Service filter chips — appear only when search is active */}
-          {vetServices.length > 0 && hasSearchApplied && (
+          {/* Service filter chips */}
+          {vetServices.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-5">
               <span className="text-xs font-semibold text-gray-500 me-1">
                 {isRTL ? "فلترة حسب الخدمة:" : "Filter by service:"}
