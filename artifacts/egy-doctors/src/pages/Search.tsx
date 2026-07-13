@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
 import {
-  getDoctors, getSpecialties, getCities, getMedicalCentersDirectory, getServices,
-  type MedicalCenterDirectoryEntry, type ApiService,
+  getDoctors, getSpecialties, getCities, getAreas, getMedicalCentersDirectory, getServices,
+  type MedicalCenterDirectoryEntry, type ApiService, type ApiArea,
 } from "@/lib/api";
 
 export default function Search() {
@@ -23,7 +23,8 @@ export default function Search() {
 
   const initialQuery = searchParams.get("q") || "";
   const initialSpecialty = searchParams.get("specialty") || "";
-  const initialCity = searchParams.get("city") || "";
+  const initialCityId = searchParams.get("cityId") ? Number(searchParams.get("cityId")) : null;
+  const initialAreaId = searchParams.get("areaId") ? Number(searchParams.get("areaId")) : null;
   const initialServices = searchParams.get("services") || "";
   const medicalCenterId = searchParams.get("medicalCenterId");
 
@@ -31,9 +32,8 @@ export default function Search() {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
     initialSpecialty ? [initialSpecialty] : []
   );
-  const [selectedCities, setSelectedCities] = useState<string[]>(
-    initialCity ? [initialCity] : []
-  );
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(initialCityId);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(initialAreaId);
   const [selectedServices, setSelectedServices] = useState<number[]>(
     initialServices
       ? initialServices.split(",").filter(Boolean).map(Number).filter((n) => !Number.isNaN(n))
@@ -42,8 +42,11 @@ export default function Search() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const { data: allDoctors = [], isLoading: loadingDoctors } = useQuery({
-    queryKey: ["doctors"],
-    queryFn: () => getDoctors(),
+    queryKey: ["doctors", selectedCityId, selectedAreaId],
+    queryFn: () => getDoctors({
+      ...(selectedCityId ? { cityId: selectedCityId } : {}),
+      ...(selectedAreaId ? { areaId: selectedAreaId } : {}),
+    }),
   });
 
   const { data: specialties = [] } = useQuery({
@@ -54,6 +57,12 @@ export default function Search() {
   const { data: cities = [] } = useQuery({
     queryKey: ["cities"],
     queryFn: getCities,
+  });
+
+  const { data: areas = [] } = useQuery<ApiArea[]>({
+    queryKey: ["areas", selectedCityId],
+    queryFn: () => getAreas(selectedCityId ?? undefined),
+    enabled: selectedCityId !== null,
   });
 
   const { data: medicalCenters = [] } = useQuery<MedicalCenterDirectoryEntry[]>({
@@ -69,8 +78,21 @@ export default function Search() {
   const toggleSpecialty = (s: string) =>
     setSelectedSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
-  const toggleCity = (c: string) =>
-    setSelectedCities(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+  const handleCityChange = (cityId: number | null) => {
+    setSelectedCityId(cityId);
+    setSelectedAreaId(null);
+    const params = new URLSearchParams(searchString);
+    if (cityId) params.set("cityId", String(cityId)); else params.delete("cityId");
+    params.delete("areaId");
+    setLocation(`/search?${params.toString()}`, { replace: true });
+  };
+
+  const handleAreaChange = (areaId: number | null) => {
+    setSelectedAreaId(areaId);
+    const params = new URLSearchParams(searchString);
+    if (areaId) params.set("areaId", String(areaId)); else params.delete("areaId");
+    setLocation(`/search?${params.toString()}`, { replace: true });
+  };
 
   const toggleService = (s: number) => {
     setSelectedServices(prev => {
@@ -101,10 +123,6 @@ export default function Search() {
         selectedSpecialties.length === 0 ||
         selectedSpecialties.some(s => doctor.specialty.toLowerCase().includes(s.toLowerCase()));
 
-      const matchCity =
-        selectedCities.length === 0 ||
-        selectedCities.some(c => doctor.cityName.toLowerCase().includes(c.toLowerCase()));
-
       const matchMedicalCenter =
         !medicalCenterId || doctor.affiliatedCenter?.id === Number(medicalCenterId);
 
@@ -112,9 +130,14 @@ export default function Search() {
         selectedServices.length === 0 ||
         (doctor.affiliatedCenter?.services ?? []).some(s => selectedServices.includes(s.id));
 
-      return matchSearch && matchSpecialty && matchCity && matchMedicalCenter && matchService;
+      return matchSearch && matchSpecialty && matchMedicalCenter && matchService;
     });
-  }, [searchQuery, selectedSpecialties, selectedCities, selectedServices, medicalCenterId, allDoctors]);
+  }, [searchQuery, selectedSpecialties, selectedServices, medicalCenterId, allDoctors]);
+
+  const selectedCityName = useMemo(
+    () => selectedCityId ? (cities.find(c => c.id === selectedCityId)?.name ?? null) : null,
+    [selectedCityId, cities],
+  );
 
   const filteredMedicalCenters = useMemo(() => {
     return medicalCenters.filter(center => {
@@ -123,8 +146,8 @@ export default function Search() {
         center.name.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchCity =
-        selectedCities.length === 0 ||
-        selectedCities.some(c => (center.cityName ?? "").toLowerCase().includes(c.toLowerCase()));
+        !selectedCityName ||
+        (center.cityName ?? "").toLowerCase().includes(selectedCityName.toLowerCase());
 
       const matchService =
         selectedServices.length === 0 ||
@@ -134,19 +157,20 @@ export default function Search() {
 
       return matchSearch && matchCity && matchService && matchMedicalCenter;
     });
-  }, [searchQuery, selectedCities, selectedServices, medicalCenterId, medicalCenters]);
+  }, [searchQuery, selectedCityName, selectedServices, medicalCenterId, medicalCenters]);
 
-  const activeFilterCount = selectedSpecialties.length + selectedCities.length + selectedServices.length;
+  const activeFilterCount =
+    selectedSpecialties.length + selectedServices.length +
+    (selectedCityId ? 1 : 0) + (selectedAreaId ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
   const clearFilters = () => {
     setSelectedSpecialties([]);
-    setSelectedCities([]);
+    setSelectedCityId(null);
+    setSelectedAreaId(null);
     setSelectedServices([]);
     setSearchQuery("");
-    const params = new URLSearchParams(searchString);
-    params.delete("services");
-    setLocation(`/search?${params.toString()}`, { replace: true });
+    setLocation("/search", { replace: true });
   };
 
   const filterPanel = (
@@ -190,29 +214,6 @@ export default function Search() {
         </div>
       )}
 
-      {cities.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">
-            {t.search.location}
-          </h3>
-          <div className="space-y-2.5">
-            {cities.map(c => (
-              <div key={c.id} className="flex items-center gap-2">
-                <Checkbox
-                  id={`city-${c.id}`}
-                  checked={selectedCities.includes(c.name)}
-                  onCheckedChange={() => toggleCity(c.name)}
-                  data-testid={`checkbox-location-${c.name}`}
-                />
-                <Label htmlFor={`city-${c.id}`} className="text-sm font-medium text-gray-600 cursor-pointer">
-                  {t.governorates[c.name] ?? t.locations[c.name] ?? c.name}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="mb-2">
         <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wider">
           {isRTL ? "الخدمات" : "Services"}
@@ -241,8 +242,9 @@ export default function Search() {
       {/* Sticky search bar */}
       <div className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-2xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Text search */}
+            <div className="relative flex-1 min-w-[160px]">
               <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 placeholder={t.search.placeholder}
@@ -251,6 +253,37 @@ export default function Search() {
                 onChange={e => setSearchQuery(e.target.value)}
                 data-testid="input-search-doctors"
               />
+            </div>
+            {/* City select */}
+            <div className="hidden sm:flex items-center gap-1.5 h-11 px-3 rounded-full border border-gray-200 bg-gray-50 min-w-[130px]">
+              <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+              <select
+                className="bg-transparent border-none outline-none text-sm text-gray-700 w-full cursor-pointer"
+                value={selectedCityId ?? ""}
+                onChange={e => handleCityChange(e.target.value ? Number(e.target.value) : null)}
+                data-testid="select-city"
+              >
+                <option value="">{isRTL ? "كل المدن" : "All Cities"}</option>
+                {cities.map(c => (
+                  <option key={c.id} value={c.id}>{isRTL ? c.nameAr : c.name}</option>
+                ))}
+              </select>
+            </div>
+            {/* Area select */}
+            <div className={`hidden sm:flex items-center gap-1.5 h-11 px-3 rounded-full border border-gray-200 bg-gray-50 min-w-[130px] ${!selectedCityId ? "opacity-50 pointer-events-none" : ""}`}>
+              <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+              <select
+                className="bg-transparent border-none outline-none text-sm text-gray-700 w-full cursor-pointer"
+                value={selectedAreaId ?? ""}
+                onChange={e => handleAreaChange(e.target.value ? Number(e.target.value) : null)}
+                disabled={!selectedCityId}
+                data-testid="select-area"
+              >
+                <option value="">{isRTL ? "كل المناطق" : "All Areas"}</option>
+                {areas.map(a => (
+                  <option key={a.id} value={a.id}>{isRTL ? a.nameAr : a.name}</option>
+                ))}
+              </select>
             </div>
             {/* Mobile filter toggle */}
             <button

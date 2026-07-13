@@ -288,6 +288,7 @@ export function getDoctors(params?: {
   q?: string;
   specialtyId?: number;
   cityId?: number;
+  areaId?: number;
   lat?: number;
   lng?: number;
 }): Promise<ApiDoctor[]> {
@@ -295,6 +296,7 @@ export function getDoctors(params?: {
   if (params?.q) qs.set("q", params.q);
   if (params?.specialtyId) qs.set("specialtyId", String(params.specialtyId));
   if (params?.cityId) qs.set("cityId", String(params.cityId));
+  if (params?.areaId) qs.set("areaId", String(params.areaId));
   if (params?.lat != null) qs.set("lat", String(params.lat));
   if (params?.lng != null) qs.set("lng", String(params.lng));
   const query = qs.toString();

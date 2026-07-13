@@ -1,0 +1,23 @@
+Please upgrade the main Search Bar component and the backend Search API to support combined, multi-parameter filtering (AND logic). I need to add "City" and "Area" to the existing search controls.
+
+I will not provide an image, so please follow these UI and architectural instructions strictly:
+
+### 1. Frontend UI Updates (Search Bar Component)
+* **Add Location Dropdowns:** Add two new dropdown selects to the search bar layout: "City" (or Governorate) and "Area".
+* **Cascading Logic:** These should be cascading dropdowns. Selecting a "City" must dynamically filter the available options in the "Area" dropdown.
+* **Keep Existing Controls:** Ensure the new dropdowns sit seamlessly next to the existing inputs: Text Search (Name/Clinic), "Specialty" Dropdown, the "Near Me" (Geolocation) toggle button, and the "Find Doctors" submit button.
+
+### 2. Frontend State & Request Payload
+* **Unified State:** Modify the search state management to capture ALL active filters simultaneously.
+* **Combined Request:** When the user clicks "Find Doctors", the frontend must send a single API request containing all selected parameters as query strings. 
+* **Example Payload:** `GET /api/search?q=text&specialty=Dermatology&city=Cairo&area=Maadi&lat=30.04&lng=31.23`
+* **Near Me Behavior:** Clicking "Near Me" should fetch the user's browser coordinates (`lat`, `lng`) and append them to the search state *without* clearing or overriding the other active selections (like Specialty, City, or Area).
+
+### 3. Backend API & Dynamic Querying (AND Logic)
+* **Dynamic Query Builder:** Update the search endpoint (`GET /api/search` or `GET /api/doctors`) to dynamically build the database query based on the exact parameters provided in the request.
+* **Strict AND Logic:** The backend MUST apply an `AND` operator across all provided filters. 
+  - If `city` is provided -> filter where `city === req.query.city`.
+  - If `area` is provided -> filter where `area === req.query.area`.
+  - If `specialty` is provided -> filter where `specialty === req.query.specialty`.
+  - If `q` (text) is provided -> perform text search on Name/Bio.
+* **Handling Geo-location with Filters:** If `lat` and `lng` are provided (Near Me active) ALONG with other filters (like City/Area/Specialty), the system must first filter the database using the strict parameters (e.g., Dermatologists in Maadi), and THEN apply a geospatial calculation (e.g., Haversine formula or spatial DB queries) to sort those specific results by proximity (closest to furthest) to the provided coordinates.

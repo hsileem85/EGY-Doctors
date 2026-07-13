@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctors, getSpecialties, getStats, getMedicalCentersDirectory, getServices, type ApiDoctor, type MedicalCenterDirectoryEntry, type ApiService } from "@/lib/api";
+import { getDoctors, getSpecialties, getStats, getCities, getAreas, getMedicalCentersDirectory, getServices, type ApiDoctor, type ApiCity, type ApiArea, type MedicalCenterDirectoryEntry, type ApiService } from "@/lib/api";
 
 type SortOption = "nearest" | "rating" | "fee";
 type ApiDoctorWithDist = ApiDoctor & { distanceKm?: number | null };
@@ -60,6 +60,8 @@ export default function Home() {
   const [_, setLocation] = useLocation();
   const [doctorName, setDoctorName] = useState("");
   const [specialty, setSpecialty] = useState<string>("");
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [isDetecting, setIsDetecting] = useState(false);
   const [locationName, setLocationName] = useState("");
@@ -187,11 +189,24 @@ export default function Home() {
     queryFn: getSpecialties,
   });
 
+  const { data: cities = [] } = useQuery<ApiCity[]>({
+    queryKey: ["cities"],
+    queryFn: getCities,
+  });
+
+  const { data: areas = [] } = useQuery<ApiArea[]>({
+    queryKey: ["areas", selectedCityId],
+    queryFn: () => getAreas(selectedCityId ?? undefined),
+    enabled: selectedCityId !== null,
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (doctorName.trim()) params.set("q", doctorName.trim());
     if (specialty) params.set("specialty", specialty);
+    if (selectedCityId) params.set("cityId", String(selectedCityId));
+    if (selectedAreaId) params.set("areaId", String(selectedAreaId));
     if (nearMeActive && userCoords) {
       params.set("lat", String(userCoords.lat));
       params.set("lng", String(userCoords.lng));
@@ -318,6 +333,46 @@ export default function Home() {
               </div>
 
               {/* Divider 2 */}
+              <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
+
+              {/* City dropdown */}
+              <div className="flex items-center sm:w-36 h-9 px-3 border-t sm:border-t-0 border-gray-100">
+                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <select
+                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
+                  value={selectedCityId ?? ""}
+                  onChange={e => {
+                    setSelectedCityId(e.target.value ? Number(e.target.value) : null);
+                    setSelectedAreaId(null);
+                  }}
+                >
+                  <option value="">{isRTL ? "المدينة" : "Any City"}</option>
+                  {cities.map(c => (
+                    <option key={c.id} value={c.id}>{isRTL ? c.nameAr : c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Divider 3 */}
+              <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
+
+              {/* Area dropdown — only when areas are loaded */}
+              <div className={`flex items-center sm:w-36 h-9 px-3 border-t sm:border-t-0 border-gray-100 ${!selectedCityId ? "opacity-40 pointer-events-none" : ""}`}>
+                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <select
+                  className="flex-1 bg-transparent border-none outline-none text-[#0F172A] font-medium cursor-pointer pl-2 text-sm w-full truncate"
+                  value={selectedAreaId ?? ""}
+                  onChange={e => setSelectedAreaId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={!selectedCityId}
+                >
+                  <option value="">{isRTL ? "المنطقة" : "Any Area"}</option>
+                  {areas.map(a => (
+                    <option key={a.id} value={a.id}>{isRTL ? a.nameAr : a.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Divider 4 */}
               <div className="hidden sm:block h-6 w-[1px] bg-gray-200 mx-1 shrink-0" />
 
               {/* Near Me button */}

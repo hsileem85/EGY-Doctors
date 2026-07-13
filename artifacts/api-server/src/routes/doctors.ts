@@ -64,12 +64,13 @@ router.get("/doctors", async (req, res): Promise<void> => {
     q: z.string().optional(),
     specialtyId: z.coerce.number().optional(),
     cityId: z.coerce.number().optional(),
+    areaId: z.coerce.number().optional(),
     lat: z.coerce.number().optional(),
     lng: z.coerce.number().optional(),
   });
 
   const params = Schema.safeParse(req.query);
-  const { q, specialtyId, cityId, lat, lng } = params.success ? params.data : {} as Record<string, undefined>;
+  const { q, specialtyId, cityId, areaId, lat, lng } = params.success ? params.data : {} as Record<string, undefined>;
 
   const conditions = [
     eq(doctorsTable.accountStatus, "approved"),
@@ -78,6 +79,13 @@ router.get("/doctors", async (req, res): Promise<void> => {
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));
+  if (areaId) {
+    const doctorIdsInArea = db
+      .select({ id: clinicsTable.doctorId })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.areaId, areaId));
+    conditions.push(inArray(doctorsTable.id, doctorIdsInArea));
+  }
 
   let rows = await db.select({
     id: doctorsTable.id,
