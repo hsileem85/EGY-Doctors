@@ -16,10 +16,11 @@ import { getMedicalCenterProfile, updateMedicalCenterProfile, getServices, type 
 import { useQuery } from "@tanstack/react-query";
 
 const subTypeLabels: Record<CenterSubType, { en: string; ar: string }> = {
-  POLY_CLINIC: { en: "Poly Clinic",   ar: "عيادة متعددة التخصصات" },
-  HOSPITAL:    { en: "Hospital",       ar: "مستشفى" },
-  LAB:         { en: "Lab",            ar: "معمل تحاليل" },
-  SCAN_CENTER: { en: "Scan Center",   ar: "مركز أشعة" },
+  POLY_CLINIC:        { en: "Poly Clinic",        ar: "عيادة متعددة التخصصات" },
+  HOSPITAL:           { en: "Hospital",            ar: "مستشفى" },
+  LAB:                { en: "Lab",                 ar: "معمل تحاليل" },
+  SCAN_CENTER:        { en: "Scan Center",         ar: "مركز أشعة" },
+  VETERINARY_CLINIC:  { en: "Veterinary Clinic",   ar: "عيادة بيطرية" },
 };
 
 const typeLabels: Record<string, { en: string; ar: string }> = {

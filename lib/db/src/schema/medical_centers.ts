@@ -1,7 +1,7 @@
 import { pgTable, serial, integer, text, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
 import { subscriptionStatusEnum } from "./doctors";
 
-export const centerSubTypeEnum = ["POLY_CLINIC", "HOSPITAL", "LAB", "SCAN_CENTER"] as const;
+export const centerSubTypeEnum = ["POLY_CLINIC", "HOSPITAL", "LAB", "SCAN_CENTER", "VETERINARY_CLINIC"] as const;
 
 export const medicalCentersTable = pgTable("medical_centers", {
   id: serial("id").primaryKey(),

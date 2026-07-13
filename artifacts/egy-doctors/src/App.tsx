@@ -26,6 +26,7 @@ import AssistantDashboard from "@/pages/AssistantDashboard";
 import PaymentResult from "@/pages/PaymentResult";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
+import EgyVet from "@/pages/EgyVet";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/assistant/dashboard">{() => <ProtectedRoute component={AssistantDashboard} />}</Route>
       <Route path="/billing/payment-result" component={PaymentResult} />
+      <Route path="/vet" component={EgyVet} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
       <Route component={NotFound} />

@@ -16,7 +16,7 @@ import { getSpecialties, getCities, forgotPassword as apiForgotPassword, resetPa
 import { PhoneInput, buildPhone } from "@/components/ui/PhoneInput";
 
 type UserType = "patient" | "doctor" | "medical";
-type MedicalSubtype = "hospital" | "clinic" | "polyclinic" | "lab" | "scan";
+type MedicalSubtype = "hospital" | "vet" | "polyclinic" | "lab" | "scan";
 
 /** Strip leading English doctor title prefixes (case-insensitive): "Dr.", "Dr ", "Dr/" */
 function stripEnTitle(value: string): string {
@@ -284,8 +284,8 @@ export default function AuthPage() {
   );
 
   const medicalSubtypeLabels = lang === "ar"
-    ? { hospital: "مستشفى", clinic: "عيادة", polyclinic: "عيادة متعددة", lab: "معمل", scan: "مركز أشعة" }
-    : { hospital: "Hospital", clinic: "Clinic", polyclinic: "Poly Clinic", lab: "Lab", scan: "Scan Center" };
+    ? { hospital: "مستشفى", vet: "عيادة بيطرية", polyclinic: "عيادة متعددة تخصصات", lab: "معمل", scan: "مركز أشعة" }
+    : { hospital: "Hospital", vet: "Veterinary Clinic", polyclinic: "Poly Clinic", lab: "Lab", scan: "Scan Center" };
 
   if (showForgot) {
     return (
@@ -714,18 +714,6 @@ export default function AuthPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-gray-300">{tl.location}</Label>
-                          <SearchableCombobox
-                            dark
-                            value={signupData.location}
-                            onValueChange={(v) => setSignupData({ ...signupData, location: v })}
-                            options={apiCities.map((c) => ({ value: c.name, label: isRTL ? (c.nameAr || c.name) : c.name }))}
-                            placeholder={isRTL ? "اختر الموقع" : "Choose location"}
-                            searchPlaceholder={isRTL ? "ابحث في المحافظات..." : "Search governorates..."}
-                            emptyMessage={isRTL ? "لا توجد نتائج" : "No results found"}
-                          />
                         </div>
                       </>
                     )}

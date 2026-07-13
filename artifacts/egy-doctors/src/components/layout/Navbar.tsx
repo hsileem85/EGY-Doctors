@@ -24,6 +24,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/", icon: Home, labelEn: "Home", labelAr: "الرئيسية" },
+    { href: "/vet", icon: null, labelEn: "EGY Vet 🐾", labelAr: "إيجي بيطري 🐾" },
     { href: "/magazine", icon: Newspaper, labelEn: "Magazine", labelAr: "المجلة" },
     { href: "/about", icon: Info, labelEn: "About", labelAr: "من نحن" },
     { href: "/contact", icon: PhoneCall, labelEn: "Contact Us", labelAr: "تواصل معنا" },
@@ -63,7 +64,7 @@ export function Navbar() {
                   variant="ghost"
                   className="text-sm font-normal h-8 px-3 text-gray-400 hover:text-[#D4A853] hover:bg-transparent"
                 >
-                  <Icon className="h-4 w-4 mr-1" />
+                  {Icon && <Icon className="h-4 w-4 mr-1" />}
                   {lang === "ar" ? labelAr : labelEn}
                 </Button>
               </Link>
@@ -209,7 +210,7 @@ export function Navbar() {
                 onClick={() => setMobileOpen(false)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:text-[#D4A853] hover:bg-[#1E293B] transition-colors text-left"
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                {Icon && <Icon className="h-4 w-4 shrink-0" />}
                 {lang === "ar" ? labelAr : labelEn}
               </button>
             </Link>

@@ -6,7 +6,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, medicalCentersTable, centerClinicsTable, usersTable, doctorsTable, specialtiesTable,
-  clinicsTable, citiesTable, servicesTable, availabilityPeriodEnum,
+  clinicsTable, citiesTable, servicesTable, availabilityPeriodEnum, centerSubTypeEnum,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -36,7 +36,7 @@ const ProfileBody = z.object({
   name: z.string().min(1).optional(),
   nameAr: z.string().optional(),
   type: z.string().optional(),
-  subType: z.enum(["POLY_CLINIC", "HOSPITAL", "LAB", "SCAN_CENTER"]).optional().nullable(),
+  subType: z.enum(["POLY_CLINIC", "HOSPITAL", "LAB", "SCAN_CENTER", "VETERINARY_CLINIC"]).optional().nullable(),
   phone: z.string().optional(),
   address: z.string().optional(),
   bio: z.string().optional(),
@@ -465,7 +465,16 @@ router.delete("/medical-centers/affiliated-doctors/:id", requireCenter, async (r
 ════════════════════════════════════════════════════ */
 
 /* ── GET /medical-centers/directory ── */
-router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
+router.get("/medical-centers/directory", async (req, res): Promise<void> => {
+  const rawSubType = (req.query.subType as string | undefined) || undefined;
+  const subTypeFilter = rawSubType && (centerSubTypeEnum as ReadonlyArray<string>).includes(rawSubType)
+    ? rawSubType as typeof centerSubTypeEnum[number]
+    : undefined;
+  const baseCondition = eq(medicalCentersTable.isApproved, true);
+  const whereClause = subTypeFilter
+    ? and(baseCondition, eq(medicalCentersTable.subType, subTypeFilter))
+    : baseCondition;
+
   const centers = await db
     .select({
       id: medicalCentersTable.id,
@@ -486,7 +495,7 @@ router.get("/medical-centers/directory", async (_req, res): Promise<void> => {
     })
     .from(medicalCentersTable)
     .leftJoin(citiesTable, eq(medicalCentersTable.cityId, citiesTable.id))
-    .where(eq(medicalCentersTable.isApproved, true))
+    .where(whereClause)
     .orderBy(desc(medicalCentersTable.createdAt));
 
   if (centers.length === 0) { res.json([]); return; }

@@ -739,7 +739,7 @@ export function deleteAdminVoucher(id: number): Promise<{ message: string }> {
 
 /* ─── Medical Center Profile ─── */
 
-export type CenterSubType = "POLY_CLINIC" | "HOSPITAL" | "LAB" | "SCAN_CENTER";
+export type CenterSubType = "POLY_CLINIC" | "HOSPITAL" | "LAB" | "SCAN_CENTER" | "VETERINARY_CLINIC";
 
 export interface ApiService {
   id: number;
@@ -858,8 +858,9 @@ export interface MedicalCenterDirectoryEntry {
   services: { id: number; name: string; nameAr: string }[];
 }
 
-export function getMedicalCentersDirectory(): Promise<MedicalCenterDirectoryEntry[]> {
-  return request("/medical-centers/directory");
+export function getMedicalCentersDirectory(params?: { subType?: string }): Promise<MedicalCenterDirectoryEntry[]> {
+  const qs = params?.subType ? `?subType=${encodeURIComponent(params.subType)}` : "";
+  return request(`/medical-centers/directory${qs}`);
 }
 
 export interface MedicalCenterPublicProfile {
