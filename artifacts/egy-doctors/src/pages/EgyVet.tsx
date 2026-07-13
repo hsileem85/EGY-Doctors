@@ -39,7 +39,6 @@ export default function EgyVet() {
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
-  const [serviceFilters, setServiceFilters] = useState<Set<number>>(new Set());
 
   const [isDetecting, setIsDetecting] = useState(false);
   const [locationName, setLocationName] = useState("");
@@ -146,13 +145,9 @@ export default function EgyVet() {
       const matchCity =
         !selectedCityName ||
         (clinic.cityName ?? "").toLowerCase() === selectedCityName.toLowerCase();
-      const activeServiceIds = new Set([
-        ...serviceFilters,
-        ...(selectedServiceId !== null ? [selectedServiceId] : []),
-      ]);
       const matchService =
-        activeServiceIds.size === 0 ||
-        clinic.services.some((s) => activeServiceIds.has(s.id));
+        selectedServiceId === null ||
+        clinic.services.some((s) => s.id === selectedServiceId);
       return matchSearch && matchCity && matchService;
     });
 
@@ -171,15 +166,7 @@ export default function EgyVet() {
     }
 
     return results;
-  }, [vetClinics, searchQuery, selectedCityName, serviceFilters, selectedServiceId, nearMeActive, userCoords]);
-
-  function toggleServiceFilter(id: number) {
-    setServiceFilters((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  }, [vetClinics, searchQuery, selectedCityName, selectedServiceId, nearMeActive, userCoords]);
 
   return (
     <Layout>
@@ -369,40 +356,7 @@ export default function EgyVet() {
             </span>
           </div>
 
-          {/* Service filter chips */}
-          {vetServices.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mb-5">
-              <span className="text-xs font-semibold text-gray-500 me-1">
-                {isRTL ? "فلترة حسب الخدمة:" : "Filter by service:"}
-              </span>
-              {vetServices.map((svc) => {
-                const active = serviceFilters.has(svc.id);
-                return (
-                  <button
-                    key={svc.id}
-                    type="button"
-                    onClick={() => toggleServiceFilter(svc.id)}
-                    className={`text-xs font-semibold rounded-full px-3 py-1 border transition-colors ${
-                      active
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-white text-gray-600 border-gray-300 hover:border-emerald-400"
-                    }`}
-                  >
-                    {isRTL ? svc.nameAr : svc.name}
-                  </button>
-                );
-              })}
-              {serviceFilters.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setServiceFilters(new Set())}
-                  className="text-xs font-semibold text-emerald-700 underline ms-1"
-                >
-                  {isRTL ? "مسح الفلتر" : "Clear filter"}
-                </button>
-              )}
-            </div>
-          )}
+
 
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
