@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Stethoscope, Eye, EyeOff, CheckCircle2, Building2, User, Shield, Heart, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ export default function AuthPage() {
     syndicateMembership: "",
     password: "",
     confirmPassword: "",
+    agreeDataAccuracy: false,
   });
 
   const { data: apiSpecialties = [] } = useQuery({
@@ -150,6 +152,24 @@ export default function AuthPage() {
     if (signupData.password !== signupData.confirmPassword) {
       setError(isRTL ? "كلمات المرور غير متطابقة" : "Passwords do not match");
       return;
+    }
+    if (userType === "doctor") {
+      if (!signupData.fullNameAr.trim()) {
+        setError(isRTL ? "الاسم باللغة العربية مطلوب" : "Arabic Name is required");
+        return;
+      }
+      if (!signupData.specialty) {
+        setError(isRTL ? "التخصص مطلوب" : "Specialty is required");
+        return;
+      }
+      if (!signupData.syndicateMembership.trim()) {
+        setError(isRTL ? "رقم عضوية النقابة الطبية مطلوب" : "Medical Syndicate Membership Number is required");
+        return;
+      }
+      if (!signupData.agreeDataAccuracy) {
+        setError(isRTL ? "يجب الموافقة على إقرار صحة البيانات" : "You must confirm the data accuracy disclaimer");
+        return;
+      }
     }
     setIsLoading(true);
     const selectedSpecialty = apiSpecialties.find(s => s.name === signupData.specialty);
@@ -615,6 +635,7 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label htmlFor="signupNameAr" className="text-gray-300">
                         {isRTL ? "الاسم باللغة العربية" : "Arabic Name"}
+                        {userType === "doctor" && <span className="text-red-400 ms-1">*</span>}
                       </Label>
                       <Input
                         id="signupNameAr"
@@ -622,6 +643,7 @@ export default function AuthPage() {
                         value={signupData.fullNameAr}
                         onChange={(e) => setSignupData({ ...signupData, fullNameAr: stripArTitle(arabicOnly(e.target.value)) })}
                         className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
+                        required={userType === "doctor"}
                       />
                     </div>
 
@@ -672,7 +694,9 @@ export default function AuthPage() {
                     {userType === "doctor" && (
                       <>
                         <div className="space-y-2">
-                          <Label className="text-gray-300">{tl.specialty}</Label>
+                          <Label className="text-gray-300">
+                            {tl.specialty} <span className="text-red-400">*</span>
+                          </Label>
                           <SpecialtyCombobox
                             value={signupData.specialty}
                             onValueChange={(v) => setSignupData({ ...signupData, specialty: v })}
@@ -684,13 +708,30 @@ export default function AuthPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-gray-300">{tl.syndicateMembership}</Label>
+                          <Label className="text-gray-300">
+                            {tl.syndicateMembership} <span className="text-red-400">*</span>
+                          </Label>
                           <Input
                             value={signupData.syndicateMembership}
                             onChange={(e) => setSignupData({ ...signupData, syndicateMembership: e.target.value })}
                             placeholder={isRTL ? "أدخل رقم عضوية النقابة" : "Enter syndicate membership number"}
                             className="bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
                           />
+                        </div>
+                        <div className="flex items-start gap-3 pt-1">
+                          <Checkbox
+                            id="agreeDataAccuracy"
+                            checked={signupData.agreeDataAccuracy}
+                            onCheckedChange={(c) => setSignupData({ ...signupData, agreeDataAccuracy: c === true })}
+                            className="mt-0.5 border-[#334155] data-[state=checked]:bg-[#D4A853] data-[state=checked]:border-[#D4A853]"
+                            data-testid="checkbox-data-accuracy"
+                          />
+                          <Label htmlFor="agreeDataAccuracy" className="text-sm font-normal text-gray-400 leading-relaxed cursor-pointer">
+                            {isRTL
+                              ? <>أقر بأن جميع البيانات المدخلة <strong className="text-gray-200">صحيحة ودقيقة</strong> وأتحمل المسؤولية الكاملة عن صحتها. <strong className="text-gray-200">EGY Doctors</strong> لا تتحمل أي مسؤولية أو التزام تجاه أي بيانات غير صحيحة أو مضللة.</>
+                              : <>I confirm that all entered information is <strong className="text-gray-200">accurate and truthful</strong>. I accept full responsibility for its correctness. <strong className="text-gray-200">EGY Doctors</strong> bears no liability for any incorrect or misleading data provided.</>
+                            }
+                          </Label>
                         </div>
                       </>
                     )}
@@ -770,7 +811,15 @@ export default function AuthPage() {
                     <Button
                       type="submit"
                       className="w-full bg-[#D4A853] text-[#0F172A] hover:bg-[#D4A853]/90 font-semibold shadow-lg shadow-[#D4A853]/20"
-                      disabled={isLoading}
+                      disabled={
+                        isLoading ||
+                        (userType === "doctor" && (
+                          !signupData.fullNameAr.trim() ||
+                          !signupData.specialty ||
+                          !signupData.syndicateMembership.trim() ||
+                          !signupData.agreeDataAccuracy
+                        ))
+                      }
                     >
                       {isLoading ? (isRTL ? "جاري الإنشاء..." : "Creating...") : tl.signupBtn}
                     </Button>
