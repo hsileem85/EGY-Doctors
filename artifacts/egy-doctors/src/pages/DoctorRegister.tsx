@@ -42,7 +42,8 @@ export default function DoctorRegister() {
     experience: "",
     license: "",
     syndicateMembership: "",
-    agreeTerms: false
+    agreeTerms: false,
+    agreeDataAccuracy: false,
   });
 
   const { data: apiSpecialties = [] } = useQuery({
@@ -55,7 +56,7 @@ export default function DoctorRegister() {
   });
 
   const handleNext = () => {
-    if (formData.fullName && formData.email && formData.phone && formData.password && formData.password === formData.confirmPassword) {
+    if (formData.fullName && formData.fullNameAr && formData.email && formData.phone && formData.password && formData.password === formData.confirmPassword) {
       setStep(2);
     }
   };
@@ -64,7 +65,7 @@ export default function DoctorRegister() {
   const selectedCity = apiCities.find(c => c.name === formData.location);
 
   const handleRegister = async () => {
-    if (!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.agreeTerms) return;
+    if (!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.syndicateMembership || !formData.agreeTerms || !formData.agreeDataAccuracy) return;
     try {
       await apiSignUp({
         name: formData.fullName,
@@ -201,7 +202,7 @@ export default function DoctorRegister() {
               <Button 
                 type="submit"
                 className="w-full mt-6" 
-                disabled={!formData.fullName || !formData.email || !formData.phone || !formData.password || formData.password !== formData.confirmPassword}
+                disabled={!formData.fullName || !formData.fullNameAr || !formData.email || !formData.phone || !formData.password || formData.password !== formData.confirmPassword}
                 data-testid="button-register-next"
               >
                 {t.register.next}
@@ -271,15 +272,32 @@ export default function DoctorRegister() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2 space-x-reverse mt-4 pt-2">
+              <div className="flex items-start gap-3 mt-4 pt-2">
                 <Checkbox 
                   id="terms" 
                   checked={formData.agreeTerms}
                   onCheckedChange={(c) => setFormData({...formData, agreeTerms: c === true})}
                   data-testid="checkbox-register-terms"
+                  className="mt-0.5"
                 />
-                <Label htmlFor="terms" className="text-sm font-normal text-gray-600">
+                <Label htmlFor="terms" className="text-sm font-normal text-gray-600 leading-relaxed cursor-pointer">
                   {t.register.agreeToTerms}
+                </Label>
+              </div>
+
+              <div className="flex items-start gap-3 pt-2">
+                <Checkbox
+                  id="dataAccuracy"
+                  checked={formData.agreeDataAccuracy}
+                  onCheckedChange={(c) => setFormData({...formData, agreeDataAccuracy: c === true})}
+                  data-testid="checkbox-register-data-accuracy"
+                  className="mt-0.5"
+                />
+                <Label htmlFor="dataAccuracy" className="text-sm font-normal text-gray-600 leading-relaxed cursor-pointer">
+                  {lang === "ar"
+                    ? <>أقر بأن جميع البيانات المدخلة <strong className="text-gray-800">صحيحة ودقيقة</strong> وأتحمل المسؤولية الكاملة عن صحتها. <strong className="text-gray-800">EGY Doctors</strong> لا تتحمل أي مسؤولية أو التزام تجاه أي بيانات غير صحيحة أو مضللة.</>
+                    : <>I confirm that all entered information is <strong className="text-gray-800">accurate and truthful</strong>. I accept full responsibility for its correctness. <strong className="text-gray-800">EGY Doctors</strong> bears no liability or responsibility for any incorrect or misleading data provided.</>
+                  }
                 </Label>
               </div>
 
@@ -290,7 +308,7 @@ export default function DoctorRegister() {
                 <Button 
                   type="submit"
                   className="w-2/3" 
-                  disabled={!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.syndicateMembership || !formData.agreeTerms}
+                  disabled={!formData.specialty || !formData.location || !formData.experience || !formData.license || !formData.syndicateMembership || !formData.agreeTerms || !formData.agreeDataAccuracy}
                   data-testid="button-register-submit"
                 >
                   {t.register.register}
