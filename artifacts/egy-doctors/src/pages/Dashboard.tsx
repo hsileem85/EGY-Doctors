@@ -62,12 +62,11 @@ function IncompleteScreen({ doctorName, signOut, isRTL, refreshUser, accountStat
   const clinics = profile?.clinics ?? [];
   const isSubmitted = profile?.isSubmittedForReview ?? false;
 
-  // Determine if profile is "complete" (has at least 1 clinic + mandatory fields)
+  // Determine if profile is "complete" (has at least 1 clinic + specialty + name + bio in either language)
   const hasMandatoryFields = !!(
     profile?.specialtyId &&
-    profile?.name &&
-    profile?.bio &&
-    profile?.fee
+    (profile?.name || (profile as { nameAr?: string })?.nameAr) &&
+    (profile?.bio || (profile as { bioAr?: string })?.bioAr)
   );
   const isProfileComplete = clinics.length > 0 && hasMandatoryFields;
 
@@ -1353,6 +1352,35 @@ function BillingTab({ isRTL }: { isRTL: boolean }) {
   );
 }
 
+function ActivationRequiredScreen({ isRTL, signOut }: { isRTL: boolean; signOut: () => void }) {
+  return (
+    <Layout>
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <UserCheck className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRTL ? "🎉 تهانينا! تم قبول حسابك" : "🎉 Congratulations! Your account is approved"}
+          </h1>
+          <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">
+            {isRTL
+              ? "للظهور للمرضى وبدء قبول المواعيد، يرجى الاشتراك في إحدى خطط المنصة أدناه."
+              : "To appear to patients and start accepting appointments, please subscribe to a plan below."}
+          </p>
+          <button
+            onClick={signOut}
+            className="mt-3 text-xs text-gray-400 hover:text-gray-600 underline"
+          >
+            {isRTL ? "تسجيل الخروج" : "Sign out"}
+          </button>
+        </div>
+        <BillingTab isRTL={isRTL} />
+      </div>
+    </Layout>
+  );
+}
+
 export default function Dashboard() {
   const { t, dir, setLang } = useLanguage();
   const { user, signOut, refreshUser } = useAuth();
@@ -1391,6 +1419,10 @@ export default function Dashboard() {
 
   if (user?.role === "doctor" && (accountStatus === "pending" || accountStatus === "rejected")) {
     return <PendingScreen status={accountStatus} doctorName={doctorName} signOut={signOut} isRTL={isRTL} />;
+  }
+
+  if (user?.role === "doctor" && accountStatus === "approved" && billingInfo !== undefined && !isSubscribed) {
+    return <ActivationRequiredScreen isRTL={isRTL} signOut={signOut} />;
   }
 
   const navItems: { tab: Tab; icon: React.ReactNode; label: string }[] = [

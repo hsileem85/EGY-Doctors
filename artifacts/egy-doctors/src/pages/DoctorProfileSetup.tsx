@@ -337,7 +337,7 @@ export default function DoctorProfileSetup() {
       }));
 
       await refreshUser();
-      await queryClient.invalidateQueries({ queryKey: ["myDoctorProfile"] });
+      await queryClient.invalidateQueries({ queryKey: ["doctor-profile"] });
       queryClient.removeQueries({ queryKey: ["doctors"] });
       queryClient.removeQueries({ queryKey: ["doctor"] });
       toast({
@@ -443,7 +443,7 @@ export default function DoctorProfileSetup() {
 
       await submitDoctorForReview();
       await refreshUser();
-      await queryClient.invalidateQueries({ queryKey: ["myDoctorProfile"] });
+      await queryClient.invalidateQueries({ queryKey: ["doctor-profile"] });
       setLocation("/dashboard");
     } catch {
       toast({
