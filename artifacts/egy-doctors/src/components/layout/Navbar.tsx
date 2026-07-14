@@ -120,7 +120,7 @@ export function Navbar() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                    <p className="text-xs text-gray-400 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role}</p>
+                    <p className="text-xs text-gray-400 capitalize">{user.role === "medical_center" ? "Medical Center" : user.role === "patient" ? "User" : user.role}</p>
                   </div>
                 </div>
                 {user.role === "patient" && (
