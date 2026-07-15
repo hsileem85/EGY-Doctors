@@ -16,3 +16,5 @@ export * from "./magazine_post_interactions";
 export * from "./doctor_follows";
 export * from "./vouchers";
 export * from "./payments";
+export * from "./notifications";
+export * from "./push_subscriptions";

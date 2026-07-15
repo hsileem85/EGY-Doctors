@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Newspaper, Info, ShieldCheck, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall, Menu, X } from "lucide-react";
+import { Newspaper, Info, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall, Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { NotificationBell } from "./NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,8 @@ export function Navbar() {
   const { user, signOut } = useAuth();
   const [, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  usePushNotifications();
 
   const initials = user?.name
     ? user.name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()
@@ -78,6 +82,9 @@ export function Navbar() {
           </div>
 
           <div className="w-px h-6 bg-[#334155] hidden md:block" />
+
+          {/* Notification bell — logged-in users only */}
+          <NotificationBell />
 
           {/* Language toggle */}
           <button

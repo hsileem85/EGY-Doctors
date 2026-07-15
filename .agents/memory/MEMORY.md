@@ -8,3 +8,5 @@
 - [Booking schedule source of truth](booking-schedule-source-of-truth.md) — availability (schedule, period, sessions/hour) must sync clinics+doctors rows and validate server-side; never generate slots client-side.
 - [Duplicate legacy workflows](duplicate-legacy-workflows.md) — stale non-artifact-named workflows can conflict on ports with canonical `artifacts/...` workflows; remove the stale one, not the canonical one.
 - [Orval + js-yaml v5](orval-js-yaml.md) — pin js-yaml override to `>=4.2.0 <5` in pnpm-workspace.yaml or OpenAPI codegen breaks.
+- [New schema tables need lib rebuild](schema-lib-rebuild.md) — after adding tables to lib/db/src/schema/, run `pnpm run typecheck:libs` before typechecking artifacts or TS2305/TS2724 errors appear.
+- [Push notifications setup](push-notifications.md) — web-push installed on api-server; VAPID keys in VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY env vars (shared); sw.js at artifacts/egy-doctors/public/sw.js.

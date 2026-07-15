@@ -924,3 +924,49 @@ export function approveCenter(id: number): Promise<AdminMedicalCenter> {
 export function toggleCenterVezeeta(id: number): Promise<AdminMedicalCenter> {
   return request(`/admin/medical-centers/${id}/toggle-vezeeta`, { method: "PATCH" });
 }
+
+/* ─── Notifications ─── */
+
+export interface AppNotification {
+  id: number;
+  userId: number;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export function getNotifications(): Promise<AppNotification[]> {
+  return request("/notifications");
+}
+
+export function getUnreadCount(): Promise<{ count: number }> {
+  return request("/notifications/unread-count");
+}
+
+export function markNotificationRead(id: number): Promise<{ ok: boolean }> {
+  return request(`/notifications/${id}/read`, { method: "PATCH" });
+}
+
+export function markAllNotificationsRead(): Promise<{ ok: boolean }> {
+  return request("/notifications/read-all", { method: "PATCH" });
+}
+
+/* ─── Push subscriptions ─── */
+
+export function getVapidPublicKey(): Promise<{ publicKey: string }> {
+  return request("/push/vapid-public-key");
+}
+
+export function savePushSubscription(sub: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}): Promise<{ ok: boolean }> {
+  return request("/push/subscribe", { method: "POST", body: JSON.stringify(sub) });
+}
+
+export function removePushSubscription(endpoint: string): Promise<{ ok: boolean }> {
+  return request("/push/subscribe", { method: "DELETE", body: JSON.stringify({ endpoint }) });
+}
