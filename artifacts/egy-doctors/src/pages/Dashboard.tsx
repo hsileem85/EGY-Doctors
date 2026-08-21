@@ -1484,8 +1484,29 @@ export default function Dashboard() {
           </div>
         </aside>
 
+        {/* Mobile dashboard navigation */}
+        <nav
+          aria-label={isRTL ? "تنقل لوحة التحكم" : "Dashboard navigation"}
+          className="fixed bottom-0 inset-x-0 z-30 flex md:hidden overflow-x-auto bg-white border-t shadow-lg"
+        >
+          {navItems.map(item => (
+            <button
+              key={item.tab}
+              type="button"
+              onClick={() => setActiveTab(item.tab)}
+              aria-current={activeTab === item.tab ? "page" : undefined}
+              className={`min-w-[78px] flex-1 shrink-0 flex flex-col items-center justify-center gap-1 px-1 py-2.5 text-[10px] font-medium transition-colors ${
+                activeTab === item.tab ? "text-primary" : "text-gray-500"
+              }`}
+            >
+              {item.icon}
+              <span className="whitespace-nowrap">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
         {/* Main Content */}
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
           <div className="max-w-5xl mx-auto">
 
             {/* ── Appointments Tab ── */}
