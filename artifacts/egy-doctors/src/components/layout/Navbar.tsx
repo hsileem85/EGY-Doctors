@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Newspaper, Info, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall, Menu, X } from "lucide-react";
+import { Newspaper, Info, LogOut, UserCog, LayoutDashboard, CalendarDays, Home, PhoneCall, Menu, X, Wallet } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/context/LanguageContext";
@@ -39,14 +39,14 @@ export function Navbar() {
       {/* ── Main row ── */}
       <div className="max-w-5xl mx-auto flex h-14 sm:h-16 items-center justify-between px-4">
         {/* Logo + hotline */}
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-1.5" data-testid="link-home">
+        <div className="flex shrink-0 items-center gap-3">
+          <Link href="/" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap" data-testid="link-home">
             {lang === "ar" ? (
               <span className="text-lg sm:text-xl font-bold text-white tracking-tight font-brand">
                 إيجي <span className="text-[#D4A853]">دكتورز</span>
               </span>
             ) : (
-              <span className="flex items-center gap-0 text-lg sm:text-xl font-bold tracking-tight font-brand">
+              <span className="flex shrink-0 items-center gap-0 whitespace-nowrap text-lg sm:text-xl font-bold tracking-tight font-brand">
                 <span className="text-white">EG</span>
                 <span className="text-[#D4A853]">Y Doctors</span>
               </span>
@@ -133,7 +133,16 @@ export function Navbar() {
                 {user.role === "patient" && (
                   <DropdownMenuItem
                     className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853] mt-1"
-                    onClick={() => setLocation("/patient/dashboard")}
+                    onClick={() => setLocation("/patient/dashboard?view=wallet")}
+                  >
+                    <Wallet className="h-4 w-4 text-[#D4A853]" />
+                    {lang === "ar" ? "محفظتي" : "My Wallet"}
+                  </DropdownMenuItem>
+                )}
+                {user.role === "patient" && (
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer hover:bg-[#D4A853]/10 focus:bg-[#D4A853]/10 focus:text-[#D4A853]"
+                    onClick={() => setLocation("/patient/dashboard?view=appointments")}
                   >
                     <CalendarDays className="h-4 w-4 text-[#D4A853]" />
                     {lang === "ar" ? "مواعيدي" : "My Appointments"}

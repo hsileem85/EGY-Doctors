@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus, ChevronDown } from "lucide-react";
+import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus, ChevronDown, Wallet } from "lucide-react";
+import { useSearch } from "wouter";
 import { Layout } from "@/components/layout/Layout";
+import { WalletTab } from "@/components/dashboard/WalletTab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,13 +15,19 @@ import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAppointments, getPreferences, updatePreferences, updateAppointmentStatus, updateAppointment, type UserPreferences, type ApiAppointment } from "@/lib/api";
 
-type View = "appointments" | "preferences";
+type View = "appointments" | "wallet" | "preferences";
+
+function getViewFromSearch(search: string): View {
+  const view = new URLSearchParams(search).get("view");
+  return view === "wallet" || view === "preferences" ? view : "appointments";
+}
 
 export default function PatientDashboard() {
   const { dir, setLang } = useLanguage();
   const { user, signOut } = useAuth();
   const isRTL = dir === "rtl";
-  const [activeView, setActiveView] = useState<View>("appointments");
+  const search = useSearch();
+  const [activeView, setActiveView] = useState<View>(() => getViewFromSearch(search));
   const qc = useQueryClient();
 
   const [editApt, setEditApt] = useState<ApiAppointment | null>(null);
@@ -31,6 +39,10 @@ export default function PatientDashboard() {
   useEffect(() => {
     if (user?.siteLanguage) setLang(user.siteLanguage);
   }, [user?.siteLanguage]);
+
+  useEffect(() => {
+    setActiveView(getViewFromSearch(search));
+  }, [search]);
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["patient-appointments", user?.id],
@@ -122,6 +134,7 @@ export default function PatientDashboard() {
 
   const navItems: { view: View; icon: React.ReactNode; label: string }[] = [
     { view: "appointments", icon: <CalendarDays className="h-4 w-4" />, label: isRTL ? "مواعيدي" : "My Appointments" },
+    { view: "wallet", icon: <Wallet className="h-4 w-4" />, label: isRTL ? "محفظتي" : "My Wallet" },
     { view: "preferences", icon: <Settings className="h-4 w-4" />, label: isRTL ? "الإعدادات" : "Preferences" },
   ];
 
@@ -387,6 +400,10 @@ export default function PatientDashboard() {
             {/* ── Preferences View ── */}
             {activeView === "preferences" && (
               <PatientPreferencesView isRTL={isRTL} />
+            )}
+
+            {activeView === "wallet" && (
+              <WalletTab isRTL={isRTL} />
             )}
           </div>
         </main>
