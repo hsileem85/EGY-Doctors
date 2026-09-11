@@ -1176,6 +1176,21 @@ export default function DoctorProfileSetup() {
               })}
 
             </div>
+            {isEditMode && (
+              <div className="mt-8 flex justify-end border-t border-gray-200 pt-6">
+                <Button
+                  onClick={handleSave}
+                  size="lg"
+                  className="w-full md:w-auto"
+                  data-testid="button-save-profile-bottom"
+                  disabled={isSaving || isSubmitting}
+                >
+                  {isSaving
+                    ? (isRTL ? "جاري الحفظ..." : "Saving...")
+                    : (isRTL ? "حفظ التغييرات" : "Save Changes")}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
