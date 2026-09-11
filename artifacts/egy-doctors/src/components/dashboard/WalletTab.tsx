@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Wallet, ArrowDownRight, ArrowUpRight, Clock, CheckCircle2, History, AlertCircle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { arEG, enGB } from "date-fns/locale";
+import { getWalletCategoryLabel } from "./walletCategoryLabels";
 
 interface WalletTabProps {
   isRTL: boolean;
@@ -63,30 +64,6 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
       style: "currency",
       currency: currency || "EGP",
     }).format(amount);
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const map: Record<string, { en: string; ar: string }> = {
-      BOOKING_PAYMENT: { en: "Booking Payment", ar: "دفع حجز" },
-      PLATFORM_COMMISSION: { en: "Platform Commission", ar: "عمولة المنصة" },
-      SUBSCRIPTION_FEE: { en: "Subscription Fee", ar: "رسوم اشتراك" },
-      WITHDRAWAL_PAYOUT: { en: "Withdrawal Payout", ar: "سحب أموال" },
-      REFUND: { en: "Refund", ar: "استرداد نقدي" },
-      CASHBACK_REWARD: { en: "Cashback Reward", ar: "مكافأة كاش باك" },
-      WALLET_TOP_UP: { en: "Wallet Top-Up", ar: "شحن المحفظة" },
-      CASHBACK_USAGE: { en: "Cashback Used", ar: "استخدام الكاش باك" },
-      FEE_DEDUCTION: { en: "Fee Deduction", ar: "خصم رسوم" },
-      ADMIN_GIFT: { en: "Admin Gift", ar: "هدية من الإدارة" },
-    };
-    const label = map[category];
-    if (label) return isRTL ? label.ar : label.en;
-
-    return category
-      .toLowerCase()
-      .split("_")
-      .filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
   };
 
   if (isLoading) {
@@ -265,7 +242,7 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900 text-sm">
-                              {getCategoryLabel(tx.category)}
+                              {getWalletCategoryLabel(tx.category, isRTL)}
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 max-w-[200px] md:max-w-[300px]">
                               {tx.description}
