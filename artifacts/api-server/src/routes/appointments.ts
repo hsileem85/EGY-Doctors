@@ -413,10 +413,11 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
       && assistant?.isActive === true
       && assistant.assistantDoctorId === existing.doctorId
       && (!assistant.assistantClinicId || assistant.assistantClinicId === existing.clinicId);
+    const isAssistantCompletion = isScopedAssistant && parsed.data.status === "completed";
     const isPatientCancellation = payload.role === "patient"
       && existing.patientUserId === payload.sub
       && parsed.data.status === "cancelled";
-    if (!isProvider && !isPatientCancellation && !isScopedAssistant) {
+    if (!isProvider && !isPatientCancellation && !isAssistantCompletion) {
       throw new Error("FORBIDDEN_APPOINTMENT_STATUS");
     }
 

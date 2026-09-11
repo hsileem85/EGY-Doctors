@@ -591,7 +591,7 @@ export const GetWalletResponse = zod.object({
   "transactions": zod.array(zod.object({
   "id": zod.string().uuid(),
   "type": zod.enum(['CREDIT', 'DEBIT']),
-  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'CASHBACK_RESERVE', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
   "amount": zod.number(),
   "balancePost": zod.number(),
   "referenceId": zod.string().nullish(),

@@ -12,3 +12,4 @@
 - [Push notifications setup](push-notifications.md) — web-push installed on api-server; VAPID keys in VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY env vars (shared); sw.js at artifacts/egy-doctors/public/sw.js.
 - [Wallet ownership identity](wallet-ownership.md) — authenticated wallets use user IDs as stable owner keys; center subtypes change ownerType, not ownerId.
 - [Phone autofill normalization](phone-autofill.md) — sanitize selected international dial-code prefixes before clamping; native maxLength can truncate autofill before React.
+- [Booking cashback policy](booking-cashback-policy.md) — settle at Visit Done; patient cashback is reserved until review, never an additional bonus.

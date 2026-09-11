@@ -3,8 +3,10 @@ import { afterAll, afterEach, describe, expect, it } from "vitest";
 import {
   db,
   pool,
+  paymentsTable,
   walletsTable,
   walletTransactionsTable,
+  systemSettingsTable,
   type WalletTransaction,
 } from "@workspace/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -13,15 +15,18 @@ import {
   creditWallet,
   debitWallet,
   ensureWallet,
+  escrowBookingInTx,
   escrowFunds,
   releaseBookingEscrowInTx,
   releaseEscrow,
+  releaseReservedCashbackInTx,
   calculateFinancialSplit,
 } from "./wallet.service.js";
 
 const PLATFORM_OWNER_ID = "SYSTEM_REVENUE";
 const testOwnerIds = new Set<string>();
 const testReferenceIds = new Set<string>();
+const testPaymentIds = new Set<number>();
 
 describe("financial split invariants", () => {
   it("splits a fixed total deduction, not the post-deduction amount", () => {
@@ -35,6 +40,12 @@ describe("financial split invariants", () => {
       deductionType: "PERCENTAGE", deductionValue: 10,
       platformSharePercentage: 50, cashbackSharePercentage: 50,
     })).toEqual({ deduction: 100, platformShare: 50, cashbackShare: 50 });
+  });
+  it("keeps the patient share inside the gross booking split", () => {
+    expect(calculateFinancialSplit(500, {
+      deductionType: "FIXED", deductionValue: 50,
+      platformSharePercentage: 50, cashbackSharePercentage: 50,
+    })).toEqual({ deduction: 50, platformShare: 25, cashbackShare: 25 });
   });
 });
 
@@ -66,6 +77,15 @@ async function getWallet(ownerId: string) {
     .select()
     .from(walletsTable)
     .where(and(eq(walletsTable.ownerType, "DOCTOR"), eq(walletsTable.ownerId, ownerId)))
+    .limit(1);
+  return wallet;
+}
+
+async function getPatientWallet(ownerId: string) {
+  const [wallet] = await db
+    .select()
+    .from(walletsTable)
+    .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, ownerId)))
     .limit(1);
   return wallet;
 }
@@ -117,12 +137,18 @@ afterEach(async () => {
     });
   }
 
+  const paymentIds = [...testPaymentIds];
+  if (paymentIds.length > 0) {
+    await db.delete(paymentsTable).where(inArray(paymentsTable.id, paymentIds));
+  }
+
   const ownerIds = [...testOwnerIds];
   if (ownerIds.length > 0) {
     await db.delete(walletsTable).where(inArray(walletsTable.ownerId, ownerIds));
   }
   testOwnerIds.clear();
   testReferenceIds.clear();
+  testPaymentIds.clear();
 });
 
 afterAll(async () => {
@@ -245,7 +271,7 @@ describe.sequential("wallet service database guarantees", () => {
       bookingId,
       commissionRate: 0.1,
     });
-    expect(released).toMatchObject({ balance: 180, pendingFunds: 0 });
+    expect(released).toMatchObject({ balance: 150, pendingFunds: 0 });
 
     const wallet = await getWallet(ownerId);
     const entries = await getTransactions(wallet.id);
@@ -268,8 +294,8 @@ describe.sequential("wallet service database guarantees", () => {
       expect.objectContaining({
         type: "DEBIT",
         category: "FEE_DEDUCTION",
-        amount: 20,
-        balancePost: 180,
+        amount: 50,
+        balancePost: 150,
         referenceId: bookingId,
       }),
     ]));
@@ -292,7 +318,7 @@ describe.sequential("wallet service database guarantees", () => {
     expect(platformEntry).toMatchObject({
       type: "CREDIT",
       category: "PLATFORM_COMMISSION",
-      amount: 20,
+      amount: 25,
       referenceId: bookingId,
     });
   });
@@ -345,5 +371,181 @@ describe.sequential("wallet service database guarantees", () => {
         eq(walletTransactionsTable.referenceId, bookingId),
       ));
     expect(platformEntries).toHaveLength(0);
+  });
+
+  it("releases a reserved booking cashback exactly once", async () => {
+    const patientId = uniqueId("reserved-cashback");
+    testOwnerIds.add(patientId);
+    const bookingId = uniqueId("reserved-booking");
+    testReferenceIds.add(bookingId);
+    const patient = await ensureWallet("PATIENT", patientId);
+
+    await db.transaction(async (tx) => {
+      const [reserved] = await tx.update(walletsTable).set({
+        reservedCashback: 25,
+      }).where(eq(walletsTable.id, patient.id)).returning();
+      await tx.insert(walletTransactionsTable).values({
+        walletId: reserved.id,
+        type: "CREDIT",
+        category: "CASHBACK_RESERVE",
+        amount: 25,
+        balancePost: reserved.balance,
+        reservedCashbackPost: 25,
+        referenceId: `booking:${bookingId}`,
+        description: "Test booking cashback reserve",
+      });
+    });
+
+    const released = await db.transaction((tx) => releaseReservedCashbackInTx(tx, {
+      patientUserId: patientId,
+      bookingId,
+    }));
+    expect(released).toEqual({ amount: 25, alreadyReleased: false });
+
+    const walletAfterRelease = await getPatientWallet(patientId);
+    expect(walletAfterRelease).toMatchObject({ balance: 25, reservedCashback: 0 });
+    const releasedAgain = await db.transaction((tx) => releaseReservedCashbackInTx(tx, {
+      patientUserId: patientId,
+      bookingId,
+    }));
+    expect(releasedAgain).toEqual({ amount: 0, alreadyReleased: true });
+    const walletAfterReplay = await getPatientWallet(patientId);
+    expect(walletAfterReplay).toMatchObject({ balance: 25, reservedCashback: 0 });
+  });
+
+  it("uses schema defaults when settings are absent and releases the same 25 EGP after review", async () => {
+    const { ownerId } = await createDoctorWallet("default-split");
+    const patientId = uniqueId("default-split-patient");
+    testOwnerIds.add(patientId);
+    const bookingId = uniqueId("default-split-booking");
+    testReferenceIds.add(bookingId);
+    const patient = await ensureWallet("PATIENT", patientId);
+    const [existingSettings] = await db.select().from(systemSettingsTable)
+      .where(eq(systemSettingsTable.id, 1)).limit(1);
+
+    try {
+      await db.transaction(async (tx) => {
+        await tx.delete(systemSettingsTable).where(eq(systemSettingsTable.id, 1));
+        await escrowBookingInTx(tx, {
+          ownerType: "DOCTOR",
+          ownerId,
+          amount: 500,
+          bookingId,
+        });
+        await releaseBookingEscrowInTx(tx, {
+          ownerType: "DOCTOR",
+          ownerId,
+          amount: 500,
+          bookingId,
+          commissionRate: 0.1,
+          patientUserId: patientId,
+        });
+      });
+
+      const doctor = await getWallet(ownerId);
+      expect(doctor).toMatchObject({ balance: 450, pendingFunds: 0 });
+      const reservedPatient = await getPatientWallet(patientId);
+      expect(reservedPatient).toMatchObject({ balance: 0, reservedCashback: 25 });
+
+      const reviewResult = await db.transaction((tx) => releaseReservedCashbackInTx(tx, {
+        patientUserId: patientId,
+        bookingId,
+      }));
+      expect(reviewResult).toEqual({ amount: 25, alreadyReleased: false });
+      const reviewedPatient = await getPatientWallet(patientId);
+      expect(reviewedPatient).toMatchObject({ balance: 25, reservedCashback: 0 });
+    } finally {
+      if (existingSettings) {
+        await db.insert(systemSettingsTable).values(existingSettings).onConflictDoUpdate({
+          target: systemSettingsTable.id,
+          set: {
+            deductionType: existingSettings.deductionType,
+            deductionValue: existingSettings.deductionValue,
+            platformSharePercentage: existingSettings.platformSharePercentage,
+            cashbackSharePercentage: existingSettings.cashbackSharePercentage,
+            minDoctorWalletBalance: existingSettings.minDoctorWalletBalance,
+            subscriptionModelEnabled: existingSettings.subscriptionModelEnabled,
+            reviewPromptDelayHours: existingSettings.reviewPromptDelayHours,
+            reviewCashbackAmount: existingSettings.reviewCashbackAmount,
+          },
+        });
+      } else {
+        await db.delete(systemSettingsTable).where(eq(systemSettingsTable.id, 1));
+      }
+    }
+  });
+
+  it("accepts the route completion transition to SETTLED before releasing escrow", async () => {
+    const { ownerId } = await createDoctorWallet("settled-transition");
+    const patientId = uniqueId("settled-transition-patient");
+    testOwnerIds.add(patientId);
+    const bookingId = uniqueId("settled-transition-booking");
+    testReferenceIds.add(bookingId);
+    await ensureWallet("PATIENT", patientId);
+
+    const [payment] = await db.insert(paymentsTable).values({
+      appointmentId: Number.parseInt(crypto.randomUUID().replace(/-/g, "").slice(0, 8), 16),
+      escrowOwnerType: "DOCTOR",
+      escrowOwnerId: ownerId,
+      planType: "BOOKING",
+      amount: 500,
+      status: "PAID",
+    }).returning();
+    testPaymentIds.add(payment.id);
+
+    await db.transaction(async (tx) => {
+      await escrowBookingInTx(tx, {
+        ownerType: "DOCTOR",
+        ownerId,
+        amount: 500,
+        bookingId,
+      });
+      const [settled] = await tx.update(paymentsTable)
+        .set({ status: "SETTLED" })
+        .where(and(eq(paymentsTable.id, payment.id), eq(paymentsTable.status, "PAID")))
+        .returning();
+      expect(settled).toMatchObject({ id: payment.id, status: "SETTLED" });
+      await releaseBookingEscrowInTx(tx, {
+        ownerType: "DOCTOR",
+        ownerId,
+        amount: 500,
+        bookingId,
+        commissionRate: 0.1,
+        patientUserId: patientId,
+      });
+    });
+
+    expect(await getWallet(ownerId)).toMatchObject({ balance: 450, pendingFunds: 0 });
+    expect(await getPatientWallet(patientId)).toMatchObject({ balance: 0, reservedCashback: 25 });
+  });
+
+  it("does not add a review reward to a legacy booking cashback credit", async () => {
+    const patientId = uniqueId("legacy-cashback");
+    testOwnerIds.add(patientId);
+    const bookingId = uniqueId("legacy-booking");
+    testReferenceIds.add(bookingId);
+    const patient = await ensureWallet("PATIENT", patientId);
+
+    await db.transaction(async (tx) => {
+      const [credited] = await tx.update(walletsTable).set({
+        balance: 25,
+      }).where(eq(walletsTable.id, patient.id)).returning();
+      await tx.insert(walletTransactionsTable).values({
+        walletId: credited.id,
+        type: "CREDIT",
+        category: "CASHBACK_REWARD",
+        amount: 25,
+        balancePost: 25,
+        referenceId: bookingId,
+        description: "Legacy booking cashback",
+      });
+    });
+
+    const result = await db.transaction((tx) => releaseReservedCashbackInTx(tx, {
+      patientUserId: patientId,
+      bookingId,
+    }));
+    expect(result).toEqual({ amount: 0, alreadyReleased: true });
+    await expect(getPatientWallet(patientId)).resolves.toMatchObject({ balance: 25, reservedCashback: 0 });
   });
 });

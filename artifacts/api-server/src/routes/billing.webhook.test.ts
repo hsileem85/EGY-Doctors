@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   recordSubscriptionRefundInTx: vi.fn(),
   escrowBookingInTx: vi.fn(),
   refundBookingEscrowInTx: vi.fn(),
+  releaseBookingEscrowInTx: vi.fn(),
 }));
 
 vi.mock("../lib/wallet.service.js", () => ({
@@ -30,6 +31,7 @@ vi.mock("../lib/wallet.service.js", () => ({
   recordSubscriptionRefundInTx: state.recordSubscriptionRefundInTx,
   escrowBookingInTx: state.escrowBookingInTx,
   refundBookingEscrowInTx: state.refundBookingEscrowInTx,
+  releaseBookingEscrowInTx: state.releaseBookingEscrowInTx,
   centerSubtypeToWalletOwnerType: vi.fn(() => "MEDICAL_CENTER"),
 }));
 
@@ -180,6 +182,7 @@ describe("POST /api/billing/paymob/webhook", () => {
     state.recordSubscriptionRefundInTx.mockReset();
     state.escrowBookingInTx.mockReset();
     state.refundBookingEscrowInTx.mockReset();
+    state.releaseBookingEscrowInTx.mockReset();
     vi.clearAllMocks();
   });
 
@@ -379,6 +382,47 @@ describe("POST /api/billing/paymob/webhook", () => {
       { ownerType: "DOCTOR", ownerId: "314", amount: 450, bookingId: "77" },
     );
     expect(state.recordSubscriptionFeeInTx).not.toHaveBeenCalled();
+  });
+
+  it("settles a booking that was completed before its successful webhook arrived", async () => {
+    const body = makeWebhookBody();
+    const obj = body.obj;
+    const order = obj["order"] as Record<string, unknown>;
+    const sourceData = obj["source_data"] as Record<string, unknown>;
+    const hmac = buildHmac(obj, order, sourceData, HMAC_SECRET);
+    state.updatedPayment = {
+      id: 11,
+      appointmentId: 79,
+      escrowOwnerType: "DOCTOR",
+      escrowOwnerId: "314",
+      planType: "BOOKING",
+      amount: 500,
+      cashbackAmount: 0,
+      voucherCode: null,
+    };
+    state.doctor = { status: "completed", patientUserId: 9001 };
+
+    const res = await request(app)
+      .post(`/api/billing/paymob/webhook?hmac=${hmac}`)
+      .send({ type: "TRANSACTION", obj })
+      .set("Content-Type", "application/json");
+
+    expect(res.status).toBe(200);
+    expect(state.escrowBookingInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      { ownerType: "DOCTOR", ownerId: "314", amount: 500, bookingId: "79" },
+    );
+    expect(state.releaseBookingEscrowInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        ownerType: "DOCTOR",
+        ownerId: "314",
+        amount: 500,
+        bookingId: "79",
+        commissionRate: 0.1,
+        patientUserId: "9001",
+      },
+    );
   });
 
   it("refunds booking escrow from the original wallet snapshot", async () => {

@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, doublePrecision, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, doublePrecision, timestamp, uniqueIndex, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const paymentsTable = pgTable("payments", {
@@ -23,6 +23,10 @@ export const paymentsTable = pgTable("payments", {
   uniqueIndex("payments_appointment_unique")
     .on(table.appointmentId)
     .where(sql`${table.appointmentId} is not null`),
+  check(
+    "payments_status_check",
+    sql`${table.status} IN ('PENDING', 'PAID', 'FAILED', 'REFUND_PENDING', 'REFUND_REQUESTED', 'REFUNDED', 'SETTLED')`,
+  ),
 ]);
 
 export type Payment = typeof paymentsTable.$inferSelect;

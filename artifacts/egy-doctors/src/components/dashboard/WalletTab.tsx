@@ -115,7 +115,9 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
                 : "View the platform balance, pending funds, and transaction history.")
             : (isRTL
                 ? "تتبع الأرصدة المتاحة والأموال المعلقة وسجل معاملاتك."
-                : "Track your available balance, pending funds, and transaction history.")}
+                : isDoctor
+                  ? "Track your available balance, paid booking escrow, and transaction history."
+                  : "Track your available balance, pending funds, and transaction history.")}
         </p>
       </div>
       {isDoctor && wallet.balance <= 50 && (
@@ -168,7 +170,9 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-              {isRTL ? "الأموال المعلقة" : "Pending Funds"}
+              {isDoctor
+                ? (isRTL ? "أموال الحجوزات المدفوعة المعلقة" : "Paid Pending Escrow")
+                : (isRTL ? "الأموال المعلقة" : "Pending Funds")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -176,7 +180,11 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
               {formatCurrency(wallet.pendingFunds, currency)}
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              {isRTL ? "تُضاف للرصيد بعد استكمال المواعيد" : "Added to balance upon appointment completion"}
+              {isDoctor
+                ? (isRTL
+                    ? "مدفوعة من المريض ومحتجزة حتى تأكيد إتمام الزيارة. تُسوّى عند اختيار «تمت الزيارة»."
+                    : "Paid by the patient and held until the visit is marked done. Settled when you choose Visit Done.")
+                : (isRTL ? "تُضاف للرصيد بعد استكمال المواعيد" : "Added to balance upon appointment completion")}
             </p>
           </CardContent>
         </Card>

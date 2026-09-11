@@ -10,7 +10,7 @@ import {
   type WalletOwnerType,
   type WalletTransactionCategory,
 } from "@workspace/db";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 
 const PLATFORM_OWNER_ID = "SYSTEM_REVENUE";
 type WalletTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -272,7 +272,29 @@ export async function escrowBookingInTx(tx: WalletTx, input: {
   bookingId: string;
 }) {
   const amount = normalizeAmount(input.amount);
-  await ensureWalletInTx(tx, input.ownerType, input.ownerId);
+  const ensuredWallet = await ensureWalletInTx(tx, input.ownerType, input.ownerId);
+  const [lockedWallet] = await tx
+    .select()
+    .from(walletsTable)
+    .where(eq(walletsTable.id, ensuredWallet.id))
+    .limit(1)
+    .for("update");
+  if (!lockedWallet) throw new WalletNotFoundError();
+
+  // The verified payment status transition normally provides this guard. Keep
+  // it here as well because a late webhook can race another escrow attempt.
+  const [existingEscrow] = await tx
+    .select({ id: walletTransactionsTable.id })
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedWallet.id),
+      eq(walletTransactionsTable.type, "CREDIT"),
+      eq(walletTransactionsTable.category, "BOOKING_PAYMENT"),
+      eq(walletTransactionsTable.referenceId, input.bookingId),
+      isNotNull(walletTransactionsTable.pendingFundsPost),
+    ))
+    .limit(1);
+  if (existingEscrow) return lockedWallet;
 
   const [wallet] = await tx
     .update(walletsTable)
@@ -280,10 +302,7 @@ export async function escrowBookingInTx(tx: WalletTx, input: {
       pendingFunds: sql`${walletsTable.pendingFunds} + ${amount}`,
       updatedAt: new Date(),
     })
-    .where(and(
-      eq(walletsTable.ownerType, input.ownerType),
-      eq(walletsTable.ownerId, input.ownerId),
-    ))
+    .where(eq(walletsTable.id, lockedWallet.id))
     .returning();
 
   if (!wallet) throw new WalletNotFoundError();
@@ -350,11 +369,45 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
   const split = financial
     ? calculateFinancialSplit(amount, financial)
     : calculateFinancialSplit(amount, {
-      deductionType: "PERCENTAGE",
-      deductionValue: input.commissionRate * 100,
-      platformSharePercentage: 100,
-      cashbackSharePercentage: 0,
+      // Match the schema defaults when a pre-settings database has no row.
+      // The legacy commission-rate fallback would silently drop the patient
+      // share and settle a 500 EGP booking as doctor450/platform50.
+      deductionType: "FIXED",
+      deductionValue: 50,
+      platformSharePercentage: 50,
+      cashbackSharePercentage: 50,
     });
+
+  const owner = await ensureWalletInTx(tx, input.ownerType, input.ownerId);
+  const [lockedOwner] = await tx
+    .select()
+    .from(walletsTable)
+    .where(eq(walletsTable.id, owner.id))
+    .limit(1)
+    .for("update");
+  if (!lockedOwner) throw new WalletNotFoundError();
+
+  // A payment may be settled by the appointment request or by a late Paymob
+  // webhook. Both paths are allowed to call this function, but only one may
+  // create the settlement ledger entry.
+  const [existingRelease] = await tx
+    .select()
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedOwner.id),
+      eq(walletTransactionsTable.type, "CREDIT"),
+      eq(walletTransactionsTable.category, "BOOKING_PAYMENT"),
+      eq(walletTransactionsTable.referenceId, input.bookingId),
+      isNull(walletTransactionsTable.pendingFundsPost),
+    ))
+    .limit(1);
+  if (existingRelease) {
+    return lockedOwner;
+  }
+
+  if (lockedOwner.pendingFunds < amount) {
+    throw new InsufficientWalletFundsError("Insufficient pending funds");
+  }
 
   const [creditedOwner] = await tx
     .update(walletsTable)
@@ -363,14 +416,10 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
       balance: sql`${walletsTable.balance} + ${amount}`,
       updatedAt: new Date(),
     })
-    .where(and(
-      eq(walletsTable.ownerType, input.ownerType),
-      eq(walletsTable.ownerId, input.ownerId),
-      gte(walletsTable.pendingFunds, amount),
-    ))
+    .where(eq(walletsTable.id, lockedOwner.id))
     .returning();
 
-  if (!creditedOwner) throw new InsufficientWalletFundsError("Insufficient pending funds");
+  if (!creditedOwner) throw new WalletNotFoundError();
 
   await tx.insert(walletTransactionsTable).values({
     walletId: creditedOwner.id,
@@ -434,20 +483,165 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
       description: "Platform commission received",
     });
     if (split.cashbackShare > 0 && input.patientUserId) {
-      const patientWallet = await ensureWalletInTx(tx, "PATIENT", input.patientUserId);
-      const [creditedPatient] = await tx.update(walletsTable).set({
-        balance: sql`${walletsTable.balance} + ${split.cashbackShare}`,
-        updatedAt: new Date(),
-      }).where(eq(walletsTable.id, patientWallet.id)).returning();
-      await tx.insert(walletTransactionsTable).values({
-        walletId: creditedPatient.id, type: "CREDIT", category: "CASHBACK_REWARD",
-        amount: split.cashbackShare, balancePost: creditedPatient.balance,
-        referenceId: input.bookingId, description: "Booking cashback reward",
+      await reserveBookingCashbackInTx(tx, {
+        patientUserId: input.patientUserId,
+        bookingId: input.bookingId,
+        amount: split.cashbackShare,
       });
     }
   }
 
   return ownerWallet;
+}
+
+/**
+ * Holds the booking's cashback share outside the patient's spendable balance.
+ * The hold is released by the review transaction after the configured delay.
+ * This keeps completion and review as one 25 EGP reward rather than two
+ * independent credits.
+ */
+async function reserveBookingCashbackInTx(tx: WalletTx, input: {
+  patientUserId: string;
+  bookingId: string;
+  amount: number;
+}) {
+  const amount = normalizeAmount(input.amount);
+  const wallet = await ensureWalletInTx(tx, "PATIENT", input.patientUserId);
+  const [lockedWallet] = await tx
+    .select()
+    .from(walletsTable)
+    .where(eq(walletsTable.id, wallet.id))
+    .limit(1)
+    .for("update");
+  if (!lockedWallet) throw new WalletNotFoundError();
+
+  // Deployments before reserved cashback was introduced credited this amount
+  // immediately using the booking id. Never reserve or pay that legacy entry
+  // again when its appointment is later reviewed.
+  const [legacyReward] = await tx
+    .select({ id: walletTransactionsTable.id })
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedWallet.id),
+      eq(walletTransactionsTable.type, "CREDIT"),
+      eq(walletTransactionsTable.category, "CASHBACK_REWARD"),
+      eq(walletTransactionsTable.referenceId, input.bookingId),
+    ))
+    .limit(1);
+  if (legacyReward) return lockedWallet;
+
+  const reserveReference = `booking:${input.bookingId}`;
+  const [existingReserve] = await tx
+    .select({ id: walletTransactionsTable.id })
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedWallet.id),
+      eq(walletTransactionsTable.category, "CASHBACK_RESERVE"),
+      eq(walletTransactionsTable.referenceId, reserveReference),
+    ))
+    .limit(1);
+  if (existingReserve) return lockedWallet;
+
+  const [reservedWallet] = await tx
+    .update(walletsTable)
+    .set({
+      reservedCashback: sql`${walletsTable.reservedCashback} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(walletsTable.id, lockedWallet.id))
+    .returning();
+  if (!reservedWallet) throw new WalletNotFoundError();
+
+  await tx.insert(walletTransactionsTable).values({
+    walletId: reservedWallet.id,
+    type: "CREDIT",
+    category: "CASHBACK_RESERVE",
+    amount,
+    balancePost: reservedWallet.balance,
+    reservedCashbackPost: reservedWallet.reservedCashback,
+    referenceId: reserveReference,
+    description: "Booking cashback reserved until eligible review",
+  });
+  return reservedWallet;
+}
+
+export async function releaseReservedCashbackInTx(tx: WalletTx, input: {
+  patientUserId: string;
+  bookingId: string;
+}) {
+  const wallet = await ensureWalletInTx(tx, "PATIENT", input.patientUserId);
+  const [lockedWallet] = await tx
+    .select()
+    .from(walletsTable)
+    .where(eq(walletsTable.id, wallet.id))
+    .limit(1)
+    .for("update");
+  if (!lockedWallet) throw new WalletNotFoundError();
+
+  const reviewReference = `review:${input.bookingId}`;
+  const [existingReward] = await tx
+    .select({ id: walletTransactionsTable.id, amount: walletTransactionsTable.amount })
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedWallet.id),
+      eq(walletTransactionsTable.type, "CREDIT"),
+      eq(walletTransactionsTable.category, "CASHBACK_REWARD"),
+      eq(walletTransactionsTable.referenceId, reviewReference),
+    ))
+    .limit(1);
+  if (existingReward) return { amount: 0, alreadyReleased: true };
+
+  // A legacy completion credited using the bare appointment id. It is already
+  // the full reward and must not receive a second review bonus.
+  const [legacyReward] = await tx
+    .select({ id: walletTransactionsTable.id })
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedWallet.id),
+      eq(walletTransactionsTable.type, "CREDIT"),
+      eq(walletTransactionsTable.category, "CASHBACK_REWARD"),
+      eq(walletTransactionsTable.referenceId, input.bookingId),
+    ))
+    .limit(1);
+  if (legacyReward) return { amount: 0, alreadyReleased: true };
+
+  const [reserve] = await tx
+    .select({ amount: walletTransactionsTable.amount })
+    .from(walletTransactionsTable)
+    .where(and(
+      eq(walletTransactionsTable.walletId, lockedWallet.id),
+      eq(walletTransactionsTable.category, "CASHBACK_RESERVE"),
+      eq(walletTransactionsTable.referenceId, `booking:${input.bookingId}`),
+    ))
+    .limit(1);
+  const amount = reserve?.amount ?? 0;
+  if (amount <= 0) return { amount: 0, alreadyReleased: false };
+  if (lockedWallet.reservedCashback < amount) {
+    throw new InsufficientWalletFundsError("Insufficient reserved cashback");
+  }
+
+  const [releasedWallet] = await tx
+    .update(walletsTable)
+    .set({
+      reservedCashback: sql`${walletsTable.reservedCashback} - ${amount}`,
+      balance: sql`${walletsTable.balance} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(walletsTable.id, lockedWallet.id))
+    .returning();
+  if (!releasedWallet) throw new WalletNotFoundError();
+
+  await tx.insert(walletTransactionsTable).values({
+    walletId: releasedWallet.id,
+    type: "CREDIT",
+    category: "CASHBACK_REWARD",
+    amount,
+    balancePost: releasedWallet.balance,
+    reservedCashbackPost: releasedWallet.reservedCashback,
+    referenceId: reviewReference,
+    description: "Booking cashback released after eligible review",
+  });
+  return { amount, alreadyReleased: false };
 }
 
 export async function recordSubscriptionFeeInTx(tx: WalletTx, input: {

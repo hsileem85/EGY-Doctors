@@ -1009,7 +1009,7 @@ components:
           enum: [CREDIT, DEBIT]
         category:
           type: string
-          enum: [BOOKING_PAYMENT, PLATFORM_COMMISSION, SUBSCRIPTION_FEE, WITHDRAWAL_PAYOUT, REFUND, CASHBACK_REWARD, WALLET_TOP_UP, CASHBACK_USAGE, FEE_DEDUCTION, ADMIN_GIFT]
+          enum: [BOOKING_PAYMENT, PLATFORM_COMMISSION, SUBSCRIPTION_FEE, WITHDRAWAL_PAYOUT, REFUND, CASHBACK_REWARD, CASHBACK_RESERVE, WALLET_TOP_UP, CASHBACK_USAGE, FEE_DEDUCTION, ADMIN_GIFT]
         amount: { type: number, format: double }
         balancePost: { type: number, format: double }
         referenceId: { type: [string, "null"] }

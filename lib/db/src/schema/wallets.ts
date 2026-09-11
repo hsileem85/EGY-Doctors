@@ -31,6 +31,7 @@ export const transactionCategoryEnum = [
   "WITHDRAWAL_PAYOUT",
   "REFUND",
   "CASHBACK_REWARD",
+  "CASHBACK_RESERVE",
   "WALLET_TOP_UP",
   "CASHBACK_USAGE",
   "FEE_DEDUCTION",
@@ -45,6 +46,7 @@ export const walletsTable = pgTable(
     ownerId: text("owner_id").notNull(),
     balance: numeric("balance", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
     pendingFunds: numeric("pending_funds", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
+    reservedCashback: numeric("reserved_cashback", { precision: 14, scale: 2, mode: "number" }).notNull().default(0),
     currency: text("currency").notNull().default("EGP"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
@@ -64,12 +66,16 @@ export const walletTransactionsTable = pgTable(
     amount: numeric("amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
     balancePost: numeric("balance_post", { precision: 14, scale: 2, mode: "number" }).notNull(),
     pendingFundsPost: numeric("pending_funds_post", { precision: 14, scale: 2, mode: "number" }),
+    reservedCashbackPost: numeric("reserved_cashback_post", { precision: 14, scale: 2, mode: "number" }),
     referenceId: text("reference_id"),
     description: text("description").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("wallet_transactions_wallet_created_idx").on(table.walletId, table.createdAt),
+    uniqueIndex("wallet_transactions_cashback_reserve_reference_unique")
+      .on(table.walletId, table.referenceId)
+      .where(sql`${table.category} = 'CASHBACK_RESERVE'`),
     uniqueIndex("wallet_transactions_review_cashback_reference_unique")
       .on(table.walletId, table.referenceId)
       .where(sql`${table.category} = 'CASHBACK_REWARD' AND ${table.referenceId} LIKE 'review:%'`),

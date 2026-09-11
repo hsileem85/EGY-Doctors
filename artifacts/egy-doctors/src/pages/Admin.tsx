@@ -2241,11 +2241,12 @@ function DoctorsFinancialReportSubpage({ lang }: { lang: string }) {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
+                <TableRow>
                 <TableHead>{isRTL ? "الطبيب" : "Doctor"}</TableHead>
                 <TableHead>{isRTL ? "رقم الهاتف" : "Phone"}</TableHead>
                 <TableHead>{isRTL ? "البريد الإلكتروني" : "Email"}</TableHead>
                 <TableHead className="text-right">{isRTL ? "رصيد المحفظة" : "Wallet Balance"}</TableHead>
+                  <TableHead className="text-right">{isRTL ? "الأموال المعلقة" : "Pending Funds"}</TableHead>
                 <TableHead className="text-right">{isRTL ? "سحوبات معلقة" : "Pending Withdrawals"}</TableHead>
                 <TableHead className="text-right">{isRTL ? "سحوبات مكتملة" : "Completed Withdrawals"}</TableHead>
                 <TableHead className="text-right">{isRTL ? "عدد الحجوزات" : "Appointments"}</TableHead>
@@ -2255,11 +2256,11 @@ function DoctorsFinancialReportSubpage({ lang }: { lang: string }) {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8">{isRTL ? "جاري التحميل..." : "Loading..."}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8">{isRTL ? "جاري التحميل..." : "Loading..."}</TableCell></TableRow>
               ) : isError ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-red-500">{isRTL ? "حدث خطأ" : "Error loading data"}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-red-500">{isRTL ? "حدث خطأ" : "Error loading data"}</TableCell></TableRow>
               ) : !data || data.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-gray-500">{isRTL ? "لا توجد بيانات" : "No data available"}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-gray-500">{isRTL ? "لا توجد بيانات" : "No data available"}</TableCell></TableRow>
               ) : (
                 data.map((row: DoctorFinancialReportRow) => (
                   <TableRow key={row.doctorId}>
@@ -2269,6 +2270,7 @@ function DoctorsFinancialReportSubpage({ lang }: { lang: string }) {
                     <TableCell>{row.phone || "-"}</TableCell>
                     <TableCell>{row.email || "-"}</TableCell>
                     <TableCell className="text-right font-bold text-gray-900">{row.walletBalance.toLocaleString()} EGP</TableCell>
+                    <TableCell className="text-right font-semibold text-amber-600">{row.pendingFunds.toLocaleString()} EGP</TableCell>
                     <TableCell className="text-right text-yellow-600">{row.pendingWithdrawalAmount.toLocaleString()} EGP</TableCell>
                     <TableCell className="text-right text-green-600">{row.completedWithdrawalAmount.toLocaleString()} EGP</TableCell>
                     <TableCell className="text-right">{row.appointmentCount}</TableCell>

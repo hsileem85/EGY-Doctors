@@ -8,6 +8,7 @@ import {
   clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable, systemSettingsTable, walletsTable, walletTransactionsTable,
   doctorFollowsTable, centerClinicsTable, medicalCentersTable, servicesTable, availabilityPeriodEnum,
 } from "@workspace/db";
+import { releaseReservedCashbackInTx } from "../lib/wallet.service.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
@@ -577,7 +578,6 @@ router.get("/patient/review-eligibility", async (req, res): Promise<void> => {
   if (!payload || payload.role !== "patient") { res.status(401).json({ error: "Unauthorized" }); return; }
   const [settings] = await db.select({
     delay: systemSettingsTable.reviewPromptDelayHours,
-    cashback: systemSettingsTable.reviewCashbackAmount,
   }).from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
   const delay = settings?.delay ?? 6;
   const rows = await db.select({
@@ -596,7 +596,26 @@ router.get("/patient/review-eligibility", async (req, res): Promise<void> => {
     const [review] = await db.select({ id: reviewsTable.id }).from(reviewsTable)
       .where(eq(reviewsTable.appointmentId, due.appointmentId)).limit(1);
     if (review) continue;
-    res.json({ appointmentId: due.appointmentId, doctorId: due.doctorId, doctorName: due.doctorName ?? "Doctor", cashbackAmount: settings?.cashback ?? 25 });
+    // The amount is the booking's reserved split, not a new review bonus.
+    // Older bookings may have already received their reward at completion;
+    // exposing zero here prevents the client from showing another bonus.
+    let cashbackAmount = 0;
+    const [patientWallet] = await db.select({ id: walletsTable.id })
+      .from(walletsTable)
+      .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub))))
+      .limit(1);
+    if (patientWallet) {
+      const [reserve] = await db.select({ amount: walletTransactionsTable.amount })
+        .from(walletTransactionsTable)
+        .where(and(
+          eq(walletTransactionsTable.walletId, patientWallet.id),
+          eq(walletTransactionsTable.category, "CASHBACK_RESERVE"),
+          eq(walletTransactionsTable.referenceId, `booking:${due.appointmentId}`),
+        ))
+        .limit(1);
+      cashbackAmount = reserve?.amount ?? 0;
+    }
+    res.json({ appointmentId: due.appointmentId, doctorId: due.doctorId, doctorName: due.doctorName ?? "Doctor", cashbackAmount });
     return;
   }
   res.json(null);
@@ -635,18 +654,14 @@ router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
         const [settings] = await tx.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
         const delay = settings?.reviewPromptDelayHours ?? 6;
         if (Date.now() < appointment.completedAt.getTime() + delay * 3600000) throw new Error("REVIEW_NOT_DUE");
-        reward = settings?.reviewCashbackAmount ?? 25;
       }
       const [review] = await tx.insert(reviewsTable).values({ appointmentId: appointmentId ?? null, doctorId: id, patientName, rating, text, patientUserId }).returning();
-      if (appointmentId && reward > 0) {
-        await tx.insert(walletsTable).values({ ownerType: "PATIENT", ownerId: String(patientUserId) }).onConflictDoNothing({ target: [walletsTable.ownerType, walletsTable.ownerId] });
-        const [wallet] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} + ${reward}`, updatedAt: new Date() })
-          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(patientUserId)))).returning();
-        if (!wallet) throw new Error("PATIENT_WALLET_NOT_FOUND");
-        await tx.insert(walletTransactionsTable).values({
-          walletId: wallet.id, type: "CREDIT", category: "CASHBACK_REWARD", amount: reward,
-          balancePost: wallet.balance, referenceId: `review:${appointmentId}`, description: "Review cashback reward",
+      if (appointmentId) {
+        const released = await releaseReservedCashbackInTx(tx, {
+          patientUserId: String(patientUserId),
+          bookingId: String(appointmentId),
         });
+        reward = released.amount;
       }
       const [agg] = await tx.select({ avgRating: avg(reviewsTable.rating), total: count() }).from(reviewsTable).where(eq(reviewsTable.doctorId, id));
       await tx.update(doctorsTable).set({ rating: agg.avgRating ? Math.round(parseFloat(agg.avgRating) * 10) / 10 : 0, reviews: agg.total ?? 0 }).where(eq(doctorsTable.id, id));
@@ -656,7 +671,8 @@ router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "REVIEW_NOT_ELIGIBLE" || message === "REVIEW_NOT_DUE") { res.status(409).json({ error: "Appointment is not eligible for this review" }); return; }
-    if ((error as { code?: string })?.code === "23505") { res.status(409).json({ error: "This appointment has already been reviewed" }); return; }
+    const databaseError = error as { code?: string; cause?: { code?: string } };
+    if (databaseError?.code === "23505" || databaseError?.cause?.code === "23505") { res.status(409).json({ error: "This appointment has already been reviewed" }); return; }
     throw error;
   }
 });

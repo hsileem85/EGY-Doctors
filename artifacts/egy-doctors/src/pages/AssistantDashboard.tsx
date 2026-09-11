@@ -1,13 +1,23 @@
 import { useState } from "react";
-import { CalendarDays, LogOut, CheckCircle, XCircle, Clock, Phone } from "lucide-react";
+import { CalendarDays, LogOut, CheckCircle, XCircle, Phone, RefreshCw, AlertCircle } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAppointments, type ApiAppointment } from "@/lib/api";
+import { getAppointments, updateAppointmentStatus, type ApiAppointment } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 function statusBadge(status: ApiAppointment["status"], isRTL: boolean) {
@@ -28,6 +38,8 @@ export default function AssistantDashboard() {
   const isRTL = dir === "rtl";
   const qc = useQueryClient();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [completionCandidate, setCompletionCandidate] = useState<ApiAppointment | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const clinicId = user?.assistantClinicId ?? undefined;
   const assistantName = user?.name ?? "Assistant";
@@ -41,16 +53,23 @@ export default function AssistantDashboard() {
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: ApiAppointment["status"] }) => {
       setUpdatingId(id);
-      const res = await fetch(`/api/appointments/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("egy_token")}` },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error("Failed to update");
-      return res.json();
+      return updateAppointmentStatus(id, status);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["appointments", "clinic", clinicId] }); setUpdatingId(null); },
-    onError: () => setUpdatingId(null),
+    onSuccess: async (_appointment, variables) => {
+      setUpdatingId(null);
+      setActionError(null);
+      if (variables.status === "completed") setCompletionCandidate(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["appointments"] }),
+        ...(variables.status === "completed"
+          ? [qc.invalidateQueries({ queryKey: ["/api/wallet"] })]
+          : []),
+      ]);
+    },
+    onError: (error: Error) => {
+      setUpdatingId(null);
+      setActionError(error.message || (isRTL ? "تعذر تحديث الحجز." : "Unable to update the appointment."));
+    },
   });
 
   if (!user || user.role !== "assistant") {
@@ -105,6 +124,12 @@ export default function AssistantDashboard() {
                 <CalendarDays className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">{isRTL ? "الحجوزات" : "Appointments"}</CardTitle>
               </div>
+              {actionError && (
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{actionError}</span>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -148,7 +173,10 @@ export default function AssistantDashboard() {
                             {apt.status === "pending" && (
                               <>
                                 <button
-                                  onClick={() => updateStatus.mutate({ id: apt.id, status: "confirmed" })}
+                                  onClick={() => {
+                                    setActionError(null);
+                                    updateStatus.mutate({ id: apt.id, status: "confirmed" });
+                                  }}
                                   disabled={updatingId === apt.id}
                                   className="p-1.5 rounded text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
                                   title={isRTL ? "تأكيد" : "Confirm"}
@@ -156,7 +184,10 @@ export default function AssistantDashboard() {
                                   <CheckCircle className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => updateStatus.mutate({ id: apt.id, status: "cancelled" })}
+                                  onClick={() => {
+                                    setActionError(null);
+                                    updateStatus.mutate({ id: apt.id, status: "cancelled" });
+                                  }}
                                   disabled={updatingId === apt.id}
                                   className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                                   title={isRTL ? "إلغاء" : "Cancel"}
@@ -167,12 +198,19 @@ export default function AssistantDashboard() {
                             )}
                             {apt.status === "confirmed" && (
                               <button
-                                onClick={() => updateStatus.mutate({ id: apt.id, status: "completed" })}
+                                onClick={() => {
+                                  setActionError(null);
+                                  setCompletionCandidate(apt);
+                                }}
                                 disabled={updatingId === apt.id}
                                 className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                title={isRTL ? "تم" : "Complete"}
+                                title={isRTL ? "تمت الزيارة" : "Visit Done"}
+                                aria-label={isRTL ? "تمت الزيارة" : "Visit Done"}
+                                data-testid={`button-visit-done-${apt.id}`}
                               >
-                                <Clock className="w-4 h-4" />
+                                {updatingId === apt.id
+                                  ? <RefreshCw className="w-4 h-4 animate-spin" />
+                                  : <CheckCircle className="w-4 h-4" />}
                               </button>
                             )}
                           </div>
@@ -184,6 +222,57 @@ export default function AssistantDashboard() {
               </Table>
             </CardContent>
           </Card>
+
+          <AlertDialog
+            open={completionCandidate !== null}
+            onOpenChange={(open) => {
+              if (!open && !updateStatus.isPending) {
+                setCompletionCandidate(null);
+                setActionError(null);
+              }
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {isRTL ? "تأكيد إتمام الزيارة" : "Confirm Visit Done"}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <span className="block">
+                    {isRTL
+                      ? "سيؤدي هذا إلى تسوية أي مبلغ مدفوع ومحتجز في الضمان لهذا الحجز."
+                      : "This will settle any paid amount held in escrow for this appointment."}
+                  </span>
+                  <span className="block font-semibold text-amber-700">
+                    {isRTL
+                      ? "هذا الإجراء نهائي ولا يمكن التراجع عنه. لن يحصل المريض على استرداد نقدي الآن؛ تُمنح المكافأة النقدية فقط بعد إرسال المراجعة."
+                      : "This action is final and cannot be undone. The patient does not receive cashback now; cashback is awarded only after they submit a review."}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {actionError && <p className="text-sm text-red-600" role="alert">{actionError}</p>}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={updateStatus.isPending}>
+                  {isRTL ? "إلغاء" : "Cancel"}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  asChild
+                  onClick={(event) => {
+                    event.preventDefault();
+                    if (completionCandidate) {
+                      updateStatus.mutate({ id: completionCandidate.id, status: "completed" });
+                    }
+                  }}
+                >
+                  <Button disabled={updateStatus.isPending} className="bg-green-600 text-white hover:bg-green-700">
+                    {updateStatus.isPending
+                      ? (isRTL ? "جارٍ التسوية..." : "Settling...")
+                      : (isRTL ? "تأكيد: تمت الزيارة" : "Confirm Visit Done")}
+                  </Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </Layout>

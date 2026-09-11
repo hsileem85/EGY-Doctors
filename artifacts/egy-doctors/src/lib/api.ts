@@ -1074,6 +1074,7 @@ export interface DoctorFinancialReportRow {
   phone: string | null;
   email: string | null;
   walletBalance: number;
+  pendingFunds: number;
   pendingWithdrawalAmount: number;
   completedWithdrawalAmount: number;
   appointmentCount: number;

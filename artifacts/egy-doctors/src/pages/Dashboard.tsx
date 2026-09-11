@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock, RefreshCw, AlertCircle, Wallet } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock, RefreshCw, AlertCircle, Wallet, CheckCircle } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/context/LanguageContext";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
@@ -1400,6 +1410,8 @@ export default function Dashboard() {
     return validTabs.includes(tabParam) ? tabParam : "appointments";
   });
   const qc = useQueryClient();
+  const [completionCandidate, setCompletionCandidate] = useState<ApiAppointment | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
   const accountStatus = user?.accountStatus ?? "approved";
 
@@ -1407,6 +1419,21 @@ export default function Dashboard() {
     queryKey: ["appointments", user?.doctorId],
     queryFn: () => getAppointments({ doctorId: user?.doctorId ?? undefined }),
     enabled: !!user?.doctorId && accountStatus === "approved",
+  });
+
+  const completeAppointment = useMutation({
+    mutationFn: ({ id }: { id: number }) => updateAppointmentStatus(id, "completed"),
+    onSuccess: async () => {
+      setCompletionCandidate(null);
+      setCompletionError(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["appointments"] }),
+        qc.invalidateQueries({ queryKey: ["/api/wallet"] }),
+      ]);
+    },
+    onError: (error: Error) => {
+      setCompletionError(error.message || (isRTL ? "تعذر إتمام الزيارة." : "Unable to complete the visit."));
+    },
   });
 
   const doctorName = user?.name ?? "Doctor";
@@ -1616,6 +1643,13 @@ export default function Dashboard() {
                   );
                 })()}
 
+                {completionError && (
+                  <div className="mb-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{completionError}</span>
+                  </div>
+                )}
+
                 <Card className="border-0 shadow-sm shadow-gray-200/50 mb-8">
                   <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b bg-gray-50/50 rounded-t-xl pb-4">
                     <div>
@@ -1637,13 +1671,14 @@ export default function Dashboard() {
                           <TableHead className="font-semibold text-gray-600">{t.dashboard.time}</TableHead>
                           <TableHead className="font-semibold text-gray-600">{t.dashboard.status}</TableHead>
                           <TableHead className="font-semibold text-gray-600">{isRTL ? "متابعة" : "Follow-up"}</TableHead>
+                          <TableHead className="font-semibold text-gray-600 text-right">{isRTL ? "إجراءات" : "Actions"}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {isLoading ? (
-                          <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
                         ) : appointments.length === 0 ? (
-                          <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">{t.dashboard.noAppointments}</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">{t.dashboard.noAppointments}</TableCell></TableRow>
                         ) : (
                           appointments.map((apt) => (
                             <TableRow key={apt.id}>
@@ -1659,6 +1694,26 @@ export default function Dashboard() {
                                   </Badge>
                                 )}
                               </TableCell>
+                              <TableCell className="text-right">
+                                {apt.status === "confirmed" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-1 border-green-200 text-green-700 hover:bg-green-50"
+                                    onClick={() => {
+                                      setCompletionError(null);
+                                      setCompletionCandidate(apt);
+                                    }}
+                                    disabled={completeAppointment.isPending}
+                                    data-testid={`button-visit-done-${apt.id}`}
+                                  >
+                                    {completeAppointment.isPending && completionCandidate?.id === apt.id
+                                      ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      : <CheckCircle className="h-3.5 w-3.5" />}
+                                    {isRTL ? "تمت الزيارة" : "Visit Done"}
+                                  </Button>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))
                         )}
@@ -1666,6 +1721,62 @@ export default function Dashboard() {
                     </Table>
                   </CardContent>
                 </Card>
+
+                <AlertDialog
+                  open={completionCandidate !== null}
+                  onOpenChange={(open) => {
+                    if (!open && !completeAppointment.isPending) {
+                      setCompletionCandidate(null);
+                      setCompletionError(null);
+                    }
+                  }}
+                >
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {isRTL ? "تأكيد إتمام الزيارة" : "Confirm Visit Done"}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <span className="block">
+                          {isRTL
+                            ? "سيؤدي هذا إلى تسوية أي مبلغ مدفوع ومحتجز في الضمان لهذا الحجز."
+                            : "This will settle any paid amount held in escrow for this appointment."}
+                        </span>
+                        <span className="block font-semibold text-amber-700">
+                          {isRTL
+                            ? "هذا الإجراء نهائي ولا يمكن التراجع عنه. لن يحصل المريض على استرداد نقدي الآن؛ تُمنح المكافأة النقدية فقط بعد إرسال المراجعة."
+                            : "This action is final and cannot be undone. The patient does not receive cashback now; cashback is awarded only after they submit a review."}
+                        </span>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    {completionError && (
+                      <p className="text-sm text-red-600" role="alert">{completionError}</p>
+                    )}
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={completeAppointment.isPending}>
+                        {isRTL ? "إلغاء" : "Cancel"}
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        asChild
+                        onClick={(event) => {
+                          event.preventDefault();
+                          if (completionCandidate) {
+                            completeAppointment.mutate({ id: completionCandidate.id });
+                          }
+                        }}
+                      >
+                        <Button
+                          disabled={completeAppointment.isPending}
+                          className="bg-green-600 text-white hover:bg-green-700"
+                        >
+                          {completeAppointment.isPending
+                            ? (isRTL ? "جارٍ التسوية..." : "Settling...")
+                            : (isRTL ? "تأكيد: تمت الزيارة" : "Confirm Visit Done")}
+                        </Button>
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
               </>
             )}
