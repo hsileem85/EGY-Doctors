@@ -35,6 +35,8 @@ const settingsInput = z.object({
   cashbackSharePercentage: z.number().finite().min(0).max(100),
   minDoctorWalletBalance: z.number().finite().min(0),
   subscriptionModelEnabled: z.boolean(),
+  reviewPromptDelayHours: z.number().finite().int().min(0).max(720).optional(),
+  reviewCashbackAmount: z.number().finite().min(0).max(100000).optional(),
 }).refine((v) => v.platformSharePercentage + v.cashbackSharePercentage === 100,
   "Platform and cashback shares must total 100");
 const bankInput = z.object({

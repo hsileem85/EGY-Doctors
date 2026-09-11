@@ -12,6 +12,8 @@ export const systemSettingsTable = pgTable("system_settings", {
   cashbackSharePercentage: numeric("cashback_share_percentage", { precision: 5, scale: 2, mode: "number" }).notNull().default(50),
   minDoctorWalletBalance: numeric("min_doctor_wallet_balance", { precision: 14, scale: 2, mode: "number" }).notNull().default(50),
   subscriptionModelEnabled: boolean("subscription_model_enabled").notNull().default(false),
+  reviewPromptDelayHours: integer("review_prompt_delay_hours").notNull().default(6),
+  reviewCashbackAmount: numeric("review_cashback_amount", { precision: 14, scale: 2, mode: "number" }).notNull().default(25),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

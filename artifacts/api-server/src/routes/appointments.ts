@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, desc, ne } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, type WalletOwnerType } from "@workspace/db";
+import { db, appointmentsTable, appointmentReminderDeliveriesTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, type WalletOwnerType } from "@workspace/db";
 import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from "../lib/email";
 import {
   releaseBookingEscrowInTx,
@@ -317,6 +317,11 @@ router.get("/appointments", async (req, res): Promise<void> => {
 
 /* ─── PATCH /appointments/:id ─── (update date/time) */
 router.patch("/appointments/:id", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "patient") {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -334,10 +339,22 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
 
   if (Object.keys(update).length === 0) { res.status(400).json({ error: "Nothing to update" }); return; }
 
-  const [row] = await db.update(appointmentsTable)
-    .set(update)
-    .where(eq(appointmentsTable.id, id))
-    .returning();
+  const row = await db.transaction(async (tx) => {
+    const [updated] = await tx.update(appointmentsTable)
+      .set(update)
+      .where(and(
+        eq(appointmentsTable.id, id),
+        eq(appointmentsTable.patientUserId, payload.sub),
+        ne(appointmentsTable.status, "cancelled"),
+        ne(appointmentsTable.status, "completed"),
+      ))
+      .returning();
+    if (updated) {
+      await tx.delete(appointmentReminderDeliveriesTable)
+        .where(eq(appointmentReminderDeliveriesTable.appointmentId, id));
+    }
+    return updated;
+  });
 
   if (!row) { res.status(404).json({ error: "Appointment not found" }); return; }
   res.json(serializeRow(row));
@@ -421,7 +438,7 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     }
 
     const [updated] = await tx.update(appointmentsTable)
-      .set({ status: parsed.data.status })
+      .set({ status: parsed.data.status, ...(parsed.data.status === "completed" ? { completedAt: new Date() } : {}) })
       .where(and(eq(appointmentsTable.id, id), eq(appointmentsTable.status, existing.status)))
       .returning();
     if (!updated) {

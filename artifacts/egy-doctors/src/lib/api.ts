@@ -151,9 +151,17 @@ export interface ApiAppointment {
   feeCharged?: number | null;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string | null;
   doctorName?: string | null;
   specialty?: string | null;
   specialtyAr?: string | null;
+}
+
+export interface ReviewEligibility {
+  appointmentId: number;
+  doctorId: number;
+  doctorName: string;
+  cashbackAmount: number;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -429,13 +437,17 @@ export function getAppointmentPaymentStatus(appointmentId: number): Promise<{
 
 export function submitReview(
   doctorId: number,
-  data: { patientName: string; rating: number; text?: string },
-): Promise<{ ok: boolean }> {
+  data: { patientName: string; rating: number; text?: string; appointmentId?: number },
+): Promise<{ ok: boolean; cashbackAmount: number }> {
   return request(`/doctors/${doctorId}/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+}
+
+export function getReviewEligibility(): Promise<ReviewEligibility | null> {
+  return request("/patient/review-eligibility");
 }
 
 export async function adminSearchUser(phone: string): Promise<{ id: number; name: string; phone: string; email: string | null; role: string }> {
@@ -948,6 +960,8 @@ export interface AdminFinancialSettings {
   cashbackSharePercentage: number;
   minDoctorWalletBalance: number;
   subscriptionModelEnabled: boolean;
+  reviewPromptDelayHours: number;
+  reviewCashbackAmount: number;
 }
 
 export interface AdminPlatformBankAccount {

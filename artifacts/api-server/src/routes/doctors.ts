@@ -1,11 +1,11 @@
-import { Router, type IRouter } from "express";
-import { eq, and, inArray, avg, count, sql } from "drizzle-orm";
+import { Router, type IRouter, type Request } from "express";
+import { eq, and, inArray, avg, count, sql, asc } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
-  clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable, systemSettingsTable, walletsTable,
+  clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable, systemSettingsTable, walletsTable, walletTransactionsTable,
   doctorFollowsTable, centerClinicsTable, medicalCentersTable, servicesTable, availabilityPeriodEnum,
 } from "@workspace/db";
 
@@ -501,6 +501,43 @@ const insertReviewBodySchema = z.object({
   patientName: z.string().min(1).max(255),
   rating: z.number().int().min(1).max(5),
   text: z.string().max(2000).optional(),
+  appointmentId: z.coerce.number().int().positive().optional(),
+});
+
+function patientAuth(req: Request): { sub: number; role: string } | null {
+  const h = req.headers.authorization;
+  if (!h?.startsWith("Bearer ")) return null;
+  try { return jwt.verify(h.slice(7), JWT_SECRET) as unknown as { sub: number; role: string }; } catch { return null; }
+}
+
+router.get("/patient/review-eligibility", async (req, res): Promise<void> => {
+  const payload = patientAuth(req);
+  if (!payload || payload.role !== "patient") { res.status(401).json({ error: "Unauthorized" }); return; }
+  const [settings] = await db.select({
+    delay: systemSettingsTable.reviewPromptDelayHours,
+    cashback: systemSettingsTable.reviewCashbackAmount,
+  }).from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+  const delay = settings?.delay ?? 6;
+  const rows = await db.select({
+    appointmentId: appointmentsTable.id,
+    doctorId: appointmentsTable.doctorId,
+    doctorName: usersTable.name,
+    completedAt: appointmentsTable.completedAt,
+  }).from(appointmentsTable)
+    .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
+    .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id))
+    .where(and(eq(appointmentsTable.patientUserId, payload.sub), eq(appointmentsTable.status, "completed")))
+    .orderBy(asc(appointmentsTable.completedAt));
+  const now = Date.now();
+  for (const due of rows) {
+    if (!due.completedAt || now < due.completedAt.getTime() + delay * 3600000) continue;
+    const [review] = await db.select({ id: reviewsTable.id }).from(reviewsTable)
+      .where(eq(reviewsTable.appointmentId, due.appointmentId)).limit(1);
+    if (review) continue;
+    res.json({ appointmentId: due.appointmentId, doctorId: due.doctorId, doctorName: due.doctorName ?? "Doctor", cashbackAmount: settings?.cashback ?? 25 });
+    return;
+  }
+  res.json(null);
 });
 
 router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
@@ -513,38 +550,53 @@ router.post("/doctors/:id/reviews", async (req, res): Promise<void> => {
     return;
   }
 
-  const { patientName, rating, text } = parsed.data;
+  const { patientName, rating, text, appointmentId } = parsed.data;
 
   // Resolve caller identity from JWT when present
   let patientUserId: number | null = null;
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) {
-    try {
-      const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number; role: string };
-      // Non-patient roles (doctor, medical_center, admin, assistant) must not submit reviews
+  const payload = patientAuth(req);
+  if (payload) {
       if (payload.role !== "patient") {
         res.status(403).json({ error: "Doctors are not allowed to submit or edit reviews." });
         return;
       }
       patientUserId = payload.sub;
-    } catch { /* anonymous review — allow */ }
   }
-
-  await db.insert(reviewsTable).values({ doctorId: id, patientName, rating, text, patientUserId });
-
-  // Recalculate avg rating + count and update doctor row
-  const [agg] = await db
-    .select({ avgRating: avg(reviewsTable.rating), total: count() })
-    .from(reviewsTable)
-    .where(eq(reviewsTable.doctorId, id));
-
-  const newRating = agg.avgRating ? Math.round(parseFloat(agg.avgRating) * 10) / 10 : 0;
-  const newCount = agg.total ?? 0;
-  await db.update(doctorsTable)
-    .set({ rating: newRating, reviews: newCount })
-    .where(eq(doctorsTable.id, id));
-
-  res.status(201).json({ ok: true });
+  if (appointmentId && (!payload || payload.role !== "patient")) { res.status(401).json({ error: "Authenticated patient required" }); return; }
+  try {
+    const result = await db.transaction(async (tx) => {
+      let reward = 0;
+      if (appointmentId) {
+        const [appointment] = await tx.select().from(appointmentsTable)
+          .where(and(eq(appointmentsTable.id, appointmentId), eq(appointmentsTable.patientUserId, patientUserId!))).limit(1);
+        if (!appointment || appointment.doctorId !== id || appointment.status !== "completed" || !appointment.completedAt) throw new Error("REVIEW_NOT_ELIGIBLE");
+        const [settings] = await tx.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+        const delay = settings?.reviewPromptDelayHours ?? 6;
+        if (Date.now() < appointment.completedAt.getTime() + delay * 3600000) throw new Error("REVIEW_NOT_DUE");
+        reward = settings?.reviewCashbackAmount ?? 25;
+      }
+      const [review] = await tx.insert(reviewsTable).values({ appointmentId: appointmentId ?? null, doctorId: id, patientName, rating, text, patientUserId }).returning();
+      if (appointmentId && reward > 0) {
+        await tx.insert(walletsTable).values({ ownerType: "PATIENT", ownerId: String(patientUserId) }).onConflictDoNothing({ target: [walletsTable.ownerType, walletsTable.ownerId] });
+        const [wallet] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} + ${reward}`, updatedAt: new Date() })
+          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(patientUserId)))).returning();
+        if (!wallet) throw new Error("PATIENT_WALLET_NOT_FOUND");
+        await tx.insert(walletTransactionsTable).values({
+          walletId: wallet.id, type: "CREDIT", category: "CASHBACK_REWARD", amount: reward,
+          balancePost: wallet.balance, referenceId: `review:${appointmentId}`, description: "Review cashback reward",
+        });
+      }
+      const [agg] = await tx.select({ avgRating: avg(reviewsTable.rating), total: count() }).from(reviewsTable).where(eq(reviewsTable.doctorId, id));
+      await tx.update(doctorsTable).set({ rating: agg.avgRating ? Math.round(parseFloat(agg.avgRating) * 10) / 10 : 0, reviews: agg.total ?? 0 }).where(eq(doctorsTable.id, id));
+      return { reward, review };
+    });
+    res.status(201).json({ ok: true, cashbackAmount: result.reward });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "REVIEW_NOT_ELIGIBLE" || message === "REVIEW_NOT_DUE") { res.status(409).json({ error: "Appointment is not eligible for this review" }); return; }
+    if ((error as { code?: string })?.code === "23505") { res.status(409).json({ error: "This appointment has already been reviewed" }); return; }
+    throw error;
+  }
 });
 
 /* ─── GET /doctor/profile  (own profile — requires JWT) ─── */

@@ -7,6 +7,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 
 export const walletOwnerTypeEnum = [
@@ -69,6 +70,9 @@ export const walletTransactionsTable = pgTable(
   },
   (table) => [
     index("wallet_transactions_wallet_created_idx").on(table.walletId, table.createdAt),
+    uniqueIndex("wallet_transactions_review_cashback_reference_unique")
+      .on(table.walletId, table.referenceId)
+      .where(sql`${table.category} = 'CASHBACK_REWARD' AND ${table.referenceId} LIKE 'review:%'`),
   ],
 );
 

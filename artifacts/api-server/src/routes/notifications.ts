@@ -238,4 +238,39 @@ export async function notifyFollowers(params: {
   }
 }
 
+/** Delivers a single user's notification through both durable in-app and Web Push channels. */
+export async function notifyUser(userId: number, input: {
+  type?: "new_post" | "appointment_reminder";
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}): Promise<void> {
+  await db.insert(notificationsTable).values({
+    userId, type: input.type ?? "new_post", title: input.title, body: input.body, data: input.data ?? {},
+  });
+  await sendPushToUser(userId, input);
+}
+
+/** Best-effort Web Push delivery for a notification already stored in-app. */
+export async function sendPushToUser(userId: number, input: {
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}): Promise<void> {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  const subs = await db.select().from(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.userId, userId));
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, JSON.stringify({
+        title: input.title, body: input.body, url: "/patient/dashboard", icon: "/favicon.svg", data: input.data,
+      }));
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "statusCode" in err && (err as { statusCode: number }).statusCode === 410) {
+        await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.id, sub.id));
+      }
+      logger.warn({ err, subId: sub.id }, "Appointment push notification failed");
+    }
+  }
+}
+
 export default router;

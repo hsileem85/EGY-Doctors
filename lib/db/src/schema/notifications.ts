@@ -4,7 +4,7 @@ import { usersTable } from "./users";
 export const notificationsTable = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
-  type: text("type", { enum: ["new_post"] }).notNull(),
+  type: text("type", { enum: ["new_post", "appointment_reminder"] }).notNull(),
   title: text("title").notNull(),
   body: text("body").notNull(),
   data: jsonb("data"),

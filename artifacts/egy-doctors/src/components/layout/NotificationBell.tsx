@@ -71,6 +71,7 @@ export function NotificationBell() {
   }
 
   function getPostUrl(n: AppNotification) {
+    if (n.type === "appointment_reminder") return "/patient/dashboard";
     const postId = (n.data as { postId?: number })?.postId;
     return postId ? `/magazine/${postId}` : "/magazine";
   }

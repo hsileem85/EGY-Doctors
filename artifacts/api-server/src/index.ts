@@ -4,6 +4,7 @@ import { db, specialtiesTable, usersTable } from "@workspace/db";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { initializeWallets } from "./lib/wallet.service.js";
+import { processAppointmentReminders } from "./lib/appointment-reminders.js";
 
 const SPECIALTIES = [
   { id: 1,  name: "Cardiology",       nameAr: "أمراض القلب" },
@@ -107,4 +108,6 @@ app.listen(port, async (err) => {
   await seedSpecialties();
   await seedAdmin();
   await initializeWallets();
+  void processAppointmentReminders().catch((error) => logger.error({ error }, "Initial appointment reminder processing failed"));
+  setInterval(() => void processAppointmentReminders().catch((error) => logger.error({ error }, "Appointment reminder processing failed")), 60_000);
 });

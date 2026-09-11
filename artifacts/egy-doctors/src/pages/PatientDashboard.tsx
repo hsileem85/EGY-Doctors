@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus, ChevronDown, Wallet } from "lucide-react";
+import { CalendarDays, Bell, User, Pill, Stethoscope, LogOut, Settings, Globe, Mail, MessageSquare, X, Pencil, CalendarPlus, ChevronDown, Wallet, Star } from "lucide-react";
 import { useSearch } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { WalletTab } from "@/components/dashboard/WalletTab";
@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAppointments, getPreferences, updatePreferences, updateAppointmentStatus, updateAppointment, type UserPreferences, type ApiAppointment } from "@/lib/api";
+import { getAppointments, getPreferences, updatePreferences, updateAppointmentStatus, updateAppointment, getReviewEligibility, submitReview, type UserPreferences, type ApiAppointment } from "@/lib/api";
 
 type View = "appointments" | "wallet" | "preferences";
 
@@ -33,6 +33,10 @@ export default function PatientDashboard() {
   const [editApt, setEditApt] = useState<ApiAppointment | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [dismissedReviewId, setDismissedReviewId] = useState<number | null>(null);
 
   const firstName = user?.name?.split(" ")[0] ?? (isRTL ? "مريض" : "Patient");
 
@@ -48,6 +52,42 @@ export default function PatientDashboard() {
     queryKey: ["patient-appointments", user?.id],
     queryFn: () => getAppointments({ patientUserId: user!.id }),
     enabled: !!user?.id,
+  });
+  const { data: reviewEligibility } = useQuery({
+    queryKey: ["patient-review-eligibility", user?.id],
+    queryFn: getReviewEligibility,
+    enabled: !!user?.id,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (reviewEligibility && reviewEligibility.appointmentId !== dismissedReviewId) {
+      setReviewOpen(true);
+      setReviewRating(0);
+      setReviewText("");
+    }
+  }, [reviewEligibility?.appointmentId]);
+
+  const reviewMut = useMutation({
+    mutationFn: () => {
+      if (!reviewEligibility || !user || reviewRating < 1) throw new Error(isRTL ? "يرجى اختيار تقييم من 1 إلى 5 نجوم" : "Please choose a rating from 1 to 5 stars");
+      return submitReview(reviewEligibility.doctorId, {
+        appointmentId: reviewEligibility.appointmentId,
+        patientName: user.name,
+        rating: reviewRating,
+        ...(reviewText.trim() ? { text: reviewText.trim() } : {}),
+      });
+    },
+    onSuccess: () => {
+      setReviewOpen(false);
+      setDismissedReviewId(reviewEligibility?.appointmentId ?? null);
+      qc.invalidateQueries({ queryKey: ["patient-review-eligibility", user?.id] });
+      qc.invalidateQueries({ queryKey: ["patient-appointments", user?.id] });
+      qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+      qc.invalidateQueries({ queryKey: ["/api/wallet"] });
+      qc.invalidateQueries({ queryKey: ["wallet"] });
+    },
   });
 
   const cancelMut = useMutation({
@@ -447,6 +487,47 @@ export default function PatientDashboard() {
               className="bg-[#D4A853] text-[#0F172A] hover:bg-[#c49a4a]"
             >
               {editMut.isPending ? (isRTL ? "جاري الحفظ..." : "Saving...") : (isRTL ? "حفظ" : "Save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={reviewOpen && !!reviewEligibility} onOpenChange={(open) => {
+        if (!open) {
+          setReviewOpen(false);
+          if (reviewEligibility) setDismissedReviewId(reviewEligibility.appointmentId);
+        }
+      }}>
+        <DialogContent className="max-w-md" aria-describedby="review-dialog-description">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-[#D4A853] fill-[#D4A853]" />
+              {isRTL ? "قيّم زيارتك واحصل على كاش باك" : "Review your visit and get cashback"}
+            </DialogTitle>
+          </DialogHeader>
+          <div id="review-dialog-description" className="space-y-4 py-2">
+            <p className="text-sm text-gray-600">
+              {isRTL ? `شاركنا رأيك عن د. ${reviewEligibility?.doctorName} واحصل على ${reviewEligibility?.cashbackAmount} جنيه مصري في محفظتك.` : `Tell us about your visit with Dr. ${reviewEligibility?.doctorName} and receive exactly EGP ${reviewEligibility?.cashbackAmount} cashback in your wallet.`}
+            </p>
+            <div className="space-y-2">
+              <Label id="review-rating-label">{isRTL ? "التقييم (مطلوب)" : "Rating (required)"}</Label>
+              <div className="flex gap-1" role="radiogroup" aria-labelledby="review-rating-label">
+                {[1, 2, 3, 4, 5].map(value => (
+                  <button key={value} type="button" role="radio" aria-checked={reviewRating === value} aria-label={`${value} ${isRTL ? "نجوم" : "stars"}`} onClick={() => setReviewRating(value)} className="p-1 focus-visible:ring-2 rounded">
+                    <Star className={`h-7 w-7 ${value <= reviewRating ? "text-[#D4A853] fill-[#D4A853]" : "text-gray-300"}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="review-text">{isRTL ? "مراجعتك (اختياري)" : "Your review (optional)"}</Label>
+              <textarea id="review-text" value={reviewText} onChange={e => setReviewText(e.target.value)} maxLength={2000} rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none" placeholder={isRTL ? "اكتب تجربتك..." : "Write about your experience..."} />
+            </div>
+            {reviewMut.isError && <p role="alert" className="text-sm text-red-600">{reviewMut.error instanceof Error ? reviewMut.error.message : (isRTL ? "تعذر إرسال التقييم." : "Unable to submit review.")}</p>}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setReviewOpen(false); if (reviewEligibility) setDismissedReviewId(reviewEligibility.appointmentId); }}>{isRTL ? "لاحقاً" : "Later"}</Button>
+            <Button disabled={reviewRating < 1 || reviewMut.isPending} onClick={() => reviewMut.mutate()} className="bg-[#D4A853] text-[#0F172A] hover:bg-[#c49a4a]">
+              {reviewMut.isPending ? (isRTL ? "جاري الإرسال..." : "Submitting...") : (isRTL ? "إرسال التقييم" : "Submit review")}
             </Button>
           </DialogFooter>
         </DialogContent>
