@@ -118,6 +118,23 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
                 : "Track your available balance, pending funds, and transaction history.")}
         </p>
       </div>
+      {isDoctor && wallet.balance <= 50 && (
+        <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold">
+                {isRTL ? "رصيد المحفظة منخفض" : "Low wallet balance"}
+              </p>
+              <p className="mt-1 text-sm">
+                {isRTL
+                  ? "يجب أن يكون رصيدك المتاح 50 جنيهاً على الأقل حتى يظهر ملفك للمرضى. اشحن محفظتك الآن للحفاظ على ظهور حسابك."
+                  : "Your available balance must be at least 50 EGP for your profile to appear to patients. Top up now to keep your account visible."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
         {/* Available Balance */}

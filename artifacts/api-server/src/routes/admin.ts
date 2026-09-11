@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { db, doctorsTable, specialtiesTable, servicesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable, appointmentsTable, reviewsTable, paymentsTable, walletsTable, withdrawalRequestsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
+import { grantDoctorApprovalGiftInTx } from "../lib/wallet.service.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
@@ -233,17 +234,20 @@ router.patch("/admin/doctors/:id/approve", async (req, res): Promise<void> => {
     return;
   }
 
-  const [doctor] = await db
-    .update(doctorsTable)
-    .set({ accountStatus: "approved" })
-    .where(eq(doctorsTable.id, parsed.data.id))
-    .returning();
+  const doctor = await db.transaction(async (tx) => {
+    const [approved] = await tx
+      .update(doctorsTable)
+      .set({ accountStatus: "approved" })
+      .where(eq(doctorsTable.id, parsed.data.id))
+      .returning();
+    if (approved) await grantDoctorApprovalGiftInTx(tx, approved.userId);
+    return approved;
+  });
 
   if (!doctor) {
     res.status(404).json({ error: "Doctor not found" });
     return;
   }
-
   const [user] = await db.select({ email: usersTable.email, name: usersTable.name })
     .from(usersTable)
     .where(eq(usersTable.id, doctor.userId))

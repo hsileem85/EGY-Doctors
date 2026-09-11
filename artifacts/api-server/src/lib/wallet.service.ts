@@ -5,6 +5,8 @@ import {
   walletsTable,
   walletTransactionsTable,
   systemSettingsTable,
+  doctorsTable,
+  notificationsTable,
   type WalletOwnerType,
   type WalletTransactionCategory,
 } from "@workspace/db";
@@ -163,10 +165,73 @@ export async function initializeWallets(): Promise<void> {
       await ensureWallet("PATIENT", String(user.id));
     } else if (user.role === "doctor") {
       await ensureWallet("DOCTOR", String(user.id));
+      const [doctor] = await db.select({ accountStatus: doctorsTable.accountStatus })
+        .from(doctorsTable).where(eq(doctorsTable.userId, user.id)).limit(1);
+      if (doctor?.accountStatus === "approved") {
+        await grantDoctorApprovalGift(user.id);
+      }
     } else if (user.role === "medical_center") {
       await syncMedicalCenterWalletType(user.id, user.centerSubType);
     }
   }
+}
+
+export async function grantDoctorApprovalGiftInTx(tx: WalletTx, userId: number): Promise<boolean> {
+  const ownerId = String(userId);
+  const wallet = await ensureWalletInTx(tx, "DOCTOR", ownerId);
+  const [lockedWallet] = await tx.select().from(walletsTable)
+    .where(eq(walletsTable.id, wallet.id))
+    .limit(1)
+    .for("update");
+  if (!lockedWallet) throw new WalletNotFoundError();
+  const giftAmount = 50;
+  const referenceId = `doctor-approval-gift:${userId}`;
+  const [gift] = await tx.insert(walletTransactionsTable).values({
+    walletId: lockedWallet.id,
+    type: "CREDIT",
+    category: "ADMIN_GIFT",
+    amount: giftAmount,
+    balancePost: lockedWallet.balance + giftAmount,
+    referenceId,
+    description: "Doctor approval welcome gift",
+  }).onConflictDoNothing().returning({ id: walletTransactionsTable.id });
+  if (!gift) return false;
+  await tx.update(walletsTable).set({
+    balance: sql`${walletsTable.balance} + ${giftAmount}`,
+    updatedAt: new Date(),
+  }).where(eq(walletsTable.id, lockedWallet.id));
+  await tx.insert(notificationsTable).values({
+    userId,
+    type: "wallet_low_balance",
+    title: "Welcome gift added to your wallet",
+    body: "We added 50 EGP to your wallet. Keep your balance at or above 50 EGP so your profile remains visible to patients.",
+    data: { balance: lockedWallet.balance + giftAmount, threshold: 50 },
+  });
+  return true;
+}
+
+export async function grantDoctorApprovalGift(userId: number): Promise<boolean> {
+  return db.transaction((tx) => grantDoctorApprovalGiftInTx(tx, userId));
+}
+
+export async function notifyDoctorLowBalanceCrossingInTx(
+  tx: WalletTx,
+  ownerId: string,
+  balanceBefore: number,
+  balanceAfter: number,
+): Promise<void> {
+  const financial = await getFinancialSettingsInTx(tx);
+  const threshold = financial?.minDoctorWalletBalance ?? 50;
+  if (balanceBefore <= threshold || balanceAfter > threshold) return;
+  const userId = Number(ownerId);
+  if (!Number.isInteger(userId)) return;
+  await tx.insert(notificationsTable).values({
+    userId,
+    type: "wallet_low_balance",
+    title: "Wallet balance warning",
+    body: `Your wallet balance is ${balanceAfter.toFixed(2)} EGP. Top up to keep your profile visible to patients.`,
+    data: { balance: balanceAfter, threshold },
+  });
 }
 
 interface WalletMutationInput {
@@ -339,6 +404,14 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
       category: "FEE_DEDUCTION",
       description: "Configured booking fee deduction",
     });
+    if (input.ownerType === "DOCTOR") {
+      await notifyDoctorLowBalanceCrossingInTx(
+        tx,
+        input.ownerId,
+        creditedOwner.balance,
+        debitedOwner.balance,
+      );
+    }
 
     const platformWallet = await ensureWalletInTx(tx, "PLATFORM", PLATFORM_OWNER_ID);
     const [creditedPlatform] = await tx
@@ -468,7 +541,6 @@ export async function creditWallet(input: WalletMutationInput) {
         description: input.description,
       })
       .returning();
-
     return { wallet, transaction };
   });
 }
@@ -515,6 +587,14 @@ export async function debitWallet(input: WalletMutationInput) {
         description: input.description,
       })
       .returning();
+    if (input.ownerType === "DOCTOR") {
+      await notifyDoctorLowBalanceCrossingInTx(
+        tx,
+        input.ownerId,
+        wallet.balance + amount,
+        wallet.balance,
+      );
+    }
 
     return { wallet, transaction };
   });

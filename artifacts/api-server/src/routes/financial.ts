@@ -9,7 +9,7 @@ import {
   walletsTable, walletTransactionsTable,
   doctorsTable, paymentsTable,
 } from "@workspace/db";
-import { creditWallet, ensureWallet, InsufficientWalletFundsError } from "../lib/wallet.service.js";
+import { creditWallet, ensureWallet, InsufficientWalletFundsError, notifyDoctorLowBalanceCrossingInTx } from "../lib/wallet.service.js";
 
 const router: IRouter = Router();
 const nextDecision = (req: Request, res: Response) => (router as unknown as { handle: Function }).handle(req, res, () => undefined);
@@ -63,8 +63,9 @@ router.get("/admin/financial-settings", requireAdmin, async (_req, res) => res.j
 router.patch("/admin/financial-settings", requireAdmin, async (req, res) => {
   const parsed = settingsInput.safeParse(req.body);
   if (!parsed.success) { res.status(422).json({ error: parsed.error.message }); return; }
-  const [row] = await db.update(systemSettingsTable).set(parsed.data).where(eq(systemSettingsTable.id, 1)).returning();
-  res.json(row ?? (await db.insert(systemSettingsTable).values({ id: 1, ...parsed.data }).returning())[0]);
+  const data = { ...parsed.data, minDoctorWalletBalance: 50, subscriptionModelEnabled: false };
+  const [row] = await db.update(systemSettingsTable).set(data).where(eq(systemSettingsTable.id, 1)).returning();
+  res.json(row ?? (await db.insert(systemSettingsTable).values({ id: 1, ...data }).returning())[0]);
 });
 
 router.get("/wallet/bank-account", async (req, res) => {
@@ -116,7 +117,10 @@ router.post("/admin/withdrawal-requests/:id/decision", requireAdmin, async (req,
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   try {
     const row = await db.transaction(async (tx) => {
-      const [current] = await tx.select().from(withdrawalRequestsTable).where(eq(withdrawalRequestsTable.id, id)).limit(1);
+      const [current] = await tx.select().from(withdrawalRequestsTable)
+        .where(eq(withdrawalRequestsTable.id, id))
+        .limit(1)
+        .for("update");
       if (!current) return null;
       if (parsed.data.decision === "REJECTED") {
         if (current.status === "COMPLETED") return current;
@@ -133,6 +137,12 @@ router.post("/admin/withdrawal-requests/:id/decision", requireAdmin, async (req,
         gte(walletsTable.balance, current.amount),
       )).returning();
       if (!wallet) throw new InsufficientWalletFundsError();
+      await notifyDoctorLowBalanceCrossingInTx(
+        tx,
+        current.doctorUserId,
+        wallet.balance + current.amount,
+        wallet.balance,
+      );
       await tx.insert(walletTransactionsTable).values({
         walletId: wallet.id, type: "DEBIT", category: "WITHDRAWAL_PAYOUT",
         amount: current.amount, balancePost: wallet.balance,

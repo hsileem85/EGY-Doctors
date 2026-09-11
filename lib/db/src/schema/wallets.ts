@@ -73,6 +73,12 @@ export const walletTransactionsTable = pgTable(
     uniqueIndex("wallet_transactions_review_cashback_reference_unique")
       .on(table.walletId, table.referenceId)
       .where(sql`${table.category} = 'CASHBACK_REWARD' AND ${table.referenceId} LIKE 'review:%'`),
+    uniqueIndex("wallet_transactions_doctor_approval_gift_unique")
+      .on(table.walletId, table.referenceId)
+      .where(sql`${table.category} = 'ADMIN_GIFT' AND ${table.referenceId} LIKE 'doctor-approval-gift:%'`),
+    uniqueIndex("wallet_transactions_withdrawal_payout_unique")
+      .on(table.walletId, table.referenceId)
+      .where(sql`${table.category} = 'WITHDRAWAL_PAYOUT'`),
   ],
 );
 

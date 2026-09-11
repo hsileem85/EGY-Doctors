@@ -1393,7 +1393,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab") as Tab;
-    const validTabs: Tab[] = ["appointments", "patients", "assistants", "publications", "preferences", "billing", "wallet"];
+    const validTabs: Tab[] = ["appointments", "patients", "assistants", "publications", "preferences", "wallet"];
     return validTabs.includes(tabParam) ? tabParam : "appointments";
   });
   const qc = useQueryClient();
@@ -1406,20 +1406,6 @@ export default function Dashboard() {
     enabled: !!user?.doctorId && accountStatus === "approved",
   });
 
-  const { data: billingInfo } = useQuery<BillingInfo>({
-    queryKey: ["billingInfo"],
-    queryFn: getBillingInfo,
-    enabled: !!user?.doctorId && accountStatus === "approved",
-  });
-  const isSubscribed = billingInfo?.status === "ACTIVE" || billingInfo?.status === "TRIAL";
-  const subscriptionModelEnabled = billingInfo?.subscriptionModelEnabled === true;
-
-  useEffect(() => {
-    if (billingInfo?.subscriptionModelEnabled === false && activeTab === "billing") {
-      setActiveTab("appointments");
-    }
-  }, [activeTab, billingInfo?.subscriptionModelEnabled]);
-
   const doctorName = user?.name ?? "Doctor";
 
   if (user?.role === "doctor" && accountStatus === "incomplete") {
@@ -1430,10 +1416,6 @@ export default function Dashboard() {
     return <PendingScreen status={accountStatus} doctorName={doctorName} signOut={signOut} isRTL={isRTL} />;
   }
 
-  if (user?.role === "doctor" && accountStatus === "approved" && subscriptionModelEnabled && !isSubscribed) {
-    return <ActivationRequiredScreen isRTL={isRTL} signOut={signOut} />;
-  }
-
   const navItems: { tab: Tab; icon: React.ReactNode; label: string }[] = [
     { tab: "appointments", icon: <CalendarDays className="h-4 w-4" />, label: isRTL ? "المواعيد" : t.dashboard.appointments },
     { tab: "patients", icon: <Users className="h-4 w-4" />, label: isRTL ? "سجل المرضى" : "My Patients" },
@@ -1441,9 +1423,6 @@ export default function Dashboard() {
     { tab: "publications", icon: <Newspaper className="h-4 w-4" />, label: isRTL ? "المنشورات" : "Publications" },
     { tab: "wallet",      icon: <Wallet className="h-4 w-4" />, label: isRTL ? "المحفظة" : "Wallet" },
     { tab: "preferences", icon: <Settings className="h-4 w-4" />, label: isRTL ? "الإعدادات" : "Preferences" },
-    ...(subscriptionModelEnabled
-      ? [{ tab: "billing" as Tab, icon: <CreditCard className="h-4 w-4" />, label: isRTL ? "الاشتراك" : "Billing" }]
-      : []),
   ];
 
   return (
@@ -1697,38 +1676,13 @@ export default function Dashboard() {
             )}
 
             {/* ── Publications Tab ── */}
-            {activeTab === "publications" && (
-              !subscriptionModelEnabled || isSubscribed
-                ? <PublicationsTab isRTL={isRTL} />
-                : (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
-                      <Lock className="h-8 w-8 text-amber-500" />
-                    </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">
-                      {isRTL ? "ميزة مدفوعة" : "Subscription Required"}
-                    </h2>
-                    <p className="text-gray-500 text-sm max-w-sm mb-6">
-                      {isRTL
-                        ? "نشر المقالات والنصائح والفيديوهات متاح فقط للأطباء المشتركين في المنصة."
-                        : "Publishing articles, tips, and videos is available only to subscribed doctors."}
-                    </p>
-                    <Button onClick={() => setActiveTab("billing")} className="gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      {isRTL ? "اشترك الآن" : "Subscribe Now"}
-                    </Button>
-                  </div>
-                )
-            )}
+            {activeTab === "publications" && <PublicationsTab isRTL={isRTL} />}
 
             {/* ── Wallet Tab ── */}
             {activeTab === "wallet" && <WalletTab isRTL={isRTL} ownerMode="doctor" />}
 
             {/* ── Preferences Tab ── */}
             {activeTab === "preferences" && <PreferencesTab isRTL={isRTL} />}
-
-            {/* ── Billing Tab ── */}
-            {activeTab === "billing" && subscriptionModelEnabled && <BillingTab isRTL={isRTL} />}
 
           </div>
         </main>

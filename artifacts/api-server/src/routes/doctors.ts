@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, and, inArray, avg, count, sql, asc } from "drizzle-orm";
+import { eq, and, inArray, avg, count, sql, asc, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
@@ -74,18 +74,16 @@ router.get("/doctors", async (req, res): Promise<void> => {
 
   const [financialSettings] = await db.select({
     minDoctorWalletBalance: systemSettingsTable.minDoctorWalletBalance,
-    subscriptionModelEnabled: systemSettingsTable.subscriptionModelEnabled,
   }).from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
   const minWallet = financialSettings?.minDoctorWalletBalance ?? 50;
-  const subscriptionEnabled = financialSettings?.subscriptionModelEnabled ?? false;
   const conditions = [
     eq(doctorsTable.accountStatus, "approved"),
     eq(doctorsTable.isActive, true),
-    sql`(${doctorsTable.affiliatedCenterId} IS NOT NULL OR (EXISTS (
+    sql`EXISTS (
       SELECT 1 FROM ${walletsTable} w
       WHERE w.owner_type = 'DOCTOR' AND w.owner_id = CAST(${doctorsTable.userId} AS TEXT)
         AND w.balance >= ${minWallet}
-    ) ${subscriptionEnabled ? sql`AND (${doctorsTable.subscriptionStatus} = 'TRIAL' OR (${doctorsTable.subscriptionStatus} = 'ACTIVE' AND (${doctorsTable.subscriptionEndDate} IS NULL OR ${doctorsTable.subscriptionEndDate} > NOW())))` : sql``}))`,
+    )`,
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));
@@ -292,11 +290,13 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
 
   /* Resolve optional caller identity for isFollowing */
   let callerId: number | null = null;
+  let callerRole: string | null = null;
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) {
     try {
-      const p = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number };
+      const p = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number; role?: string };
       callerId = p.sub;
+      callerRole = p.role ?? null;
     } catch { /* unauthenticated — callerId stays null */ }
   }
 
@@ -313,6 +313,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
     rating: doctorsTable.rating,
     reviews: doctorsTable.reviews,
     accountStatus: doctorsTable.accountStatus,
+    isActive: doctorsTable.isActive,
     license: doctorsTable.license,
     specialtyId: doctorsTable.specialtyId,
     cityId: doctorsTable.cityId,
@@ -356,6 +357,21 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
   if (!row) {
     res.status(404).json({ error: "Doctor not found" });
     return;
+  }
+  const mayBypassVisibility = callerRole === "admin" || callerId === row.userId;
+  if (!mayBypassVisibility) {
+    const [settings] = await db.select({ minimum: systemSettingsTable.minDoctorWalletBalance })
+      .from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+    const [visibleWallet] = await db.select({ id: walletsTable.id }).from(walletsTable)
+      .where(and(
+        eq(walletsTable.ownerType, "DOCTOR"),
+        eq(walletsTable.ownerId, String(row.userId)),
+        gte(walletsTable.balance, settings?.minimum ?? 50),
+      )).limit(1);
+    if (row.accountStatus !== "approved" || !row.isActive || !visibleWallet) {
+      res.status(404).json({ error: "Doctor not found" });
+      return;
+    }
   }
 
   const enrichedClinics = await db

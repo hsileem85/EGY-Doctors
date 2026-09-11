@@ -330,7 +330,7 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
     const base = process.env.APP_URL ?? "https://egydoctors.com";
     await sendEmail(
       to,
-      "🎉 Your EGY Doctors account has been approved — subscribe to activate it",
+      "Your EGY Doctors account has been approved — activate it with your wallet",
       `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
         <div style="text-align:center;margin-bottom:24px">
@@ -342,15 +342,15 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
         </p>
         <div style="background:#FEF9F0;border:1px solid #D4A853;border-radius:8px;padding:16px;margin:24px 0">
           <p style="color:#92400E;margin:0;font-size:14px">
-            ⚠️ One last step: your account is <strong>not yet active</strong>. To appear on the platform and be discoverable by patients searching for doctors, you need to <strong>subscribe to a plan</strong>.
+            Your account has been approved, and EGY Doctors has added a <strong>50 EGP welcome gift</strong> to your wallet. Your profile appears to patients while your available wallet balance is at least <strong>50 EGP</strong>.
           </p>
         </div>
         <p style="color:#475569;line-height:1.6">
-          Once you subscribe, your profile will go live immediately and you'll start receiving appointments from patients in your specialty and area.
+          Keep your wallet topped up to remain visible in doctor searches. We will notify you when your balance reaches 50 EGP or below.
         </p>
         <div style="text-align:center;margin:32px 0">
-          <a href="${base}/dashboard?tab=billing" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
-            Subscribe to Activate My Account
+          <a href="${base}/dashboard?tab=wallet" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">
+            View and Top Up My Wallet
           </a>
         </div>
         <p style="color:#94A3B8;font-size:12px;margin-top:32px;border-top:1px solid #E2E8F0;padding-top:16px">

@@ -240,7 +240,7 @@ export async function notifyFollowers(params: {
 
 /** Delivers a single user's notification through both durable in-app and Web Push channels. */
 export async function notifyUser(userId: number, input: {
-  type?: "new_post" | "appointment_reminder";
+  type?: "new_post" | "appointment_reminder" | "wallet_low_balance";
   title: string;
   body: string;
   data?: Record<string, unknown>;
