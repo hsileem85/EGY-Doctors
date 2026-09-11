@@ -15,11 +15,12 @@ import { arEG, enGB } from "date-fns/locale";
 
 interface WalletTabProps {
   isRTL: boolean;
-  ownerMode?: "doctor" | "patient" | "medical-center";
+  ownerMode?: "doctor" | "patient" | "medical-center" | "platform";
 }
 
 export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
   const isDoctor = ownerMode === "doctor";
+  const isPlatform = ownerMode === "platform";
   const queryClient = useQueryClient();
   const { data: wallet, isLoading, isError, refetch } = useGetWallet();
   const { data: bankAccount } = useQuery({ queryKey: ["bank-account"], queryFn: getBankAccount, enabled: isDoctor });
@@ -113,10 +114,18 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Wallet className="h-6 w-6 text-[#D4A853]" />
-          {isRTL ? "محفظتي" : "My Wallet"}
+          {isPlatform
+            ? (isRTL ? "محفظة المنصة" : "Platform Wallet")
+            : (isRTL ? "محفظتي" : "My Wallet")}
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          {isRTL ? "تتبع الأرصدة المتاحة والأموال المعلقة وسجل معاملاتك." : "Track your available balance, pending funds, and transaction history."}
+          {isPlatform
+            ? (isRTL
+                ? "عرض رصيد المنصة والأموال المعلقة وسجل المعاملات."
+                : "View the platform balance, pending funds, and transaction history.")
+            : (isRTL
+                ? "تتبع الأرصدة المتاحة والأموال المعلقة وسجل معاملاتك."
+                : "Track your available balance, pending funds, and transaction history.")}
         </p>
       </div>
 
@@ -137,7 +146,9 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
               {formatCurrency(wallet.balance, currency)}
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              {isRTL ? "متاح للسحب والاستخدام" : "Available for withdrawal and use"}
+              {isPlatform
+                ? (isRTL ? "الرصيد المتاح للمنصة" : "Available platform balance")
+                : (isRTL ? "متاح للسحب والاستخدام" : "Available for withdrawal and use")}
             </p>
           </CardContent>
         </Card>

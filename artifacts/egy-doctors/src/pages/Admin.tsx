@@ -53,6 +53,7 @@ import {
   type AdminNotification,
 } from "@workspace/api-client-react";
 import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
+import { WalletTab } from "@/components/dashboard/WalletTab";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -781,7 +782,7 @@ function BillingManagementSection({ lang }: { lang: "en" | "ar" }) {
 function FinancialManagementSection({ lang }: { lang: "en" | "ar" }) {
   const isAr = lang === "ar";
   const qc = useQueryClient();
-  const [subTab, setSubTab] = useState<"settings" | "withdrawals">("settings");
+  const [subTab, setSubTab] = useState<"settings" | "withdrawals" | "wallet">("settings");
   const [form, setForm] = useState<AdminFinancialSettings>({ deductionType: "PERCENTAGE", deductionValue: 0, platformSharePercentage: 100, cashbackSharePercentage: 0, minDoctorWalletBalance: 0, subscriptionModelEnabled: false });
   const [bank, setBank] = useState<AdminPlatformBankAccount>({ accountHolderName: "", bankName: "", accountNumber: "", iban: "", branchName: "", swiftCode: "" });
   const settings = useQuery({ queryKey: ["adminFinancialSettings"], queryFn: getAdminFinancialSettings });
@@ -795,13 +796,17 @@ function FinancialManagementSection({ lang }: { lang: "en" | "ar" }) {
   const bankField = (label: string, key: keyof AdminPlatformBankAccount) => <label className="text-sm text-gray-700">{label}<Input className="mt-1" value={bank[key] ?? ""} onChange={(e) => setBank({ ...bank, [key]: e.target.value })} /></label>;
   return <div className="space-y-6 max-w-4xl">
     <h2 className="text-xl font-bold text-gray-900">{isAr ? "الإدارة المالية" : "Financial Management"}</h2>
-    <div className="flex gap-2"><Button variant={subTab === "settings" ? "default" : "outline"} onClick={() => setSubTab("settings")}>{isAr ? "الإعدادات" : "Settings"}</Button><Button variant={subTab === "withdrawals" ? "default" : "outline"} onClick={() => setSubTab("withdrawals")}>{isAr ? "طلبات السحب" : "Withdrawal Requests"}</Button></div>
+    <div className="flex flex-wrap gap-2">
+      <Button variant={subTab === "settings" ? "default" : "outline"} onClick={() => setSubTab("settings")}>{isAr ? "الإعدادات" : "Settings"}</Button>
+      <Button variant={subTab === "withdrawals" ? "default" : "outline"} onClick={() => setSubTab("withdrawals")}>{isAr ? "طلبات السحب" : "Withdrawal Requests"}</Button>
+      <Button variant={subTab === "wallet" ? "default" : "outline"} onClick={() => setSubTab("wallet")}>{isAr ? "محفظة المنصة" : "Platform Wallet"}</Button>
+    </div>
     {subTab === "settings" ? <div className="space-y-5">
       <div className="bg-white border rounded-xl p-6"><h3 className="font-semibold mb-4">{isAr ? "الخصم وحصص الإيرادات" : "Deduction & revenue shares"}</h3>{settings.isLoading ? <p className="text-gray-500">Loading...</p> : settings.isError ? <p className="text-red-600">{isAr ? "تعذر تحميل الإعدادات" : "Unable to load settings"}</p> : <div className="grid sm:grid-cols-2 gap-4">
         {numberField(isAr ? "قيمة الخصم" : "Deduction value", "deductionValue")}{numberField(isAr ? "حصة المنصة %" : "Platform share %", "platformSharePercentage")}{numberField(isAr ? "حصة الكاش باك %" : "Cashback share %", "cashbackSharePercentage")}{numberField(isAr ? "الحد الأدنى لمحفظة الطبيب" : "Minimum doctor wallet balance", "minDoctorWalletBalance")}
       </div>}<p className={`text-xs mt-3 ${valid ? "text-gray-500" : "text-red-600"}`}>{isAr ? "يجب أن يكون مجموع حصة المنصة والكاش باك 100%." : "Platform and cashback shares must total 100%."}</p><label className="flex items-center gap-2 mt-5 text-sm"><input type="checkbox" checked={form.subscriptionModelEnabled} onChange={(e) => setForm({ ...form, subscriptionModelEnabled: e.target.checked })} />{isAr ? "تفعيل نموذج الاشتراكات" : "Enable subscription model"}</label><div className="mt-5"><Button disabled={!valid || save.isPending} onClick={() => save.mutate(form)} className="bg-[#D4A853] text-[#0F172A]"><Save className="w-4 h-4 mr-2" />{isAr ? "حفظ" : "Save settings"}</Button>{save.isSuccess && <span className="text-sm text-green-600 ml-3">{isAr ? "تم الحفظ" : "Saved"}</span>}{save.isError && <span className="text-sm text-red-600 ml-3">{isAr ? "فشل الحفظ" : "Save failed"}</span>}</div></div>
       <div className="bg-white border rounded-xl p-6"><h3 className="font-semibold mb-4">{isAr ? "حساب المنصة البنكي" : "Platform bank account"}</h3>{bankQuery.isLoading ? <p className="text-gray-500">Loading...</p> : bankQuery.isError ? <p className="text-red-600">{isAr ? "تعذر تحميل الحساب البنكي" : "Unable to load bank account"}</p> : <div className="grid sm:grid-cols-2 gap-4">{bankField("Account holder name", "accountHolderName")}{bankField("Bank name", "bankName")}{bankField("Account number", "accountNumber")}{bankField("IBAN", "iban")}{bankField("Branch", "branchName")}</div>}<p className="text-xs text-gray-500 mt-3">Provide an account number or IBAN.</p><Button className="mt-5 bg-[#D4A853] text-[#0F172A]" disabled={saveBank.isPending || bankQuery.isError || !bank.accountHolderName.trim() || !bank.bankName.trim() || (!bank.accountNumber?.trim() && !bank.iban?.trim())} onClick={() => saveBank.mutate(bank)}><Save className="w-4 h-4 mr-2" />Save bank account</Button>{saveBank.isSuccess && <span className="text-sm text-green-600 ml-3">{isAr ? "تم الحفظ" : "Saved"}</span>}{saveBank.isError && <span className="text-sm text-red-600 ml-3">{isAr ? "فشل الحفظ" : "Save failed"}</span>}</div>
-    </div> : <WithdrawalsPanel lang={lang} />}
+    </div> : subTab === "withdrawals" ? <WithdrawalsPanel lang={lang} /> : <WalletTab isRTL={isAr} ownerMode="platform" />}
   </div>;
 }
 
