@@ -1713,7 +1713,7 @@ export default function Dashboard() {
             )}
 
             {/* ── Wallet Tab ── */}
-            {activeTab === "wallet" && <WalletTab isRTL={isRTL} />}
+            {activeTab === "wallet" && <WalletTab isRTL={isRTL} ownerMode="doctor" />}
 
             {/* ── Preferences Tab ── */}
             {activeTab === "preferences" && <PreferencesTab isRTL={isRTL} />}

@@ -2,12 +2,12 @@ import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import PDFDocument from "pdfkit";
-import { eq, inArray, and, desc, or, ne, gte } from "drizzle-orm";
+import { eq, inArray, and, desc, or, ne, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, doctorsTable, medicalCentersTable, usersTable,
   siteSettingsTable, vouchersTable, paymentsTable,
-  appointmentsTable, type WalletOwnerType,
+  appointmentsTable, clinicsTable, walletsTable, walletTransactionsTable, type WalletOwnerType,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { sendReceiptEmail } from "../lib/email";
@@ -543,7 +543,7 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
 });
 
 /* ─── POST /billing/paymob/appointments/:id/initiate ─── */
-router.post("/billing/paymob/appointments/:id/initiate", async (req, res): Promise<void> => {
+router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/payment"], async (req, res): Promise<void> => {
   const apiKey = process.env.PAYMOB_API_KEY;
   const uatBypass = process.env.UAT_PAYMENT_BYPASS === "true";
   if (!apiKey && !uatBypass) {
@@ -580,33 +580,68 @@ router.post("/billing/paymob/appointments/:id/initiate", async (req, res): Promi
     res.status(422).json({ error: "This appointment does not require payment" });
     return;
   }
-
   const [existingPayment] = await db.select().from(paymentsTable)
-    .where(eq(paymentsTable.appointmentId, appointmentId))
-    .limit(1);
+    .where(eq(paymentsTable.appointmentId, appointmentId)).limit(1);
   if (existingPayment && existingPayment.status !== "FAILED") {
-    res.status(409).json({
-      error: existingPayment.status === "PAID"
-        ? "Appointment is already paid"
-        : "An appointment payment is already in progress",
-    });
+    res.status(409).json({ error: existingPayment.status === "PAID" ? "Appointment is already paid" : "An appointment payment is already in progress" });
     return;
   }
+  const methodResult = z.enum(["CARD", "WALLET", "CASH"]).safeParse(String(req.body?.paymentMethod ?? "CARD").toUpperCase());
+  if (!methodResult.success) { res.status(422).json({ error: "Invalid payment method" }); return; }
+  const requestedMethod = methodResult.data;
+  const cashbackInput = z.object({ useCashback: z.boolean().default(false) }).safeParse(req.body ?? {});
+  if (!cashbackInput.success) { res.status(422).json({ error: "Invalid cashback amount" }); return; }
+  const [clinic] = appointment.clinicId
+    ? await db.select({ acceptedPaymentMethods: clinicsTable.acceptedPaymentMethods }).from(clinicsTable).where(eq(clinicsTable.id, appointment.clinicId)).limit(1)
+    : [];
+  const accepted = clinic?.acceptedPaymentMethods?.length ? clinic.acceptedPaymentMethods : ["CASH", "CARD", "WALLET"];
+  if (!accepted.includes(requestedMethod)) { res.status(422).json({ error: "Selected payment method is not accepted by this clinic" }); return; }
+  if (requestedMethod === "CASH") { res.status(422).json({ error: "Cash bookings do not require online payment" }); return; }
+  const [patientWallet] = await db.select({ balance: walletsTable.balance }).from(walletsTable)
+    .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub))));
+  const requestedCashback = existingPayment?.status === "FAILED" && existingPayment.cashbackAmount > 0
+    ? existingPayment.cashbackAmount
+    : cashbackInput.data.useCashback ? Math.min(patientWallet?.balance ?? 0, appointment.feeCharged) : 0;
+  let cashbackUsed = 0;
+  cashbackUsed = requestedCashback;
 
+  const remainder = appointment.feeCharged - cashbackUsed;
   const owner = await resolveBookingEscrowOwner(appointment.doctorId);
-  const amountCents = Math.round(appointment.feeCharged * 100);
+  if (remainder === 0) {
+    const [payment] = await db.transaction(async (tx) => {
+      if (cashbackUsed > 0) {
+        const [patient] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} - ${cashbackUsed}`, updatedAt: new Date() })
+          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub)), gte(walletsTable.balance, cashbackUsed))).returning();
+        if (!patient) throw new Error("Insufficient cashback balance");
+        await tx.insert(walletTransactionsTable).values({ walletId: patient.id, type: "DEBIT", category: "CASHBACK_USAGE", amount: cashbackUsed, balancePost: patient.balance, referenceId: String(appointmentId), description: "Cashback applied to booking" });
+      }
+      const [created] = await tx.insert(paymentsTable).values({ appointmentId, escrowOwnerType: owner.ownerType, escrowOwnerId: owner.ownerId, planType: "BOOKING", amount: 0, cashbackAmount: cashbackUsed, currency: "EGP", status: "PAID", paidAt: new Date(), escrowedAt: new Date() }).returning();
+      await escrowBookingInTx(tx, { ...owner, amount: appointment.feeCharged!, bookingId: String(appointmentId) });
+      return [created];
+    });
+    res.json({ paymentKey: "cashback-settled", iframeId: "none", orderId: `CASHBACK-${appointmentId}`, paymentId: payment.id, iframeUrl: "" });
+    return;
+  }
+  const amountCents = Math.round(remainder * 100);
   const orderReference = `appointment-${appointmentId}`;
 
   if (uatBypass) {
     const orderId = `UAT-BOOKING-${appointmentId}-${Date.now()}`;
     const [payment] = await db.transaction(async (tx) => {
+      if (cashbackUsed > 0) {
+        const [patient] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} - ${cashbackUsed}`, updatedAt: new Date() })
+          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub)), gte(walletsTable.balance, cashbackUsed))).returning();
+        if (!patient) throw new Error("Insufficient cashback balance");
+        await tx.insert(walletTransactionsTable).values({ walletId: patient.id, type: "DEBIT", category: "CASHBACK_USAGE", amount: cashbackUsed, balancePost: patient.balance, referenceId: String(appointmentId), description: "Cashback applied to booking" });
+      }
       const values = {
         appointmentId,
         escrowOwnerType: owner.ownerType,
         escrowOwnerId: owner.ownerId,
         paymobOrderId: orderId,
         planType: "BOOKING",
-        amount: appointment.feeCharged!,
+        amount: remainder,
+        cashbackAmount: cashbackUsed,
         currency: "EGP",
         status: "PAID" as const,
         paidAt: new Date(),
@@ -635,8 +670,8 @@ router.post("/billing/paymob/appointments/:id/initiate", async (req, res): Promi
     return;
   }
 
-  const integrationId = process.env.PAYMOB_CARD_INTEGRATION_ID;
-  const iframeId = process.env.PAYMOB_IFRAME_ID;
+  const integrationId = requestedMethod === "WALLET" ? process.env.PAYMOB_WALLET_INTEGRATION_ID : process.env.PAYMOB_CARD_INTEGRATION_ID;
+  const iframeId = requestedMethod === "WALLET" ? process.env.PAYMOB_WALLET_IFRAME_ID : process.env.PAYMOB_IFRAME_ID;
   if (!integrationId || !iframeId) {
     res.status(422).json({ error: "Card payments are not configured." });
     return;
@@ -700,17 +735,24 @@ router.post("/billing/paymob/appointments/:id/initiate", async (req, res): Promi
       escrowOwnerId: owner.ownerId,
       paymobOrderId,
       planType: "BOOKING",
-      amount: appointment.feeCharged,
+     amount: remainder,
+     cashbackAmount: cashbackUsed,
       currency: "EGP",
       status: "PENDING" as const,
       paymobTransactionId: null,
       paidAt: null,
     };
-    const [payment] = existingPayment
-      ? await db.update(paymentsTable).set(values)
-        .where(and(eq(paymentsTable.id, existingPayment.id), eq(paymentsTable.status, "FAILED")))
-        .returning()
-      : await db.insert(paymentsTable).values(values).returning();
+    const [payment] = await db.transaction(async (tx) => {
+      if (cashbackUsed > 0 && !(existingPayment?.status === "FAILED" && existingPayment.cashbackAmount > 0)) {
+        const [patient] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} - ${cashbackUsed}`, updatedAt: new Date() })
+          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub)), gte(walletsTable.balance, cashbackUsed))).returning();
+        if (!patient) throw new Error("Insufficient cashback balance");
+        await tx.insert(walletTransactionsTable).values({ walletId: patient.id, type: "DEBIT", category: "CASHBACK_USAGE", amount: cashbackUsed, balancePost: patient.balance, referenceId: String(appointmentId), description: "Cashback applied to booking" });
+      }
+      return existingPayment
+        ? tx.update(paymentsTable).set(values).where(and(eq(paymentsTable.id, existingPayment.id), eq(paymentsTable.status, "FAILED"))).returning()
+        : tx.insert(paymentsTable).values(values).returning();
+    });
     res.json({
       paymentKey: keyData.token,
       iframeId,
@@ -821,13 +863,27 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
         logger.info({ paymobOrderId }, "Paymob refund already processed (idempotent skip)");
         return;
       }
-      if (refunded.amount > 0) {
+      if (refunded.amount > 0 || refunded.cashbackAmount > 0) {
         if (refunded.appointmentId) {
+            if (refunded.cashbackAmount > 0) {
+              const [appointment] = await tx.select({ patientUserId: appointmentsTable.patientUserId }).from(appointmentsTable)
+                .where(eq(appointmentsTable.id, refunded.appointmentId)).limit(1);
+              if (appointment?.patientUserId) {
+                const [patient] = await tx.update(walletsTable).set({
+                  balance: sql`${walletsTable.balance} + ${refunded.cashbackAmount}`, updatedAt: new Date(),
+                }).where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(appointment.patientUserId)))).returning();
+                if (patient) await tx.insert(walletTransactionsTable).values({
+                  walletId: patient.id, type: "CREDIT", category: "CASHBACK_REWARD",
+                  amount: refunded.cashbackAmount, balancePost: patient.balance,
+                  referenceId: String(refunded.id), description: "Cashback restored after booking refund",
+                });
+              }
+            }
           if (refunded.escrowedAt && refunded.escrowOwnerType && refunded.escrowOwnerId) {
             await refundBookingEscrowInTx(tx, {
               ownerType: refunded.escrowOwnerType as WalletOwnerType,
               ownerId: refunded.escrowOwnerId,
-              amount: refunded.amount,
+            amount: refunded.amount + Number(refunded.cashbackAmount ?? 0),
               bookingId: String(refunded.appointmentId),
             });
           }
@@ -875,8 +931,29 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
       }
 
       if (updated.amount > 0) {
+        // Wallet top-ups use a distinct payment reference and are credited only
+        // after this HMAC-verified successful callback. The status transition
+        // above makes repeated callbacks idempotent.
+        if (updated.planType === "WALLET_TOP_UP" && updated.doctorId) {
+          const [wallet] = await tx.update(walletsTable).set({
+            balance: sql`${walletsTable.balance} + ${updated.amount}`,
+            updatedAt: new Date(),
+          }).where(and(
+            eq(walletsTable.ownerType, "DOCTOR"),
+            eq(walletsTable.ownerId, sql`(SELECT user_id::text FROM doctors WHERE id = ${updated.doctorId})`),
+          )).returning();
+          if (wallet) {
+            await tx.insert(walletTransactionsTable).values({
+              walletId: wallet.id, type: "CREDIT", category: "WALLET_TOP_UP",
+              amount: updated.amount, balancePost: wallet.balance,
+              referenceId: String(updated.id), description: "Verified Paymob wallet top-up",
+            });
+          }
+          paidPayment = updated;
+          return;
+        }
         if (updated.appointmentId && updated.escrowOwnerType && updated.escrowOwnerId) {
-          const [appointment] = await tx.select({ status: appointmentsTable.status })
+          const [appointment] = await tx.select({ status: appointmentsTable.status, patientUserId: appointmentsTable.patientUserId })
             .from(appointmentsTable)
             .where(eq(appointmentsTable.id, updated.appointmentId))
             .limit(1);
@@ -891,7 +968,7 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
           await escrowBookingInTx(tx, {
             ownerType: updated.escrowOwnerType as WalletOwnerType,
             ownerId: updated.escrowOwnerId,
-            amount: updated.amount,
+            amount: updated.amount + Number(updated.cashbackAmount ?? 0),
             bookingId: String(updated.appointmentId),
           });
           await tx.update(paymentsTable)
@@ -904,9 +981,10 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
             await releaseBookingEscrowInTx(tx, {
               ownerType: updated.escrowOwnerType as WalletOwnerType,
               ownerId: updated.escrowOwnerId,
-              amount: updated.amount,
+              amount: updated.amount + Number(updated.cashbackAmount ?? 0),
               bookingId: String(updated.appointmentId),
               commissionRate: 0.1,
+              patientUserId: appointment?.patientUserId ? String(appointment.patientUserId) : null,
             });
           }
           paidPayment = updated;

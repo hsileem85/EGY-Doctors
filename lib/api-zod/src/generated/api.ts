@@ -563,13 +563,294 @@ export const GetWalletResponse = zod.object({
   "transactions": zod.array(zod.object({
   "id": zod.string().uuid(),
   "type": zod.enum(['CREDIT', 'DEBIT']),
-  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
   "amount": zod.number(),
   "balancePost": zod.number(),
   "referenceId": zod.string().nullish(),
   "description": zod.string(),
   "createdAt": zod.coerce.date()
 }))
+})
+
+
+export const getFinancialSettingsResponseDeductionValueMin = 0;
+
+export const getFinancialSettingsResponsePlatformSharePercentageMin = 0;
+export const getFinancialSettingsResponsePlatformSharePercentageMax = 100;
+
+export const getFinancialSettingsResponseCashbackSharePercentageMin = 0;
+export const getFinancialSettingsResponseCashbackSharePercentageMax = 100;
+
+export const getFinancialSettingsResponseMinDoctorWalletBalanceMin = 0;
+
+
+
+export const GetFinancialSettingsResponse = zod.object({
+  "deductionType": zod.enum(['FIXED', 'PERCENTAGE']),
+  "deductionValue": zod.number().min(getFinancialSettingsResponseDeductionValueMin),
+  "platformSharePercentage": zod.number().min(getFinancialSettingsResponsePlatformSharePercentageMin).max(getFinancialSettingsResponsePlatformSharePercentageMax),
+  "cashbackSharePercentage": zod.number().min(getFinancialSettingsResponseCashbackSharePercentageMin).max(getFinancialSettingsResponseCashbackSharePercentageMax),
+  "minDoctorWalletBalance": zod.number().min(getFinancialSettingsResponseMinDoctorWalletBalanceMin),
+  "subscriptionModelEnabled": zod.boolean()
+})
+
+
+export const updateFinancialSettingsBodyOneDeductionValueMin = 0;
+
+export const updateFinancialSettingsBodyOnePlatformSharePercentageMin = 0;
+export const updateFinancialSettingsBodyOnePlatformSharePercentageMax = 100;
+
+export const updateFinancialSettingsBodyOneCashbackSharePercentageMin = 0;
+export const updateFinancialSettingsBodyOneCashbackSharePercentageMax = 100;
+
+export const updateFinancialSettingsBodyOneMinDoctorWalletBalanceMin = 0;
+
+
+
+export const UpdateFinancialSettingsBody = zod.object({
+  "deductionType": zod.enum(['FIXED', 'PERCENTAGE']),
+  "deductionValue": zod.number().min(updateFinancialSettingsBodyOneDeductionValueMin),
+  "platformSharePercentage": zod.number().min(updateFinancialSettingsBodyOnePlatformSharePercentageMin).max(updateFinancialSettingsBodyOnePlatformSharePercentageMax),
+  "cashbackSharePercentage": zod.number().min(updateFinancialSettingsBodyOneCashbackSharePercentageMin).max(updateFinancialSettingsBodyOneCashbackSharePercentageMax),
+  "minDoctorWalletBalance": zod.number().min(updateFinancialSettingsBodyOneMinDoctorWalletBalanceMin),
+  "subscriptionModelEnabled": zod.boolean()
+})
+
+export const updateFinancialSettingsResponseDeductionValueMin = 0;
+
+export const updateFinancialSettingsResponsePlatformSharePercentageMin = 0;
+export const updateFinancialSettingsResponsePlatformSharePercentageMax = 100;
+
+export const updateFinancialSettingsResponseCashbackSharePercentageMin = 0;
+export const updateFinancialSettingsResponseCashbackSharePercentageMax = 100;
+
+export const updateFinancialSettingsResponseMinDoctorWalletBalanceMin = 0;
+
+
+
+export const UpdateFinancialSettingsResponse = zod.object({
+  "deductionType": zod.enum(['FIXED', 'PERCENTAGE']),
+  "deductionValue": zod.number().min(updateFinancialSettingsResponseDeductionValueMin),
+  "platformSharePercentage": zod.number().min(updateFinancialSettingsResponsePlatformSharePercentageMin).max(updateFinancialSettingsResponsePlatformSharePercentageMax),
+  "cashbackSharePercentage": zod.number().min(updateFinancialSettingsResponseCashbackSharePercentageMin).max(updateFinancialSettingsResponseCashbackSharePercentageMax),
+  "minDoctorWalletBalance": zod.number().min(updateFinancialSettingsResponseMinDoctorWalletBalanceMin),
+  "subscriptionModelEnabled": zod.boolean()
+})
+
+
+export const GetBankAccountResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.string(),
+  "ownerId": zod.string(),
+  "accountHolderName": zod.string(),
+  "bankName": zod.string(),
+  "accountNumber": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "branchName": zod.string().nullish(),
+  "swiftCode": zod.string().nullish()
+})
+
+
+
+
+
+
+export const UpdateBankAccountBody = zod.object({
+  "accountHolderName": zod.string().min(1),
+  "bankName": zod.string().min(1),
+  "accountNumber": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "branchName": zod.string().nullish(),
+  "swiftCode": zod.string().nullish()
+})
+
+export const UpdateBankAccountResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.string(),
+  "ownerId": zod.string(),
+  "accountHolderName": zod.string(),
+  "bankName": zod.string(),
+  "accountNumber": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "branchName": zod.string().nullish(),
+  "swiftCode": zod.string().nullish()
+})
+
+
+export const GetPlatformBankAccountResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.string(),
+  "ownerId": zod.string(),
+  "accountHolderName": zod.string(),
+  "bankName": zod.string(),
+  "accountNumber": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "branchName": zod.string().nullish(),
+  "swiftCode": zod.string().nullish()
+})
+
+
+
+
+
+
+export const UpdatePlatformBankAccountBody = zod.object({
+  "accountHolderName": zod.string().min(1),
+  "bankName": zod.string().min(1),
+  "accountNumber": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "branchName": zod.string().nullish(),
+  "swiftCode": zod.string().nullish()
+})
+
+export const UpdatePlatformBankAccountResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.string(),
+  "ownerId": zod.string(),
+  "accountHolderName": zod.string(),
+  "bankName": zod.string(),
+  "accountNumber": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "branchName": zod.string().nullish(),
+  "swiftCode": zod.string().nullish()
+})
+
+
+export const listWithdrawalRequestsResponseAmountMin = 0;
+
+
+
+export const ListWithdrawalRequestsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "doctorUserId": zod.string(),
+  "amount": zod.number().min(listWithdrawalRequestsResponseAmountMin),
+  "bankAccountId": zod.string().uuid(),
+  "status": zod.enum(['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED']),
+  "adminNote": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListWithdrawalRequestsResponse = zod.array(ListWithdrawalRequestsResponseItem)
+
+
+export const createWithdrawalRequestBodyAmountExclusiveMin = 0;
+
+
+
+export const CreateWithdrawalRequestBody = zod.object({
+  "amount": zod.number().gt(createWithdrawalRequestBodyAmountExclusiveMin)
+})
+
+
+export const createWalletWithdrawalBodyAmountExclusiveMin = 0;
+
+
+
+export const CreateWalletWithdrawalBody = zod.object({
+  "amount": zod.number().gt(createWalletWithdrawalBodyAmountExclusiveMin)
+})
+
+
+export const DecideWithdrawalRequestParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DecideWithdrawalRequestBody = zod.object({
+  "decision": zod.enum(['APPROVED', 'REJECTED', 'COMPLETED']),
+  "adminNote": zod.string().optional()
+})
+
+export const decideWithdrawalRequestResponseAmountMin = 0;
+
+
+
+export const DecideWithdrawalRequestResponse = zod.object({
+  "id": zod.string().uuid(),
+  "doctorUserId": zod.string(),
+  "amount": zod.number().min(decideWithdrawalRequestResponseAmountMin),
+  "bankAccountId": zod.string().uuid(),
+  "status": zod.enum(['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED']),
+  "adminNote": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const createWalletGiftBodyAmountExclusiveMin = 0;
+
+
+
+export const CreateWalletGiftBody = zod.object({
+  "doctorUserId": zod.string(),
+  "amount": zod.number().gt(createWalletGiftBodyAmountExclusiveMin),
+  "description": zod.string().optional()
+})
+
+export const CreateWalletGiftResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.enum(['PATIENT', 'DOCTOR', 'HOSPITAL', 'MEDICAL_CENTER', 'POLY_CLINIC', 'LAB', 'SCAN_CENTER', 'VETERINARY', 'PLATFORM']),
+  "ownerId": zod.string(),
+  "balance": zod.number(),
+  "pendingFunds": zod.number(),
+  "currency": zod.string(),
+  "transactions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['CREDIT', 'DEBIT']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
+  "amount": zod.number(),
+  "balancePost": zod.number(),
+  "referenceId": zod.string().nullish(),
+  "description": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+export const createAdminWalletGiftBodyAmountExclusiveMin = 0;
+
+
+
+export const CreateAdminWalletGiftBody = zod.object({
+  "doctorUserId": zod.string(),
+  "amount": zod.number().gt(createAdminWalletGiftBodyAmountExclusiveMin),
+  "description": zod.string().optional()
+})
+
+export const CreateAdminWalletGiftResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.enum(['PATIENT', 'DOCTOR', 'HOSPITAL', 'MEDICAL_CENTER', 'POLY_CLINIC', 'LAB', 'SCAN_CENTER', 'VETERINARY', 'PLATFORM']),
+  "ownerId": zod.string(),
+  "balance": zod.number(),
+  "pendingFunds": zod.number(),
+  "currency": zod.string(),
+  "transactions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['CREDIT', 'DEBIT']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
+  "amount": zod.number(),
+  "balancePost": zod.number(),
+  "referenceId": zod.string().nullish(),
+  "description": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+export const initiateWalletTopUpBodyAmountExclusiveMin = 0;
+
+
+
+export const InitiateWalletTopUpBody = zod.object({
+  "amount": zod.number().gt(initiateWalletTopUpBodyAmountExclusiveMin),
+  "paymentMethod": zod.enum(['card', 'fawry', 'wallet'])
+})
+
+export const InitiateWalletTopUpResponse = zod.object({
+  "paymentKey": zod.string(),
+  "iframeId": zod.string(),
+  "orderId": zod.string(),
+  "paymentId": zod.number(),
+  "iframeUrl": zod.string()
 })
 
 

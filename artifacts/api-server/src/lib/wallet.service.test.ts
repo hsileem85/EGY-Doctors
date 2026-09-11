@@ -16,11 +16,27 @@ import {
   escrowFunds,
   releaseBookingEscrowInTx,
   releaseEscrow,
+  calculateFinancialSplit,
 } from "./wallet.service.js";
 
 const PLATFORM_OWNER_ID = "SYSTEM_REVENUE";
 const testOwnerIds = new Set<string>();
 const testReferenceIds = new Set<string>();
+
+describe("financial split invariants", () => {
+  it("splits a fixed total deduction, not the post-deduction amount", () => {
+    expect(calculateFinancialSplit(1000, {
+      deductionType: "FIXED", deductionValue: 100,
+      platformSharePercentage: 60, cashbackSharePercentage: 40,
+    })).toEqual({ deduction: 100, platformShare: 60, cashbackShare: 40 });
+  });
+  it("splits a percentage deduction from gross", () => {
+    expect(calculateFinancialSplit(1000, {
+      deductionType: "PERCENTAGE", deductionValue: 10,
+      platformSharePercentage: 50, cashbackSharePercentage: 50,
+    })).toEqual({ deduction: 100, platformShare: 50, cashbackShare: 50 });
+  });
+});
 
 function uniqueId(label: string) {
   return `wallet-test-${label}-${crypto.randomUUID()}`;
@@ -251,7 +267,7 @@ describe.sequential("wallet service database guarantees", () => {
       }),
       expect.objectContaining({
         type: "DEBIT",
-        category: "PLATFORM_COMMISSION",
+        category: "FEE_DEDUCTION",
         amount: 20,
         balancePost: 180,
         referenceId: bookingId,

@@ -4,6 +4,7 @@ import {
   usersTable,
   walletsTable,
   walletTransactionsTable,
+  systemSettingsTable,
   type WalletOwnerType,
   type WalletTransactionCategory,
 } from "@workspace/db";
@@ -22,6 +23,27 @@ export class InsufficientWalletFundsError extends Error {
   constructor(message = "Insufficient wallet funds") {
     super(message);
   }
+}
+
+export async function getFinancialSettingsInTx(tx: WalletTx) {
+  const [row] = await tx.select().from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+  return row;
+}
+
+export function calculateFinancialSplit(amount: number, settings: {
+  deductionType: "FIXED" | "PERCENTAGE";
+  deductionValue: number;
+  platformSharePercentage: number;
+  cashbackSharePercentage: number;
+}) {
+  const deduction = settings.deductionType === "FIXED"
+    ? Math.min(amount, Math.max(0, settings.deductionValue))
+    : amount * Math.max(0, Math.min(100, settings.deductionValue)) / 100;
+  return {
+    deduction: Math.round(deduction * 100) / 100,
+    platformShare: Math.round(deduction * settings.platformSharePercentage / 100 * 100) / 100,
+    cashbackShare: Math.round(deduction * settings.cashbackSharePercentage / 100 * 100) / 100,
+  };
 }
 
 function normalizeAmount(amount: number): number {
@@ -255,10 +277,19 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
   amount: number;
   bookingId: string;
   commissionRate: number;
+  patientUserId?: string | null;
 }) {
   const amount = normalizeAmount(input.amount);
-  const commissionRate = normalizeCommissionRate(input.commissionRate);
-  const commission = Math.round(amount * commissionRate * 100) / 100;
+  normalizeCommissionRate(input.commissionRate);
+  const financial = await getFinancialSettingsInTx(tx);
+  const split = financial
+    ? calculateFinancialSplit(amount, financial)
+    : calculateFinancialSplit(amount, {
+      deductionType: "PERCENTAGE",
+      deductionValue: input.commissionRate * 100,
+      platformSharePercentage: 100,
+      cashbackSharePercentage: 0,
+    });
 
   const [creditedOwner] = await tx
     .update(walletsTable)
@@ -287,11 +318,11 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
   });
 
   let ownerWallet = creditedOwner;
-  if (commission > 0) {
+  if (split.deduction > 0) {
     const [debitedOwner] = await tx
       .update(walletsTable)
       .set({
-        balance: sql`${walletsTable.balance} - ${commission}`,
+        balance: sql`${walletsTable.balance} - ${split.deduction}`,
         updatedAt: new Date(),
       })
       .where(eq(walletsTable.id, creditedOwner.id))
@@ -302,18 +333,18 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
     await tx.insert(walletTransactionsTable).values({
       walletId: debitedOwner.id,
       type: "DEBIT",
-      category: "PLATFORM_COMMISSION",
-      amount: commission,
+      amount: split.deduction,
       balancePost: debitedOwner.balance,
       referenceId: input.bookingId,
-      description: "Platform commission",
+      category: "FEE_DEDUCTION",
+      description: "Configured booking fee deduction",
     });
 
     const platformWallet = await ensureWalletInTx(tx, "PLATFORM", PLATFORM_OWNER_ID);
     const [creditedPlatform] = await tx
       .update(walletsTable)
       .set({
-        balance: sql`${walletsTable.balance} + ${commission}`,
+        balance: sql`${walletsTable.balance} + ${split.platformShare}`,
         updatedAt: new Date(),
       })
       .where(eq(walletsTable.id, platformWallet.id))
@@ -324,11 +355,23 @@ export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
       walletId: creditedPlatform.id,
       type: "CREDIT",
       category: "PLATFORM_COMMISSION",
-      amount: commission,
+      amount: split.platformShare,
       balancePost: creditedPlatform.balance,
       referenceId: input.bookingId,
       description: "Platform commission received",
     });
+    if (split.cashbackShare > 0 && input.patientUserId) {
+      const patientWallet = await ensureWalletInTx(tx, "PATIENT", input.patientUserId);
+      const [creditedPatient] = await tx.update(walletsTable).set({
+        balance: sql`${walletsTable.balance} + ${split.cashbackShare}`,
+        updatedAt: new Date(),
+      }).where(eq(walletsTable.id, patientWallet.id)).returning();
+      await tx.insert(walletTransactionsTable).values({
+        walletId: creditedPatient.id, type: "CREDIT", category: "CASHBACK_REWARD",
+        amount: split.cashbackShare, balancePost: creditedPatient.balance,
+        referenceId: input.bookingId, description: "Booking cashback reward",
+      });
+    }
   }
 
   return ownerWallet;

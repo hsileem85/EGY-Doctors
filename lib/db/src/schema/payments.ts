@@ -12,6 +12,7 @@ export const paymentsTable = pgTable("payments", {
   paymobTransactionId: text("paymob_transaction_id"),
   planType: text("plan_type").notNull(),
   amount: doublePrecision("amount").notNull(),
+  cashbackAmount: doublePrecision("cashback_amount").notNull().default(0),
   currency: text("currency").notNull().default("EGP"),
   voucherCode: text("voucher_code"),
   status: text("status", { enum: ["PENDING", "PAID", "FAILED", "REFUND_PENDING", "REFUND_REQUESTED", "REFUNDED", "SETTLED"] }).notNull().default("PENDING"),

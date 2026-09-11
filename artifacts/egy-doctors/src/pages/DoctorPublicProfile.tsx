@@ -20,6 +20,12 @@ import { PostInteractionBar } from "@/components/PostInteractionBar";
 import { SocialVideoPlayer } from "@/components/SocialVideoPlayer";
 import { useAuth } from "@/context/AuthContext";
 
+const PAYMENT_METHOD_LABELS: Record<string, { en: string; ar: string }> = {
+  CASH: { en: "Cash", ar: "نقداً" },
+  CARD: { en: "Card", ar: "بطاقة" },
+  WALLET: { en: "Wallet", ar: "محفظة" },
+};
+
 export default function DoctorPublicProfile() {
   const { id } = useParams();
   const { t, dir } = useLanguage();
@@ -401,6 +407,19 @@ export default function DoctorPublicProfile() {
                               <span className="text-sm font-bold text-gray-800">
                                 {clinic.fee} <span className="font-normal text-gray-500">{t.dashboard.egp}</span>
                               </span>
+                            </div>
+                            <div className="flex items-center flex-wrap gap-1.5 mt-2">
+                              <span className="text-xs text-gray-500 mr-1">
+                                {isRTL ? "الدفع:" : "Payment:"}
+                              </span>
+                              {(Array.isArray((clinic as typeof clinic & { acceptedPaymentMethods?: string[] }).acceptedPaymentMethods)
+                                ? (clinic as typeof clinic & { acceptedPaymentMethods: string[] }).acceptedPaymentMethods
+                                : ["CASH", "CARD", "WALLET"]
+                              ).map(method => (
+                                <Badge key={method} variant="outline" className="text-[11px] font-medium">
+                                  {PAYMENT_METHOD_LABELS[method]?.[isRTL ? "ar" : "en"] ?? method}
+                                </Badge>
+                              ))}
                             </div>
                           </div>
                           {(clinic.mapUrl || (clinic.lat != null && clinic.lng != null)) && (

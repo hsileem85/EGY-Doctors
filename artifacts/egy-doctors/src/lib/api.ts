@@ -939,6 +939,69 @@ export function toggleCenterVezeeta(id: number): Promise<AdminMedicalCenter> {
   return request(`/admin/medical-centers/${id}/toggle-vezeeta`, { method: "PATCH" });
 }
 
+/* ─── Admin financial operations ─── */
+export interface AdminFinancialSettings {
+  deductionType: "FIXED" | "PERCENTAGE";
+  deductionValue: number;
+  platformSharePercentage: number;
+  cashbackSharePercentage: number;
+  minDoctorWalletBalance: number;
+  subscriptionModelEnabled: boolean;
+}
+
+export interface AdminPlatformBankAccount {
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string | null;
+  iban: string | null;
+  branchName?: string | null;
+  swiftCode?: string | null;
+}
+
+export interface AdminWithdrawal {
+  id: string;
+  doctorUserId: string;
+  amount: number;
+  bankAccountId: string;
+  status: "PENDING" | "APPROVED" | "COMPLETED" | "REJECTED";
+  createdAt: string;
+  updatedAt: string;
+  adminNote?: string | null;
+}
+
+export function getAdminFinancialSettings(): Promise<AdminFinancialSettings> {
+  return request("/admin/financial-settings");
+}
+
+export function updateAdminFinancialSettings(data: AdminFinancialSettings): Promise<AdminFinancialSettings> {
+  return request("/admin/financial-settings", { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function getAdminPlatformBankAccount(): Promise<AdminPlatformBankAccount> {
+  return request<AdminPlatformBankAccount>("/admin/platform-bank-account").catch((error: Error): AdminPlatformBankAccount => {
+    if (error.message === "HTTP 404" || error.message === "Bank account not found") {
+      return { accountHolderName: "", bankName: "", accountNumber: null, iban: "", branchName: "", swiftCode: "" };
+    }
+    throw error;
+  });
+}
+
+export function updateAdminPlatformBankAccount(data: AdminPlatformBankAccount): Promise<AdminPlatformBankAccount> {
+  return request("/admin/platform-bank-account", { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function getAdminWithdrawals(): Promise<AdminWithdrawal[]> {
+  return request("/admin/withdrawal-requests");
+}
+
+export function decideAdminWithdrawal(id: string, decision: "COMPLETED" | "REJECTED", adminNote?: string): Promise<AdminWithdrawal> {
+  return request(`/admin/withdrawal-requests/${id}/decision`, { method: "POST", body: JSON.stringify({ decision, ...(adminNote ? { adminNote } : {}) }) });
+}
+
+export function giftAdminWalletFunds(doctorUserId: number, amount: number, description?: string): Promise<unknown> {
+  return request("/admin/wallet-gifts", { method: "POST", body: JSON.stringify({ doctorUserId: String(doctorUserId), amount, description: description || undefined }) });
+}
+
 /* ─── Notifications ─── */
 
 export interface AppNotification {

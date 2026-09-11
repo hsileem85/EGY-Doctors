@@ -11,6 +11,7 @@ import billingRouter from "./billing";
 import medicalCentersRouter from "./medical_centers";
 import notificationsRouter from "./notifications";
 import walletRouter from "./wallet";
+import financialRouter from "./financial";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(billingRouter);
 router.use(medicalCentersRouter);
 router.use(notificationsRouter);
 router.use(walletRouter);
+router.use(financialRouter);
 
 export default router;

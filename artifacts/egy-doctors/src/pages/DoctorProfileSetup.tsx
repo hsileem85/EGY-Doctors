@@ -21,10 +21,11 @@ import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { getSpecialties, getCities, getAreas, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic, submitDoctorForReview } from "@/lib/api";
+import { getSpecialties, getCities, getAreas, getMyDoctorProfile, updateDoctorProfile, addClinic as apiAddClinic, updateClinic as apiUpdateClinic, deleteClinic as apiDeleteClinic, submitDoctorForReview, type ApiClinic } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 import { queryClient } from "@/App";
+import { getBankAccount, updateBankAccount } from "@/lib/financialApi";
 
 const DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 type Day = typeof DAYS[number];
@@ -41,6 +42,8 @@ const defaultSchedule = (): ClinicSchedule => ({
 });
 
 type AvailabilityPeriod = "week" | "month" | "quarter" | "year" | "custom";
+type AcceptedPaymentMethod = "CASH" | "CARD" | "WALLET";
+const ALL_PAYMENT_METHODS: AcceptedPaymentMethod[] = ["CASH", "CARD", "WALLET"];
 
 type Clinic = {
   id: string;
@@ -60,6 +63,7 @@ type Clinic = {
   availabilityFrom: string;
   availabilityTo: string;
   sessionsPerHour: string;
+  acceptedPaymentMethods: AcceptedPaymentMethod[];
 };
 
 function makeClinic(overrides?: Partial<Clinic>): Clinic {
@@ -81,6 +85,7 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
     availabilityFrom: "",
     availabilityTo: "",
     sessionsPerHour: "2",
+    acceptedPaymentMethods: [...ALL_PAYMENT_METHODS],
     ...overrides,
   };
 }
@@ -119,6 +124,11 @@ export default function DoctorProfileSetup() {
     enabled: !!user && user.role === "doctor",
     retry: false,
   });
+  const { data: savedBankAccount } = useQuery({
+    queryKey: ["bank-account"],
+    queryFn: getBankAccount,
+    enabled: !!user && user.role === "doctor",
+  });
 
   const [profile, setProfile] = useState({
     fullName: "",
@@ -144,6 +154,9 @@ export default function DoctorProfileSetup() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [bankDetails, setBankDetails] = useState({ bankName: "", accountHolderName: "", accountNumber: "", iban: "" });
+  const [bankSaving, setBankSaving] = useState(false);
+  const [bankSaved, setBankSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const compressImage = (file: File): Promise<string> =>
@@ -230,6 +243,11 @@ export default function DoctorProfileSetup() {
           availabilityFrom: c.availabilityFrom ?? "",
           availabilityTo: c.availabilityTo ?? "",
           sessionsPerHour: c.sessionsPerHour != null ? String(c.sessionsPerHour) : "2",
+          acceptedPaymentMethods: Array.isArray((c as ApiClinic & { acceptedPaymentMethods?: string[] }).acceptedPaymentMethods)
+            ? (c as ApiClinic & { acceptedPaymentMethods: string[] }).acceptedPaymentMethods.filter(
+              (method): method is AcceptedPaymentMethod => ALL_PAYMENT_METHODS.includes(method as AcceptedPaymentMethod),
+            )
+            : [...ALL_PAYMENT_METHODS],
         };
       });
       setClinics(hydrated);
@@ -238,6 +256,41 @@ export default function DoctorProfileSetup() {
 
     setProfileLoaded(true);
   }, [myProfile, user, profileLoaded, apiSpecialties, apiCities, apiAreas]);
+
+  useEffect(() => {
+    if (savedBankAccount) {
+      setBankDetails({
+        bankName: savedBankAccount.bankName ?? "",
+        accountHolderName: savedBankAccount.accountHolderName ?? "",
+        accountNumber: savedBankAccount.accountNumber ?? "",
+        iban: savedBankAccount.iban ?? "",
+      });
+    }
+  }, [savedBankAccount]);
+
+  const handleSaveBankDetails = async () => {
+    if (!bankDetails.bankName.trim() || !bankDetails.accountHolderName.trim()) return;
+    setBankSaving(true);
+    setBankSaved(false);
+    try {
+      await updateBankAccount({
+        bankName: bankDetails.bankName.trim(),
+        accountHolderName: bankDetails.accountHolderName.trim(),
+        accountNumber: bankDetails.accountNumber.trim() || null,
+        iban: bankDetails.iban.trim() || null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["bank-account"] });
+      setBankSaved(true);
+    } catch {
+      toast({
+        title: isRTL ? "حدث خطأ" : "Error",
+        description: isRTL ? "تعذر حفظ بيانات البنك." : "Could not save bank details.",
+        variant: "destructive",
+      });
+    } finally {
+      setBankSaving(false);
+    }
+  };
 
   const addClinic = () => {
     const c = makeClinic();
@@ -264,6 +317,16 @@ export default function DoctorProfileSetup() {
     setClinics(prev => prev.map(c => {
       if (c.id !== id) return c;
       return { ...c, schedule: { ...c.schedule, [day]: { ...c.schedule[day], [field]: value } } };
+    }));
+  };
+
+  const togglePaymentMethod = (id: string, method: AcceptedPaymentMethod, checked: boolean) => {
+    setClinics(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const methods = checked
+        ? Array.from(new Set([...c.acceptedPaymentMethods, method]))
+        : c.acceptedPaymentMethods.filter(current => current !== method);
+      return { ...c, acceptedPaymentMethods: methods };
     }));
   };
 
@@ -328,11 +391,12 @@ export default function DoctorProfileSetup() {
           availabilityFrom: clinic.availabilityPeriod === "custom" && clinic.availabilityFrom ? clinic.availabilityFrom : null,
           availabilityTo: clinic.availabilityPeriod === "custom" && clinic.availabilityTo ? clinic.availabilityTo : null,
           sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : undefined,
+          acceptedPaymentMethods: clinic.acceptedPaymentMethods,
         };
         if (!isExistingClinic || isNaN(numId)) {
-          return apiAddClinic(data);
+          return apiAddClinic(data as Parameters<typeof apiAddClinic>[0]);
         } else {
-          return apiUpdateClinic(numId, data);
+          return apiUpdateClinic(numId, data as Parameters<typeof apiUpdateClinic>[1]);
         }
       }));
 
@@ -362,6 +426,7 @@ export default function DoctorProfileSetup() {
     if (!profile.bio.trim()) errs.push(isRTL ? "النبذة (إنجليزي) مطلوبة" : "Biography (English) is required");
     if (!profile.bioAr.trim()) errs.push(isRTL ? "النبذة (عربي) مطلوبة" : "Biography (Arabic) is required");
     for (const c of clinics) {
+      if (c.acceptedPaymentMethods.length === 0) errs.push(isRTL ? "اختر طريقة دفع واحدة على الأقل لكل عيادة" : "Select at least one payment method for every clinic");
       if (!c.areaId) errs.push(isRTL ? "المنطقة مطلوبة لكل عيادة" : "Area is required for every clinic");
       if (!c.address.trim()) errs.push(isRTL ? "عنوان العيادة مطلوب" : "Clinic address is required");
       if (!c.phone.trim()) errs.push(isRTL ? "رقم هاتف العيادة مطلوب" : "Clinic phone number is required");
@@ -433,11 +498,12 @@ export default function DoctorProfileSetup() {
           availabilityFrom: clinic.availabilityPeriod === "custom" && clinic.availabilityFrom ? clinic.availabilityFrom : null,
           availabilityTo: clinic.availabilityPeriod === "custom" && clinic.availabilityTo ? clinic.availabilityTo : null,
           sessionsPerHour: sessionsPerHourVal && !isNaN(sessionsPerHourVal) ? sessionsPerHourVal : undefined,
+          acceptedPaymentMethods: clinic.acceptedPaymentMethods,
         };
         if (!isExistingClinic || isNaN(numId)) {
-          return apiAddClinic(data);
+          return apiAddClinic(data as Parameters<typeof apiAddClinic>[0]);
         } else {
-          return apiUpdateClinic(numId, data);
+          return apiUpdateClinic(numId, data as Parameters<typeof apiUpdateClinic>[1]);
         }
       }));
 
@@ -569,6 +635,38 @@ export default function DoctorProfileSetup() {
                       />
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">{isRTL ? "البيانات البنكية" : "Bank Details"}</CardTitle>
+                  <p className="text-xs text-gray-500">{isRTL ? "تُستخدم هذه البيانات لتحويل طلبات السحب بأمان." : "Used securely to process your withdrawal requests."}</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {([
+                    ["bankName", isRTL ? "اسم البنك" : "Bank Name"],
+                    ["accountHolderName", isRTL ? "اسم صاحب الحساب" : "Account Holder Name"],
+                    ["accountNumber", isRTL ? "رقم الحساب" : "Account Number"],
+                    ["iban", "IBAN"],
+                  ] as const).map(([field, label]) => (
+                    <div key={field} className="space-y-1.5">
+                      <Label>{label}{(field === "bankName" || field === "accountHolderName") && <span className="text-red-500"> *</span>}</Label>
+                      <Input
+                        value={bankDetails[field]}
+                        onChange={e => setBankDetails(details => ({ ...details, [field]: e.target.value }))}
+                        autoComplete="off"
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    onClick={handleSaveBankDetails}
+                    disabled={bankSaving || !bankDetails.bankName.trim() || !bankDetails.accountHolderName.trim()}
+                    className="w-full"
+                  >
+                    {bankSaving ? (isRTL ? "جاري الحفظ..." : "Saving...") : isRTL ? "حفظ البيانات البنكية" : "Save Bank Details"}
+                  </Button>
+                  {bankSaved && <p className="text-sm text-green-600">{isRTL ? "✓ تم حفظ البيانات" : "✓ Bank details saved"}</p>}
                 </CardContent>
               </Card>
 
@@ -879,6 +977,37 @@ export default function DoctorProfileSetup() {
                                 ? (isRTL ? "ستصل طلبات الحجز إلى لوحتك وتحتاج إلى موافقتك." : "Booking requests will arrive in your dashboard and require your approval.")
                                 : (isRTL ? "تُؤكَّد المواعيد فوراً بعد الحجز." : "Appointments are confirmed instantly after booking.")}
                             </p>
+                          </div>
+
+                          {/* Accepted payment methods */}
+                          <div className="space-y-3">
+                            <Label>{isRTL ? "طرق الدفع المقبولة" : "Accepted Payment Methods"}</Label>
+                            <p className="text-[11px] text-gray-400">
+                              {isRTL ? "اختر طرق الدفع المتاحة للمرضى في هذه العيادة." : "Choose the payment methods available to patients at this clinic."}
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              {([
+                                ["CASH", isRTL ? "نقداً" : "Cash"],
+                                ["CARD", isRTL ? "بطاقة" : "Card"],
+                                ["WALLET", isRTL ? "محفظة" : "Wallet"],
+                              ] as const).map(([method, label]) => (
+                                <label
+                                  key={method}
+                                  className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer hover:border-primary/40"
+                                >
+                                  <Checkbox
+                                    checked={clinic.acceptedPaymentMethods.includes(method)}
+                                    onCheckedChange={checked => togglePaymentMethod(clinic.id, method, checked === true)}
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">{label}</span>
+                                </label>
+                              ))}
+                            </div>
+                            {clinic.acceptedPaymentMethods.length === 0 && (
+                              <p className="text-xs text-red-500">
+                                {isRTL ? "اختر طريقة دفع واحدة على الأقل." : "Select at least one payment method."}
+                              </p>
+                            )}
                           </div>
 
                           {/* Follow-up Settings */}

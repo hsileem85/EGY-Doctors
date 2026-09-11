@@ -253,6 +253,7 @@ router.get("/medical-centers/affiliated-doctors", requireCenter, async (req, res
       availabilityFrom: clinicsTable.availabilityFrom,
       availabilityTo: clinicsTable.availabilityTo,
       sessionsPerHour: clinicsTable.sessionsPerHour,
+      acceptedPaymentMethods: clinicsTable.acceptedPaymentMethods,
       isActive: doctorsTable.isActive,
     })
     .from(doctorsTable)

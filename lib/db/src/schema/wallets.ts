@@ -29,6 +29,11 @@ export const transactionCategoryEnum = [
   "SUBSCRIPTION_FEE",
   "WITHDRAWAL_PAYOUT",
   "REFUND",
+  "CASHBACK_REWARD",
+  "WALLET_TOP_UP",
+  "CASHBACK_USAGE",
+  "FEE_DEDUCTION",
+  "ADMIN_GIFT",
 ] as const;
 
 export const walletsTable = pgTable(

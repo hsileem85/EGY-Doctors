@@ -7,7 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctor, getAppointments, bookAppointment, initiateAppointmentPayment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
+import { getDoctor, getAppointments, bookAppointment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
+import { useGetWallet } from "@workspace/api-client-react";
+import { submitAppointmentPayment, type AppointmentPaymentMethod } from "@/lib/appointmentPayment";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const DEFAULT_SLOT_INTERVAL_MINUTES = 30;
@@ -205,6 +208,9 @@ export default function DoctorProfile() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<AppointmentPaymentMethod>("CASH");
+  const [useCashback, setUseCashback] = useState(false);
+  const { data: wallet } = useGetWallet();
 
   const isVirtualClinic = !selectedClinic || selectedClinic.id <= 0;
   // Medical-center-affiliated doctors always have a real (auto-created) clinic,
@@ -262,6 +268,10 @@ export default function DoctorProfile() {
   useMemo(() => {
     if (autoClinic && bookingStep === "clinic") {
       setSelectedClinic(autoClinic);
+      const accepted = (autoClinic as ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }).acceptedPaymentMethods
+        ?? ["CASH", "CARD", "WALLET"];
+      setPaymentMethod((accepted[0] ?? "CASH") as AppointmentPaymentMethod);
+      setUseCashback(false);
       setBookingStep("calendar");
     }
   }, [autoClinic]);
@@ -323,6 +333,10 @@ export default function DoctorProfile() {
 
   const handleClinicSelect = (clinic: ApiClinic) => {
     setSelectedClinic(clinic);
+    const accepted = (clinic as ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }).acceptedPaymentMethods
+      ?? ["CASH", "CARD", "WALLET"];
+    setPaymentMethod((accepted[0] ?? "CASH") as AppointmentPaymentMethod);
+    setUseCashback(false);
     setBookingStep("calendar");
   };
 
@@ -335,6 +349,13 @@ export default function DoctorProfile() {
     setSelectedTime(time);
     setBookingStep("form");
   };
+
+  const appointmentFee = Number(selectedClinic?.fee ?? 0);
+  const walletBalance = Number((wallet as { balance?: number } | undefined)?.balance ?? 0);
+  const cashbackAmount = useCashback ? Math.min(Math.max(walletBalance, 0), Math.max(appointmentFee, 0)) : 0;
+  const cardCharge = Math.max(appointmentFee - cashbackAmount, 0);
+  const acceptedPaymentMethods = (selectedClinic as (ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }) | null)
+    ?.acceptedPaymentMethods ?? ["CASH", "CARD", "WALLET"];
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,8 +371,11 @@ export default function DoctorProfile() {
         patientName: user?.name ?? "Guest",
         patientPhone: user?.phone ?? "",
       });
-      if (appointment.feeCharged && appointment.feeCharged > 0) {
-        const payment = await initiateAppointmentPayment(appointment.id);
+      if ((paymentMethod === "CARD" || paymentMethod === "WALLET") && appointment.feeCharged && appointment.feeCharged > 0) {
+        const payment = await submitAppointmentPayment(appointment.id, {
+          paymentMethod,
+          useCashback: paymentMethod === "CARD" && useCashback,
+        });
         if (payment.iframeUrl) {
           window.location.assign(payment.iframeUrl);
           return;
@@ -628,18 +652,69 @@ export default function DoctorProfile() {
                   <div className="pt-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t.profile.consultationFee}</span>
-                      <span className="font-semibold">{selectedClinic.fee} {t.dashboard.egp}</span>
+                      <span className="font-semibold">{appointmentFee} {t.dashboard.egp}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">{t.profile.bookingFee}</span>
                       <span className="text-[#D4A853] font-semibold">{t.profile.free}</span>
                     </div>
+                    {paymentMethod === "CARD" && cashbackAmount > 0 && (
+                      <>
+                        <div className="flex justify-between text-sm text-green-700">
+                          <span>{isRTL ? "الرصيد المستخدم" : "Cashback balance used"}</span>
+                          <span>-{cashbackAmount} {t.dashboard.egp}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">{isRTL ? "المبلغ على البطاقة" : "Card charge"}</span>
+                          <span className="font-semibold">{cardCharge} {t.dashboard.egp}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="w-full h-px bg-gray-100 my-2"></div>
                     <div className="flex justify-between text-base font-bold">
-                      <span>{t.profile.payAtClinic}</span>
-                      <span>{selectedClinic.fee} {t.dashboard.egp}</span>
+                      <span>{paymentMethod === "CARD" ? (isRTL ? "الإجمالي المدفوع" : "Total due") : t.profile.payAtClinic}</span>
+                      <span>{paymentMethod === "CARD" ? cardCharge : appointmentFee} {t.dashboard.egp}</span>
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-gray-800">{isRTL ? "طريقة الدفع" : "Payment method"}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {(["CASH", "CARD", "WALLET"] as AppointmentPaymentMethod[])
+                        .filter(method => acceptedPaymentMethods.includes(method))
+                        .map(method => (
+                          <button
+                            type="button"
+                            key={method}
+                            onClick={() => setPaymentMethod(method)}
+                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                              paymentMethod === method
+                                ? "border-[#D4A853] bg-[#D4A853]/10 text-[#9a741f]"
+                                : "border-gray-200 text-gray-600 hover:border-[#D4A853]/50"
+                            }`}
+                          >
+                            {method === "CASH" ? (isRTL ? "نقداً" : "Cash") : method === "CARD" ? (isRTL ? "بطاقة" : "Card") : (isRTL ? "محفظة" : "Wallet")}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {paymentMethod === "CARD" && walletBalance > 0 && (
+                    <label className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50/60 p-3 cursor-pointer">
+                      <Checkbox
+                        checked={useCashback}
+                        onCheckedChange={checked => setUseCashback(checked === true)}
+                      />
+                      <span className="text-sm text-green-800">
+                        <span className="font-semibold block">
+                          {isRTL ? "استخدم رصيد الكاش باك" : "Use Cashback Balance"}
+                        </span>
+                        <span className="text-xs text-green-700">
+                          {isRTL ? `متاح ${walletBalance} ${t.dashboard.egp}` : `${walletBalance} ${t.dashboard.egp} available`}
+                        </span>
+                      </span>
+                    </label>
+                  )}
 
                   <Button
                     type="submit"

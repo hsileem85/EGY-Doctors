@@ -17,6 +17,7 @@ export const clinicsTable = pgTable("clinics", {
   followUpDays: integer("follow_up_days").default(15),
   followUpPrice: integer("follow_up_price"),
   bookingConfirmationMethod: text("booking_confirmation_method").notNull().default("automatic"),
+  acceptedPaymentMethods: text("accepted_payment_methods").array().notNull().default(["CASH", "CARD", "WALLET"]),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
   schedule: text("schedule"),

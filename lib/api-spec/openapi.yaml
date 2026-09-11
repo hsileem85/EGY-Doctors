@@ -495,6 +495,198 @@ paths:
           description: This account type does not have a wallet
         "404":
           description: Wallet not found
+  /admin/financial-settings:
+    get:
+      operationId: getFinancialSettings
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Financial settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinancialSettings" }
+    patch:
+      operationId: updateFinancialSettings
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancialSettingsUpdate" }
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinancialSettings" }
+  /wallet/bank-account:
+    get:
+      operationId: getBankAccount
+      tags: [wallet]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Bank account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BankAccount" }
+    put:
+      operationId: updateBankAccount
+      tags: [wallet]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BankAccountInput" }
+      responses:
+        "200":
+          description: Updated bank account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BankAccount" }
+  /admin/platform-bank-account:
+    get:
+      operationId: getPlatformBankAccount
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Platform bank account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BankAccount" }
+    put:
+      operationId: updatePlatformBankAccount
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BankAccountInput" }
+      responses:
+        "200":
+          description: Updated platform bank account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BankAccount" }
+  /admin/withdrawal-requests:
+    get:
+      operationId: listWithdrawalRequests
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Withdrawal requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WithdrawalRequest" }
+  /wallet/withdrawals:
+    post:
+      operationId: createWithdrawalRequest
+      tags: [wallet]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WithdrawalInput" }
+      responses:
+        "201":
+          description: Withdrawal request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WithdrawalRequest" }
+  /wallet/withdraw:
+    post:
+      operationId: createWalletWithdrawal
+      tags: [wallet]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WithdrawalInput" }
+      responses:
+        "201":
+          description: Withdrawal request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WithdrawalRequest" }
+  /admin/withdrawal-requests/{id}/decision:
+    post:
+      operationId: decideWithdrawalRequest
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WithdrawalDecision" }
+      responses:
+        "200":
+          description: Updated withdrawal request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WithdrawalRequest" }
+  /admin/wallet-gifts:
+    post:
+      operationId: createWalletGift
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WalletGiftInput" }
+      responses:
+        "200":
+          description: Gift transaction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WalletResponse" }
+  /admin/wallet/gift:
+    post:
+      operationId: createAdminWalletGift
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WalletGiftInput" }
+      responses:
+        "200":
+          description: Gift transaction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WalletResponse" }
+  /wallet/top-ups:
+    post:
+      operationId: initiateWalletTopUp
+      tags: [wallet]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WalletTopUpInput" }
+      responses:
+        "200":
+          description: Paymob top-up checkout
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymobInitiation" }
 components:
   securitySchemes:
     bearerAuth:
@@ -777,7 +969,7 @@ components:
           enum: [CREDIT, DEBIT]
         category:
           type: string
-          enum: [BOOKING_PAYMENT, PLATFORM_COMMISSION, SUBSCRIPTION_FEE, WITHDRAWAL_PAYOUT, REFUND]
+          enum: [BOOKING_PAYMENT, PLATFORM_COMMISSION, SUBSCRIPTION_FEE, WITHDRAWAL_PAYOUT, REFUND, CASHBACK_REWARD, WALLET_TOP_UP, CASHBACK_USAGE, FEE_DEDUCTION, ADMIN_GIFT]
         amount: { type: number, format: double }
         balancePost: { type: number, format: double }
         referenceId: { type: [string, "null"] }
@@ -791,6 +983,87 @@ components:
         - balancePost
         - description
         - createdAt
+    FinancialSettings:
+      type: object
+      properties:
+        deductionType: { type: string, enum: [FIXED, PERCENTAGE] }
+        deductionValue: { type: number, minimum: 0 }
+        platformSharePercentage: { type: number, minimum: 0, maximum: 100 }
+        cashbackSharePercentage: { type: number, minimum: 0, maximum: 100 }
+        minDoctorWalletBalance: { type: number, minimum: 0 }
+        subscriptionModelEnabled: { type: boolean }
+      required: [deductionType, deductionValue, platformSharePercentage, cashbackSharePercentage, minDoctorWalletBalance, subscriptionModelEnabled]
+    FinancialSettingsUpdate:
+      allOf:
+        - $ref: "#/components/schemas/FinancialSettings"
+    BankAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ownerType: { type: string }
+        ownerId: { type: string }
+        accountHolderName: { type: string }
+        bankName: { type: string }
+        accountNumber: { type: [string, "null"] }
+        iban: { type: [string, "null"] }
+        branchName: { type: [string, "null"] }
+        swiftCode: { type: [string, "null"] }
+      required: [id, ownerType, ownerId, accountHolderName, bankName]
+    BankAccountInput:
+      type: object
+      properties:
+        accountHolderName: { type: string, minLength: 1 }
+        bankName: { type: string, minLength: 1 }
+        accountNumber: { type: [string, "null"] }
+        iban: { type: [string, "null"] }
+        branchName: { type: [string, "null"] }
+        swiftCode: { type: [string, "null"] }
+      required: [accountHolderName, bankName]
+    WithdrawalRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        doctorUserId: { type: string }
+        amount: { type: number, minimum: 0 }
+        bankAccountId: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED, COMPLETED] }
+        adminNote: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, doctorUserId, amount, bankAccountId, status, createdAt, updatedAt]
+    WithdrawalInput:
+      type: object
+      properties:
+        amount: { type: number, exclusiveMinimum: 0 }
+      required: [amount]
+    WithdrawalDecision:
+      type: object
+      properties:
+        decision: { type: string, enum: [APPROVED, REJECTED, COMPLETED] }
+        adminNote: { type: string }
+      required: [decision]
+    WalletGiftInput:
+      type: object
+      properties:
+        doctorUserId: { type: string }
+        amount: { type: number, exclusiveMinimum: 0 }
+        description: { type: string }
+      required: [doctorUserId, amount]
+    WalletTopUpInput:
+      type: object
+      properties:
+        amount: { type: number, exclusiveMinimum: 0 }
+        paymentMethod: { type: string, enum: [card, fawry, wallet] }
+      required: [amount, paymentMethod]
+    PaymobInitiation:
+      type: object
+      properties:
+        paymentKey: { type: string }
+        iframeId: { type: string }
+        orderId: { type: string }
+        paymentId: { type: integer }
+        iframeUrl: { type: string }
+      required: [paymentKey, iframeId, orderId, paymentId, iframeUrl]
     WalletResponse:
       type: object
       properties:

@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import {
   db, doctorsTable, specialtiesTable, citiesTable, areasTable,
-  clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable,
+  clinicsTable, reviewsTable, usersTable, adminNotificationsTable, appointmentsTable, systemSettingsTable, walletsTable,
   doctorFollowsTable, centerClinicsTable, medicalCentersTable, servicesTable, availabilityPeriodEnum,
 } from "@workspace/db";
 
@@ -72,10 +72,20 @@ router.get("/doctors", async (req, res): Promise<void> => {
   const params = Schema.safeParse(req.query);
   const { q, specialtyId, cityId, areaId, lat, lng } = params.success ? params.data : {} as Record<string, undefined>;
 
+  const [financialSettings] = await db.select({
+    minDoctorWalletBalance: systemSettingsTable.minDoctorWalletBalance,
+    subscriptionModelEnabled: systemSettingsTable.subscriptionModelEnabled,
+  }).from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+  const minWallet = financialSettings?.minDoctorWalletBalance ?? 50;
+  const subscriptionEnabled = financialSettings?.subscriptionModelEnabled ?? false;
   const conditions = [
     eq(doctorsTable.accountStatus, "approved"),
     eq(doctorsTable.isActive, true),
-    sql`(${doctorsTable.affiliatedCenterId} IS NOT NULL OR ${doctorsTable.subscriptionStatus} = 'TRIAL' OR (${doctorsTable.subscriptionStatus} = 'ACTIVE' AND (${doctorsTable.subscriptionEndDate} IS NULL OR ${doctorsTable.subscriptionEndDate} > NOW())))`,
+    sql`(${doctorsTable.affiliatedCenterId} IS NOT NULL OR (EXISTS (
+      SELECT 1 FROM ${walletsTable} w
+      WHERE w.owner_type = 'DOCTOR' AND w.owner_id = CAST(${doctorsTable.userId} AS TEXT)
+        AND w.balance >= ${minWallet}
+    ) ${subscriptionEnabled ? sql`AND (${doctorsTable.subscriptionStatus} = 'TRIAL' OR (${doctorsTable.subscriptionStatus} = 'ACTIVE' AND (${doctorsTable.subscriptionEndDate} IS NULL OR ${doctorsTable.subscriptionEndDate} > NOW())))` : sql``}))`,
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));
@@ -366,6 +376,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       availabilityFrom: clinicsTable.availabilityFrom,
       availabilityTo: clinicsTable.availabilityTo,
       sessionsPerHour: clinicsTable.sessionsPerHour,
+       acceptedPaymentMethods: clinicsTable.acceptedPaymentMethods,
       bookingConfirmationMethod: clinicsTable.bookingConfirmationMethod,
       areaName: areasTable.name,
     })
@@ -472,6 +483,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       availabilityFrom: c.availabilityFrom ?? null,
       availabilityTo: c.availabilityTo ?? null,
       sessionsPerHour: c.sessionsPerHour ?? null,
+      acceptedPaymentMethods: c.acceptedPaymentMethods ?? ["CASH", "CARD", "WALLET"],
       bookingConfirmationMethod: (c.bookingConfirmationMethod as "automatic" | "manual" | null) ?? "automatic",
     })),
     reviewList: reviews.map((r) => ({
@@ -706,6 +718,7 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     followUpDays: z.coerce.number().int().min(0).optional().nullable(),
     followUpPrice: z.coerce.number().int().min(0).optional().nullable(),
     bookingConfirmationMethod: z.enum(["automatic", "manual"]),
+     acceptedPaymentMethods: z.array(z.enum(["CASH", "CARD", "WALLET"])).min(1).optional(),
     areaId: z.coerce.number({ message: "Area is required" }),
     lat: z.coerce.number({ message: "Clinic location (latitude) is required" }),
     lng: z.coerce.number({ message: "Clinic location (longitude) is required" }),
@@ -773,6 +786,7 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
     followUpDays: z.coerce.number().int().min(0).optional().nullable(),
     followUpPrice: z.coerce.number().int().min(0).optional().nullable(),
     bookingConfirmationMethod: z.enum(["automatic", "manual"]).optional(),
+     acceptedPaymentMethods: z.array(z.enum(["CASH", "CARD", "WALLET"])).min(1).optional(),
     areaId: z.coerce.number({ message: "Area is required" }).optional(),
     lat: z.coerce.number({ message: "Clinic location (latitude) is required" }).optional(),
     lng: z.coerce.number({ message: "Clinic location (longitude) is required" }).optional(),

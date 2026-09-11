@@ -250,6 +250,11 @@ export const WalletTransactionCategory = {
   SUBSCRIPTION_FEE: 'SUBSCRIPTION_FEE',
   WITHDRAWAL_PAYOUT: 'WITHDRAWAL_PAYOUT',
   REFUND: 'REFUND',
+  CASHBACK_REWARD: 'CASHBACK_REWARD',
+  WALLET_TOP_UP: 'WALLET_TOP_UP',
+  CASHBACK_USAGE: 'CASHBACK_USAGE',
+  FEE_DEDUCTION: 'FEE_DEDUCTION',
+  ADMIN_GIFT: 'ADMIN_GIFT',
 } as const;
 
 export interface WalletTransaction {
@@ -262,6 +267,138 @@ export interface WalletTransaction {
   referenceId?: string | null;
   description: string;
   createdAt: string;
+}
+
+export type FinancialSettingsDeductionType = typeof FinancialSettingsDeductionType[keyof typeof FinancialSettingsDeductionType];
+
+
+export const FinancialSettingsDeductionType = {
+  FIXED: 'FIXED',
+  PERCENTAGE: 'PERCENTAGE',
+} as const;
+
+export interface FinancialSettings {
+  deductionType: FinancialSettingsDeductionType;
+  /** @minimum 0 */
+  deductionValue: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  platformSharePercentage: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  cashbackSharePercentage: number;
+  /** @minimum 0 */
+  minDoctorWalletBalance: number;
+  subscriptionModelEnabled: boolean;
+}
+
+export type FinancialSettingsUpdate = FinancialSettings;
+
+export interface BankAccount {
+  id: string;
+  ownerType: string;
+  ownerId: string;
+  accountHolderName: string;
+  bankName: string;
+  /** @nullable */
+  accountNumber?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /** @nullable */
+  branchName?: string | null;
+  /** @nullable */
+  swiftCode?: string | null;
+}
+
+export interface BankAccountInput {
+  /** @minLength 1 */
+  accountHolderName: string;
+  /** @minLength 1 */
+  bankName: string;
+  /** @nullable */
+  accountNumber?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /** @nullable */
+  branchName?: string | null;
+  /** @nullable */
+  swiftCode?: string | null;
+}
+
+export type WithdrawalRequestStatus = typeof WithdrawalRequestStatus[keyof typeof WithdrawalRequestStatus];
+
+
+export const WithdrawalRequestStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  COMPLETED: 'COMPLETED',
+} as const;
+
+export interface WithdrawalRequest {
+  id: string;
+  doctorUserId: string;
+  /** @minimum 0 */
+  amount: number;
+  bankAccountId: string;
+  status: WithdrawalRequestStatus;
+  /** @nullable */
+  adminNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WithdrawalInput {
+  /** @exclusiveMinimum 0 */
+  amount: number;
+}
+
+export type WithdrawalDecisionDecision = typeof WithdrawalDecisionDecision[keyof typeof WithdrawalDecisionDecision];
+
+
+export const WithdrawalDecisionDecision = {
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  COMPLETED: 'COMPLETED',
+} as const;
+
+export interface WithdrawalDecision {
+  decision: WithdrawalDecisionDecision;
+  adminNote?: string;
+}
+
+export interface WalletGiftInput {
+  doctorUserId: string;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  description?: string;
+}
+
+export type WalletTopUpInputPaymentMethod = typeof WalletTopUpInputPaymentMethod[keyof typeof WalletTopUpInputPaymentMethod];
+
+
+export const WalletTopUpInputPaymentMethod = {
+  card: 'card',
+  fawry: 'fawry',
+  wallet: 'wallet',
+} as const;
+
+export interface WalletTopUpInput {
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  paymentMethod: WalletTopUpInputPaymentMethod;
+}
+
+export interface PaymobInitiation {
+  paymentKey: string;
+  iframeId: string;
+  orderId: string;
+  paymentId: number;
+  iframeUrl: string;
 }
 
 export type WalletResponseOwnerType = typeof WalletResponseOwnerType[keyof typeof WalletResponseOwnerType];

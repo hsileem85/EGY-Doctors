@@ -1,4 +1,11 @@
 import { useGetWallet } from "@workspace/api-client-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { getBankAccount, initiateWalletTopUp, requestWalletWithdrawal } from "@/lib/financialApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +15,47 @@ import { arEG, enGB } from "date-fns/locale";
 
 interface WalletTabProps {
   isRTL: boolean;
+  ownerMode?: "doctor" | "patient" | "medical-center";
 }
 
-export function WalletTab({ isRTL }: WalletTabProps) {
+export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
+  const isDoctor = ownerMode === "doctor";
+  const queryClient = useQueryClient();
   const { data: wallet, isLoading, isError, refetch } = useGetWallet();
+  const { data: bankAccount } = useQuery({ queryKey: ["bank-account"], queryFn: getBankAccount, enabled: isDoctor });
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
+  const withdrawal = useMutation({
+    mutationFn: () => requestWalletWithdrawal(Number(amount)),
+    onSuccess: () => {
+      setMessage({ text: isRTL ? "تم إرسال طلب السحب وهو قيد المراجعة." : "Withdrawal request submitted and is pending review." });
+      setAmount("");
+      setWithdrawOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
+    },
+    onError: (error: Error) => setMessage({ text: error.message, error: true }),
+  });
+  const topUp = useMutation({
+    mutationFn: () => initiateWalletTopUp(Number(amount)),
+    onSuccess: (result) => {
+      if (result.iframeUrl) window.location.assign(result.iframeUrl);
+      else setMessage({ text: isRTL ? "تعذر بدء الدفع." : "Payment could not be started.", error: true });
+    },
+    onError: (error: Error) => setMessage({ text: error.message, error: true }),
+  });
+  const parsedAmount = Number(amount);
+  const withdrawalError = !bankAccount
+    ? (isRTL ? "أضف بيانات حسابك البنكي أولاً." : "Save your bank account details first.")
+    : !Number.isFinite(parsedAmount) || parsedAmount <= 0
+      ? (isRTL ? "أدخل مبلغاً موجباً." : "Enter a positive amount.")
+      : parsedAmount > (wallet?.balance ?? 0)
+        ? (isRTL ? "المبلغ يتجاوز الرصيد المتاح." : "Amount exceeds your available balance.")
+        : null;
+  const topUpError = !Number.isFinite(parsedAmount) || parsedAmount <= 0
+    ? (isRTL ? "أدخل مبلغاً موجباً." : "Enter a positive amount.")
+    : null;
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat(isRTL ? "ar-EG" : "en-EG", {
@@ -139,6 +183,17 @@ export function WalletTab({ isRTL }: WalletTabProps) {
           </CardContent>
         </Card>
       </div>
+      {isDoctor && (
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <Button onClick={() => { setMessage(null); setAmount(""); setWithdrawOpen(true); }} className="bg-[#D4A853] text-[#0F172A]">
+            {isRTL ? "طلب سحب" : "Request Withdrawal"}
+          </Button>
+          <Button variant="outline" onClick={() => { setMessage(null); setAmount(""); setTopUpOpen(true); }}>
+            {isRTL ? "شحن الرصيد" : "Top Up Balance"}
+          </Button>
+          {message && <p className={`text-sm ${message.error ? "text-red-600" : "text-green-600"}`}>{message.text}</p>}
+        </div>
+      )}
 
       <Card className="border-0 shadow-sm shadow-gray-200/60 overflow-hidden">
         <CardHeader className="border-b bg-gray-50/50 pb-4">
@@ -227,6 +282,34 @@ export function WalletTab({ isRTL }: WalletTabProps) {
           </Table>
         </CardContent>
       </Card>
+      {isDoctor && (
+        <>
+          <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{isRTL ? "طلب سحب" : "Request Withdrawal"}</DialogTitle></DialogHeader>
+              <div className="space-y-2 py-2">
+                <Label>{isRTL ? "المبلغ" : "Amount"} ({currency})</Label>
+                <Input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
+                <p className="text-xs text-gray-500">{isRTL ? "الرصيد المتاح" : "Available"}: {formatCurrency(wallet.balance, currency)}</p>
+                {withdrawalError && <p className="text-sm text-red-600">{withdrawalError}</p>}
+              </div>
+              <DialogFooter><Button variant="outline" onClick={() => setWithdrawOpen(false)}>{isRTL ? "إلغاء" : "Cancel"}</Button><Button disabled={!!withdrawalError || withdrawal.isPending} onClick={() => withdrawal.mutate()}>{withdrawal.isPending ? "..." : (isRTL ? "إرسال الطلب" : "Submit Request")}</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={topUpOpen} onOpenChange={setTopUpOpen}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{isRTL ? "شحن الرصيد" : "Top Up Balance"}</DialogTitle></DialogHeader>
+              <div className="space-y-2 py-2">
+                <Label>{isRTL ? "المبلغ" : "Amount"} ({currency})</Label>
+                <Input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
+                <p className="text-xs text-gray-500">{isRTL ? "سيتم تحويلك إلى بوابة الدفع الآمنة." : "You will be redirected to the verified Paymob checkout."}</p>
+                {topUpError && <p className="text-sm text-red-600">{topUpError}</p>}
+              </div>
+              <DialogFooter><Button variant="outline" onClick={() => setTopUpOpen(false)}>{isRTL ? "إلغاء" : "Cancel"}</Button><Button disabled={!!topUpError || topUp.isPending} onClick={() => topUp.mutate()}>{topUp.isPending ? "..." : (isRTL ? "المتابعة للدفع" : "Continue to Payment")}</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

@@ -101,8 +101,9 @@ import {
   DollarSign,
   ClipboardList,
   BarChart3,
+  WalletCards,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter, getAdminFinancialSettings, updateAdminFinancialSettings, getAdminPlatformBankAccount, updateAdminPlatformBankAccount, getAdminWithdrawals, decideAdminWithdrawal, giftAdminWalletFunds, type AdminFinancialSettings, type AdminPlatformBankAccount, type AdminWithdrawal } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -360,6 +361,7 @@ const tabs = [
   { id: "reports", label: "Reports", labelAr: "التقارير", icon: BarChart3 },
   { id: "contact", label: "Contact Info", labelAr: "معلومات التواصل", icon: Globe },
   { id: "billing", label: "Billing", labelAr: "الاشتراكات", icon: DollarSign },
+  { id: "financial", label: "Financial", labelAr: "المالية", icon: WalletCards },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -449,6 +451,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         {activeTab === "reports" && <ReportsSection lang={lang} />}
         {activeTab === "contact" && <ContactInfoSection lang={lang} />}
         {activeTab === "billing" && <BillingManagementSection lang={lang} />}
+        {activeTab === "financial" && <FinancialManagementSection lang={lang} />}
       </div>
     </div>
   );
@@ -772,6 +775,42 @@ function BillingManagementSection({ lang }: { lang: "en" | "ar" }) {
       {subTab === "vouchers" && <VouchersPanel lang={lang} />}
     </div>
   );
+}
+
+function FinancialManagementSection({ lang }: { lang: "en" | "ar" }) {
+  const isAr = lang === "ar";
+  const qc = useQueryClient();
+  const [subTab, setSubTab] = useState<"settings" | "withdrawals">("settings");
+  const [form, setForm] = useState<AdminFinancialSettings>({ deductionType: "PERCENTAGE", deductionValue: 0, platformSharePercentage: 100, cashbackSharePercentage: 0, minDoctorWalletBalance: 0, subscriptionModelEnabled: false });
+  const [bank, setBank] = useState<AdminPlatformBankAccount>({ accountHolderName: "", bankName: "", accountNumber: "", iban: "", branchName: "", swiftCode: "" });
+  const settings = useQuery({ queryKey: ["adminFinancialSettings"], queryFn: getAdminFinancialSettings });
+  const bankQuery = useQuery({ queryKey: ["adminPlatformBankAccount"], queryFn: getAdminPlatformBankAccount });
+  useEffect(() => { if (settings.data) setForm((f) => ({ ...f, ...settings.data })); }, [settings.data]);
+  useEffect(() => { if (bankQuery.data) setBank((b) => ({ ...b, ...bankQuery.data })); }, [bankQuery.data]);
+  const save = useMutation({ mutationFn: updateAdminFinancialSettings, onSuccess: () => qc.invalidateQueries({ queryKey: ["adminFinancialSettings"] }) });
+  const saveBank = useMutation({ mutationFn: updateAdminPlatformBankAccount, onSuccess: () => qc.invalidateQueries({ queryKey: ["adminPlatformBankAccount"] }) });
+  const valid = form.deductionValue >= 0 && (form.deductionType === "FIXED" || form.deductionValue <= 100) && form.minDoctorWalletBalance >= 0 && form.platformSharePercentage >= 0 && form.cashbackSharePercentage >= 0 && form.platformSharePercentage <= 100 && form.cashbackSharePercentage <= 100 && form.platformSharePercentage + form.cashbackSharePercentage === 100;
+  const numberField = (label: string, key: keyof AdminFinancialSettings) => <label className="text-sm text-gray-700">{label}<Input className="mt-1" type="number" min={0} value={form[key] as number} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>;
+  const bankField = (label: string, key: keyof AdminPlatformBankAccount) => <label className="text-sm text-gray-700">{label}<Input className="mt-1" value={bank[key] ?? ""} onChange={(e) => setBank({ ...bank, [key]: e.target.value })} /></label>;
+  return <div className="space-y-6 max-w-4xl">
+    <h2 className="text-xl font-bold text-gray-900">{isAr ? "الإدارة المالية" : "Financial Management"}</h2>
+    <div className="flex gap-2"><Button variant={subTab === "settings" ? "default" : "outline"} onClick={() => setSubTab("settings")}>{isAr ? "الإعدادات" : "Settings"}</Button><Button variant={subTab === "withdrawals" ? "default" : "outline"} onClick={() => setSubTab("withdrawals")}>{isAr ? "طلبات السحب" : "Withdrawal Requests"}</Button></div>
+    {subTab === "settings" ? <div className="space-y-5">
+      <div className="bg-white border rounded-xl p-6"><h3 className="font-semibold mb-4">{isAr ? "الخصم وحصص الإيرادات" : "Deduction & revenue shares"}</h3>{settings.isLoading ? <p className="text-gray-500">Loading...</p> : settings.isError ? <p className="text-red-600">{isAr ? "تعذر تحميل الإعدادات" : "Unable to load settings"}</p> : <div className="grid sm:grid-cols-2 gap-4">
+        {numberField(isAr ? "قيمة الخصم" : "Deduction value", "deductionValue")}{numberField(isAr ? "حصة المنصة %" : "Platform share %", "platformSharePercentage")}{numberField(isAr ? "حصة الكاش باك %" : "Cashback share %", "cashbackSharePercentage")}{numberField(isAr ? "الحد الأدنى لمحفظة الطبيب" : "Minimum doctor wallet balance", "minDoctorWalletBalance")}
+      </div>}<p className={`text-xs mt-3 ${valid ? "text-gray-500" : "text-red-600"}`}>{isAr ? "يجب أن يكون مجموع حصة المنصة والكاش باك 100%." : "Platform and cashback shares must total 100%."}</p><label className="flex items-center gap-2 mt-5 text-sm"><input type="checkbox" checked={form.subscriptionModelEnabled} onChange={(e) => setForm({ ...form, subscriptionModelEnabled: e.target.checked })} />{isAr ? "تفعيل نموذج الاشتراكات" : "Enable subscription model"}</label><div className="mt-5"><Button disabled={!valid || save.isPending} onClick={() => save.mutate(form)} className="bg-[#D4A853] text-[#0F172A]"><Save className="w-4 h-4 mr-2" />{isAr ? "حفظ" : "Save settings"}</Button>{save.isSuccess && <span className="text-sm text-green-600 ml-3">{isAr ? "تم الحفظ" : "Saved"}</span>}{save.isError && <span className="text-sm text-red-600 ml-3">{isAr ? "فشل الحفظ" : "Save failed"}</span>}</div></div>
+      <div className="bg-white border rounded-xl p-6"><h3 className="font-semibold mb-4">{isAr ? "حساب المنصة البنكي" : "Platform bank account"}</h3>{bankQuery.isLoading ? <p className="text-gray-500">Loading...</p> : bankQuery.isError ? <p className="text-red-600">{isAr ? "تعذر تحميل الحساب البنكي" : "Unable to load bank account"}</p> : <div className="grid sm:grid-cols-2 gap-4">{bankField("Account holder name", "accountHolderName")}{bankField("Bank name", "bankName")}{bankField("Account number", "accountNumber")}{bankField("IBAN", "iban")}{bankField("Branch", "branchName")}</div>}<p className="text-xs text-gray-500 mt-3">Provide an account number or IBAN.</p><Button className="mt-5 bg-[#D4A853] text-[#0F172A]" disabled={saveBank.isPending || bankQuery.isError || !bank.accountHolderName.trim() || !bank.bankName.trim() || (!bank.accountNumber?.trim() && !bank.iban?.trim())} onClick={() => saveBank.mutate(bank)}><Save className="w-4 h-4 mr-2" />Save bank account</Button>{saveBank.isSuccess && <span className="text-sm text-green-600 ml-3">{isAr ? "تم الحفظ" : "Saved"}</span>}{saveBank.isError && <span className="text-sm text-red-600 ml-3">{isAr ? "فشل الحفظ" : "Save failed"}</span>}</div>
+    </div> : <WithdrawalsPanel lang={lang} />}
+  </div>;
+}
+
+function WithdrawalsPanel({ lang }: { lang: "en" | "ar" }) {
+  const isAr = lang === "ar"; const qc = useQueryClient(); const query = useQuery({ queryKey: ["adminWithdrawals"], queryFn: getAdminWithdrawals });
+  const decide = useMutation({ mutationFn: ({ id, decision, adminNote }: { id: string; decision: "COMPLETED" | "REJECTED"; adminNote?: string }) => decideAdminWithdrawal(id, decision, adminNote), onSuccess: () => qc.invalidateQueries({ queryKey: ["adminWithdrawals"] }) });
+  const [rejecting, setRejecting] = useState<AdminWithdrawal | null>(null); const [note, setNote] = useState("");
+  const reject = useMutation({ mutationFn: ({ id, adminNote }: { id: string; adminNote: string }) => decideAdminWithdrawal(id, "REJECTED", adminNote), onSuccess: () => { setRejecting(null); setNote(""); qc.invalidateQueries({ queryKey: ["adminWithdrawals"] }); } });
+  const raw = query.data as unknown; const items: AdminWithdrawal[] = Array.isArray(raw) ? raw : ((raw as { withdrawals?: AdminWithdrawal[] } | undefined)?.withdrawals ?? []);
+  return <div className="bg-white border rounded-xl overflow-hidden">{query.isLoading ? <p className="p-8 text-center text-gray-500">Loading...</p> : <Table><TableHeader><TableRow><TableHead>Doctor</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader><TableBody>{items.map((w) => <TableRow key={w.id}><TableCell>#{w.doctorUserId}</TableCell><TableCell>{w.amount} EGP</TableCell><TableCell><Badge variant="outline">{w.status}</Badge></TableCell><TableCell>{w.status === "PENDING" && <div className="flex gap-2"><Button size="sm" variant="outline" disabled={decide.isPending} onClick={() => decide.mutate({ id: w.id, decision: "COMPLETED" })}>{isAr ? "إتمام" : "Complete"}</Button><Button size="sm" variant="outline" onClick={() => setRejecting(w)}>{isAr ? "رفض" : "Reject"}</Button></div>}</TableCell></TableRow>)}</TableBody></Table>}{!query.isLoading && !items.length && <p className="p-8 text-center text-gray-500">{isAr ? "لا توجد طلبات" : "No requests"}</p>}<Dialog open={!!rejecting} onOpenChange={(o) => !o && setRejecting(null)}><DialogContent><DialogHeader><DialogTitle>{isAr ? "رفض الطلب" : "Reject withdrawal"}</DialogTitle></DialogHeader><textarea className="w-full border rounded-md p-3" rows={4} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Admin note (required)" /><Button disabled={!note.trim() || reject.isPending} onClick={() => rejecting && reject.mutate({ id: rejecting.id, adminNote: note.trim() })}>{isAr ? "تأكيد" : "Confirm"}</Button></DialogContent></Dialog></div>;
 }
 
 function ContactInfoSection({ lang }: { lang: "en" | "ar" }) {
@@ -1156,6 +1195,13 @@ function DoctorsSection({ lang }: { lang: string }) {
   const invalidate = useInvalidateAdmin();
   const qc = useQueryClient();
   const [selectedDoctor, setSelectedDoctor] = useState<AdminDoctor | null>(null as AdminDoctor | null);
+  const [giftDoctor, setGiftDoctor] = useState<AdminDoctor | null>(null);
+  const [giftAmount, setGiftAmount] = useState("");
+  const [giftDescription, setGiftDescription] = useState("");
+  const gift = useMutation({
+    mutationFn: () => giftAdminWalletFunds(Number((giftDoctor as unknown as Record<string, unknown>).userId ?? giftDoctor!.id), Number(giftAmount), giftDescription.trim() || undefined),
+    onSuccess: () => { setGiftDoctor(null); setGiftAmount(""); setGiftDescription(""); qc.invalidateQueries({ queryKey: getListDoctorsQueryKey() }); },
+  });
 
   const incomplete = doctors.filter((d) => d.accountStatus === "incomplete");
   const pending = doctors.filter((d) => d.accountStatus === "pending");
@@ -1353,6 +1399,7 @@ function DoctorsSection({ lang }: { lang: string }) {
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
+                          <Button size="sm" variant="outline" className="text-emerald-600" onClick={() => setGiftDoctor(doctor as AdminDoctor)} title={isAr ? "إهداء أموال" : "Gift funds"}><DollarSign className="w-3.5 h-3.5" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1370,6 +1417,17 @@ function DoctorsSection({ lang }: { lang: string }) {
             onClose={() => setSelectedDoctor(null)}
           />
         )}
+      </Dialog>
+      <Dialog open={!!giftDoctor} onOpenChange={(open) => !open && setGiftDoctor(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{isAr ? `إهداء أموال لـ ${giftDoctor?.name ?? ""}` : `Gift funds to ${giftDoctor?.name ?? ""}`}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <label className="text-sm text-gray-700 block">{isAr ? "المبلغ (مطلوب)" : "Amount (required)"}<Input type="number" min="0.01" step="0.01" value={giftAmount} onChange={(e) => setGiftAmount(e.target.value)} /></label>
+            <label className="text-sm text-gray-700 block">{isAr ? "الوصف (اختياري)" : "Description (optional)"}<Input value={giftDescription} onChange={(e) => setGiftDescription(e.target.value)} /></label>
+            {gift.isError && <p className="text-sm text-red-600">{isAr ? "فشل إرسال الأموال" : "Failed to gift funds"}</p>}
+            <Button className="w-full bg-[#D4A853] text-[#0F172A]" disabled={gift.isPending || !Number.isFinite(Number(giftAmount)) || Number(giftAmount) <= 0} onClick={() => gift.mutate()}>{gift.isPending ? (isAr ? "جارٍ الإرسال..." : "Sending...") : (isAr ? "إرسال الأموال" : "Gift funds")}</Button>
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   );

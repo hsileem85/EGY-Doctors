@@ -455,6 +455,7 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
             amount: existing.feeCharged,
             bookingId: String(existing.id),
             commissionRate: await getBookingCommissionRate(tx),
+             patientUserId: existing.patientUserId ? String(existing.patientUserId) : null,
           });
         }
       } else if (parsed.data.status === "cancelled") {
