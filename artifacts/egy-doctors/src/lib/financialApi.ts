@@ -23,11 +23,9 @@ export interface BankAccount {
   iban?: string | null;
 }
 
-export interface PaymobTopUp {
-  iframeUrl: string;
-  paymentKey: string;
-  iframeId: string;
-  orderId: string;
+export interface StripeTopUp {
+  checkoutUrl: string;
+  sessionId: string;
   paymentId: number;
 }
 
@@ -62,8 +60,14 @@ export const updateBankAccount = (account: {
 });
 export const requestWalletWithdrawal = (amount: number) =>
   request<WithdrawalRequest>("/wallet/withdrawals", { method: "POST", body: JSON.stringify({ amount }) });
-export const initiateWalletTopUp = (amount: number, paymentMethod: "card" | "fawry" | "wallet" = "card") =>
-  request<PaymobTopUp>("/wallet/top-ups", {
+export const initiateWalletTopUp = (amount: number) =>
+  request<StripeTopUp>("/wallet/top-ups/stripe", {
     method: "POST",
-    body: JSON.stringify({ amount, paymentMethod }),
+    body: JSON.stringify({ amount }),
+  });
+
+export const confirmStripeWalletTopUp = (sessionId: string) =>
+  request<{ status: "PENDING" | "PAID" }>("/wallet/top-ups/stripe/confirm", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
   });

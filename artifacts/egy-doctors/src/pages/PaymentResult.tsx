@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { getAppointmentPaymentStatus, getBillingInfo } from "@/lib/api";
+import { confirmStripeWalletTopUp } from "@/lib/financialApi";
 
 type Status = "loading" | "success" | "confirming" | "failed";
 
@@ -38,6 +39,19 @@ export default function PaymentResult() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const isStripeWalletTopUp = params.get("kind") === "wallet_top_up" && params.get("provider") === "stripe";
+    const stripeSessionId = params.get("session_id");
+    if (isStripeWalletTopUp) {
+      if (params.get("cancelled") === "true" || !stripeSessionId) {
+        setStatus("failed");
+        return;
+      }
+      void confirmStripeWalletTopUp(stripeSessionId)
+        .then((result) => setStatus(result.status === "PAID" ? "success" : "confirming"))
+        .catch(() => setStatus("failed"));
+      return;
+    }
+
     const success = params.get("success") === "true";
     const orderId = params.get("order_id") ?? params.get("order") ?? "";
     const appointmentId = params.get("kind") === "booking"
@@ -62,6 +76,7 @@ export default function PaymentResult() {
     ? Number(params.get("appointment_id")) || null
     : null;
   const isBooking = appointmentId !== null;
+  const isWalletTopUp = params.get("kind") === "wallet_top_up";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -81,8 +96,20 @@ export default function PaymentResult() {
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
             <p className="text-gray-900 font-semibold text-lg">Payment Successful</p>
             <p className="text-sm text-gray-500 mt-1">
-              {isBooking ? "Your appointment payment is confirmed." : "Your subscription is now active."}
+               {isWalletTopUp
+                 ? "Your wallet balance has been updated."
+                 : isBooking
+                   ? "Your appointment payment is confirmed."
+                   : "Your subscription is now active."}
             </p>
+             {isWalletTopUp && (
+               <button
+                 onClick={() => window.location.assign("/dashboard?tab=wallet")}
+                 className="mt-5 px-4 py-2 bg-[#D4A853] text-white text-sm font-medium rounded-lg hover:bg-[#b8913f] transition-colors"
+               >
+                 Return to Wallet
+               </button>
+             )}
           </>
         )}
 
@@ -91,7 +118,7 @@ export default function PaymentResult() {
             <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">⏳</div>
             <p className="text-gray-900 font-semibold text-lg">Payment Received</p>
             <p className="text-sm text-gray-500 mt-2">
-              Your payment was received but {isBooking ? "booking confirmation" : "subscription activation"} is taking longer than expected.
+               Your payment was received but {isWalletTopUp ? "wallet confirmation" : isBooking ? "booking confirmation" : "subscription activation"} is taking longer than expected.
               Please check your dashboard in a moment.
             </p>
             <button
@@ -116,8 +143,20 @@ export default function PaymentResult() {
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✕</div>
             <p className="text-gray-900 font-semibold text-lg">Payment Not Completed</p>
             <p className="text-sm text-gray-500 mt-1">
-              {isBooking ? "Your appointment payment was not completed." : "Your subscription was not activated."} Please try again.
+               {isWalletTopUp
+                 ? "Your wallet top-up was not completed."
+                 : isBooking
+                   ? "Your appointment payment was not completed."
+                   : "Your subscription was not activated."} Please try again.
             </p>
+             {isWalletTopUp && (
+               <button
+                 onClick={() => window.location.assign("/dashboard?tab=wallet")}
+                 className="mt-5 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+               >
+                 Return to Wallet
+               </button>
+             )}
             {window.parent !== window && (
               <button
                 onClick={() => window.parent.postMessage({ type: "PAYMOB_RESULT", success: false, orderId }, "*")}

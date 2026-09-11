@@ -1,5 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import { ReplitConnectors } from "@replit/connectors-sdk";
 import { and, desc, eq, gte, sql, sum } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -7,11 +9,12 @@ import {
   walletsTable, walletTransactionsTable,
   doctorsTable, paymentsTable,
 } from "@workspace/db";
-import { creditWallet, InsufficientWalletFundsError } from "../lib/wallet.service.js";
+import { creditWallet, ensureWallet, InsufficientWalletFundsError } from "../lib/wallet.service.js";
 
 const router: IRouter = Router();
 const nextDecision = (req: Request, res: Response) => (router as unknown as { handle: Function }).handle(req, res, () => undefined);
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
+const connectors = new ReplitConnectors();
 type Auth = { sub: number; role: string };
 
 function auth(req: Request): Auth | null {
@@ -201,6 +204,175 @@ router.post("/wallet/top-ups", async (req, res) => {
   } catch (error) {
     req.log.error({ error }, "Wallet top-up Paymob initiation failed");
     res.status(502).json({ error: "Failed to initiate wallet top-up" });
+  }
+});
+
+router.post("/wallet/top-ups/stripe", async (req, res) => {
+  const p = auth(req);
+  if (!p) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (p.role !== "doctor") { res.status(403).json({ error: "Only doctors may top up this wallet" }); return; }
+
+  const parsed = z.object({
+    amount: z.number().finite().min(50).max(100_000),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Enter an amount between 50 and 100,000 EGP" }); return; }
+
+  const amount = Math.round(parsed.data.amount * 100) / 100;
+  const amountMinor = Math.round(amount * 100);
+  const [doctor] = await db.select({ id: doctorsTable.id })
+    .from(doctorsTable)
+    .where(eq(doctorsTable.userId, p.sub))
+    .limit(1);
+  if (!doctor) { res.status(404).json({ error: "Doctor profile not found" }); return; }
+
+  const pendingReference = `stripe:pending:${crypto.randomUUID()}`;
+  const [payment] = await db.insert(paymentsTable).values({
+    doctorId: doctor.id,
+    paymobOrderId: pendingReference,
+    planType: "WALLET_TOP_UP",
+    amount,
+    currency: "EGP",
+    status: "PENDING",
+  }).returning();
+
+  try {
+    const host = req.get("host");
+    if (!host) throw new Error("Missing request host");
+    const origin = host.startsWith("localhost") || host.startsWith("127.0.0.1")
+      ? `${req.protocol}://${host}`
+      : `https://${host}`;
+    const form = new URLSearchParams({
+      mode: "payment",
+      success_url: `${origin}/billing/payment-result?kind=wallet_top_up&provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/billing/payment-result?kind=wallet_top_up&provider=stripe&cancelled=true`,
+      client_reference_id: String(payment.id),
+      "line_items[0][price_data][currency]": "egp",
+      "line_items[0][price_data][product_data][name]": "EGY Doctors wallet top-up",
+      "line_items[0][price_data][unit_amount]": String(amountMinor),
+      "line_items[0][quantity]": "1",
+      "metadata[payment_id]": String(payment.id),
+      "metadata[doctor_user_id]": String(p.sub),
+      "payment_intent_data[metadata][payment_id]": String(payment.id),
+      "payment_intent_data[metadata][doctor_user_id]": String(p.sub),
+    });
+    const response = await connectors.proxy("stripe", "/v1/checkout/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form,
+    });
+    const session = await response.json() as { id?: string; url?: string; error?: { message?: string } };
+    if (!response.ok || !session.id || !session.url) {
+      throw new Error(session.error?.message ?? `Stripe checkout failed (${response.status})`);
+    }
+    await db.update(paymentsTable)
+      .set({ paymobOrderId: `stripe:${session.id}` })
+      .where(and(eq(paymentsTable.id, payment.id), eq(paymentsTable.paymobOrderId, pendingReference)));
+    res.json({ checkoutUrl: session.url, sessionId: session.id, paymentId: payment.id });
+  } catch (error) {
+    await db.update(paymentsTable)
+      .set({ status: "FAILED" })
+      .where(and(eq(paymentsTable.id, payment.id), eq(paymentsTable.status, "PENDING")));
+    req.log.error({ error, paymentId: payment.id }, "Stripe wallet top-up initiation failed");
+    res.status(502).json({ error: "Failed to initiate Stripe checkout" });
+  }
+});
+
+router.post("/wallet/top-ups/stripe/confirm", async (req, res) => {
+  const p = auth(req);
+  if (!p) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (p.role !== "doctor") { res.status(403).json({ error: "Only doctors may confirm this wallet top-up" }); return; }
+  const parsed = z.object({ sessionId: z.string().regex(/^cs_(test|live)_/) }).safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Invalid Stripe checkout session" }); return; }
+
+  try {
+    const response = await connectors.proxy("stripe", `/v1/checkout/sessions/${encodeURIComponent(parsed.data.sessionId)}`);
+    const session = await response.json() as {
+      id?: string;
+      payment_status?: string;
+      payment_intent?: string | null;
+      amount_total?: number | null;
+      currency?: string | null;
+      metadata?: Record<string, string>;
+      error?: { message?: string };
+    };
+    if (!response.ok) throw new Error(session.error?.message ?? `Stripe verification failed (${response.status})`);
+    if (session.id !== parsed.data.sessionId || session.payment_status !== "paid") {
+      res.status(409).json({ status: "PENDING", error: "Stripe payment is not complete" });
+      return;
+    }
+
+    const paymentId = Number(session.metadata?.payment_id);
+    if (!Number.isInteger(paymentId) || session.metadata?.doctor_user_id !== String(p.sub)) {
+      res.status(403).json({ error: "Stripe session does not belong to this doctor" });
+      return;
+    }
+
+    const [doctor] = await db.select({ id: doctorsTable.id })
+      .from(doctorsTable)
+      .where(eq(doctorsTable.userId, p.sub))
+      .limit(1);
+    if (!doctor) { res.status(404).json({ error: "Doctor profile not found" }); return; }
+    await ensureWallet("DOCTOR", String(p.sub));
+
+    let status: "PAID" | "PENDING" = "PENDING";
+    await db.transaction(async (tx) => {
+      const [updated] = await tx.update(paymentsTable).set({
+        status: "PAID",
+        paymobTransactionId: session.payment_intent ?? session.id,
+        paidAt: new Date(),
+      }).where(and(
+        eq(paymentsTable.id, paymentId),
+        eq(paymentsTable.doctorId, doctor.id),
+        eq(paymentsTable.paymobOrderId, `stripe:${session.id}`),
+        eq(paymentsTable.planType, "WALLET_TOP_UP"),
+        eq(paymentsTable.status, "PENDING"),
+      )).returning();
+
+      if (!updated) {
+        const [existing] = await tx.select({ status: paymentsTable.status })
+          .from(paymentsTable)
+          .where(and(
+            eq(paymentsTable.id, paymentId),
+            eq(paymentsTable.doctorId, doctor.id),
+            eq(paymentsTable.paymobOrderId, `stripe:${session.id}`),
+          ))
+          .limit(1);
+        if (existing?.status === "PAID") status = "PAID";
+        return;
+      }
+
+      if (
+        session.currency?.toUpperCase() !== updated.currency ||
+        session.amount_total !== Math.round(updated.amount * 100)
+      ) {
+        throw new Error("Stripe payment amount does not match the wallet top-up");
+      }
+
+      const [wallet] = await tx.update(walletsTable).set({
+        balance: sql`${walletsTable.balance} + ${updated.amount}`,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(walletsTable.ownerType, "DOCTOR"),
+        eq(walletsTable.ownerId, String(p.sub)),
+      )).returning();
+      if (!wallet) throw new Error("Doctor wallet not found");
+
+      await tx.insert(walletTransactionsTable).values({
+        walletId: wallet.id,
+        type: "CREDIT",
+        category: "WALLET_TOP_UP",
+        amount: updated.amount,
+        balancePost: wallet.balance,
+        referenceId: `stripe:${session.id}`,
+        description: "Verified Stripe wallet top-up",
+      });
+      status = "PAID";
+    });
+
+    res.json({ status });
+  } catch (error) {
+    req.log.error({ error, sessionId: parsed.data.sessionId }, "Stripe wallet top-up confirmation failed");
+    res.status(502).json({ error: "Failed to verify Stripe payment" });
   }
 });
 export default router;

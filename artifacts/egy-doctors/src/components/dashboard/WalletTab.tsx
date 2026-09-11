@@ -42,7 +42,7 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
   const topUp = useMutation({
     mutationFn: () => initiateWalletTopUp(Number(amount)),
     onSuccess: (result) => {
-      if (result.iframeUrl) window.location.assign(result.iframeUrl);
+      if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
       else setMessage({ text: isRTL ? "تعذر بدء الدفع." : "Payment could not be started.", error: true });
     },
     onError: (error: Error) => setMessage({ text: error.message, error: true }),
@@ -55,8 +55,8 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
       : parsedAmount > (wallet?.balance ?? 0)
         ? (isRTL ? "المبلغ يتجاوز الرصيد المتاح." : "Amount exceeds your available balance.")
         : null;
-  const topUpError = !Number.isFinite(parsedAmount) || parsedAmount <= 0
-    ? (isRTL ? "أدخل مبلغاً موجباً." : "Enter a positive amount.")
+  const topUpError = !Number.isFinite(parsedAmount) || parsedAmount < 50
+    ? (isRTL ? "الحد الأدنى للشحن هو 50 جنيهاً." : "Minimum top-up is 50 EGP.")
     : null;
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -290,7 +290,7 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
               <DialogHeader><DialogTitle>{isRTL ? "طلب سحب" : "Request Withdrawal"}</DialogTitle></DialogHeader>
               <div className="space-y-2 py-2">
                 <Label>{isRTL ? "المبلغ" : "Amount"} ({currency})</Label>
-                <Input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
+                 <Input type="number" min="50" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
                 <p className="text-xs text-gray-500">{isRTL ? "الرصيد المتاح" : "Available"}: {formatCurrency(wallet.balance, currency)}</p>
                 {withdrawalError && <p className="text-sm text-red-600">{withdrawalError}</p>}
               </div>
@@ -303,7 +303,7 @@ export function WalletTab({ isRTL, ownerMode = "patient" }: WalletTabProps) {
               <div className="space-y-2 py-2">
                 <Label>{isRTL ? "المبلغ" : "Amount"} ({currency})</Label>
                 <Input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
-                <p className="text-xs text-gray-500">{isRTL ? "سيتم تحويلك إلى بوابة الدفع الآمنة." : "You will be redirected to the verified Paymob checkout."}</p>
+                 <p className="text-xs text-gray-500">{isRTL ? "سيتم تحويلك إلى صفحة الدفع التجريبية الآمنة من Stripe." : "You will be redirected to secure Stripe test checkout."}</p>
                 {topUpError && <p className="text-sm text-red-600">{topUpError}</p>}
               </div>
               <DialogFooter><Button variant="outline" onClick={() => setTopUpOpen(false)}>{isRTL ? "إلغاء" : "Cancel"}</Button><Button disabled={!!topUpError || topUp.isPending} onClick={() => topUp.mutate()}>{topUp.isPending ? "..." : (isRTL ? "المتابعة للدفع" : "Continue to Payment")}</Button></DialogFooter>
