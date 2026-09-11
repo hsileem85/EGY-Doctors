@@ -1412,6 +1412,13 @@ export default function Dashboard() {
     enabled: !!user?.doctorId && accountStatus === "approved",
   });
   const isSubscribed = billingInfo?.status === "ACTIVE" || billingInfo?.status === "TRIAL";
+  const subscriptionModelEnabled = billingInfo?.subscriptionModelEnabled === true;
+
+  useEffect(() => {
+    if (billingInfo?.subscriptionModelEnabled === false && activeTab === "billing") {
+      setActiveTab("appointments");
+    }
+  }, [activeTab, billingInfo?.subscriptionModelEnabled]);
 
   const doctorName = user?.name ?? "Doctor";
 
@@ -1423,7 +1430,7 @@ export default function Dashboard() {
     return <PendingScreen status={accountStatus} doctorName={doctorName} signOut={signOut} isRTL={isRTL} />;
   }
 
-  if (user?.role === "doctor" && accountStatus === "approved" && billingInfo !== undefined && !isSubscribed) {
+  if (user?.role === "doctor" && accountStatus === "approved" && subscriptionModelEnabled && !isSubscribed) {
     return <ActivationRequiredScreen isRTL={isRTL} signOut={signOut} />;
   }
 
@@ -1434,7 +1441,9 @@ export default function Dashboard() {
     { tab: "publications", icon: <Newspaper className="h-4 w-4" />, label: isRTL ? "المنشورات" : "Publications" },
     { tab: "wallet",      icon: <Wallet className="h-4 w-4" />, label: isRTL ? "المحفظة" : "Wallet" },
     { tab: "preferences", icon: <Settings className="h-4 w-4" />, label: isRTL ? "الإعدادات" : "Preferences" },
-    { tab: "billing",     icon: <CreditCard className="h-4 w-4" />, label: isRTL ? "الاشتراك" : "Billing" },
+    ...(subscriptionModelEnabled
+      ? [{ tab: "billing" as Tab, icon: <CreditCard className="h-4 w-4" />, label: isRTL ? "الاشتراك" : "Billing" }]
+      : []),
   ];
 
   return (
@@ -1689,7 +1698,7 @@ export default function Dashboard() {
 
             {/* ── Publications Tab ── */}
             {activeTab === "publications" && (
-              isSubscribed
+              !subscriptionModelEnabled || isSubscribed
                 ? <PublicationsTab isRTL={isRTL} />
                 : (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -1719,7 +1728,7 @@ export default function Dashboard() {
             {activeTab === "preferences" && <PreferencesTab isRTL={isRTL} />}
 
             {/* ── Billing Tab ── */}
-            {activeTab === "billing" && <BillingTab isRTL={isRTL} />}
+            {activeTab === "billing" && subscriptionModelEnabled && <BillingTab isRTL={isRTL} />}
 
           </div>
         </main>

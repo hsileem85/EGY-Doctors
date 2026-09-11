@@ -7,7 +7,8 @@ import { z } from "zod";
 import {
   db, doctorsTable, medicalCentersTable, usersTable,
   siteSettingsTable, vouchersTable, paymentsTable,
-  appointmentsTable, clinicsTable, walletsTable, walletTransactionsTable, type WalletOwnerType,
+  appointmentsTable, clinicsTable, walletsTable, walletTransactionsTable,
+  systemSettingsTable, type WalletOwnerType,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { sendReceiptEmail } from "../lib/email";
@@ -189,6 +190,10 @@ router.get("/billing/subscription", async (req, res): Promise<void> => {
 
   const role = payload.role as UserRole;
   const settings = await getPricingSettings(role);
+  const [financialSettings] = await db.select({
+    subscriptionModelEnabled: systemSettingsTable.subscriptionModelEnabled,
+  }).from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
+  const subscriptionModelEnabled = financialSettings?.subscriptionModelEnabled ?? false;
 
   if (role === "doctor") {
     const doctor = await getDoctor(payload.sub);
@@ -205,6 +210,7 @@ router.get("/billing/subscription", async (req, res): Promise<void> => {
       plan: doctor.subscriptionPlan ?? "SEMI_ANNUAL",
       endDate: doctor.subscriptionEndDate?.toISOString() ?? null,
       isTrialUsed: doctor.isTrialUsed ?? false,
+      subscriptionModelEnabled,
       ...settings,
     });
     return;
@@ -224,6 +230,7 @@ router.get("/billing/subscription", async (req, res): Promise<void> => {
     plan: center.subscriptionPlan ?? "SEMI_ANNUAL",
     endDate: center.subscriptionEndDate?.toISOString() ?? null,
     isTrialUsed: center.isTrialUsed ?? false,
+    subscriptionModelEnabled,
     ...settings,
   });
 });

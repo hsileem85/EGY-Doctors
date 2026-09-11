@@ -612,6 +612,7 @@ export function getStats(): Promise<{ clinicsCount: number; citiesWithClinics: n
 
 export interface BillingInfo {
   status: "ACTIVE" | "INACTIVE" | "TRIAL";
+  subscriptionModelEnabled: boolean;
   plan: string;
   endDate: string | null;
   isTrialUsed: boolean;
