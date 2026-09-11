@@ -279,6 +279,52 @@ router.get("/doctors", async (req, res): Promise<void> => {
   res.set("Cache-Control", "no-store").json(response);
 });
 
+/* ─── GET /doctors/patients ─── */
+router.get("/doctors/patients", async (req, res): Promise<void> => {
+  const result = await requireDoctor(req.headers.authorization);
+  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+  const { doctorRow } = result;
+
+  const rows = await db.select({
+    patientName: appointmentsTable.patientName,
+    patientPhone: appointmentsTable.patientPhone,
+    patientUserId: appointmentsTable.patientUserId,
+    appointmentDate: appointmentsTable.appointmentDate,
+    status: appointmentsTable.status,
+  }).from(appointmentsTable)
+    .where(eq(appointmentsTable.doctorId, doctorRow.id))
+    .orderBy(appointmentsTable.appointmentDate);
+
+  const patientMap = new Map<string, {
+    patientName: string; patientPhone: string; patientUserId: number | null;
+    lastVisit: string; totalVisits: number; status: typeof appointmentsTable.status.enumValues[number];
+  }>();
+
+  for (const row of rows) {
+    const key = row.patientPhone;
+    const appointmentDate = String(row.appointmentDate);
+    const existing = patientMap.get(key);
+    if (!existing) {
+      patientMap.set(key, {
+        patientName: row.patientName,
+        patientPhone: row.patientPhone,
+        patientUserId: row.patientUserId,
+        lastVisit: appointmentDate,
+        totalVisits: 1,
+        status: row.status,
+      });
+    } else {
+      existing.totalVisits++;
+      if (appointmentDate > existing.lastVisit) {
+        existing.lastVisit = appointmentDate;
+        existing.status = row.status;
+      }
+    }
+  }
+
+  res.json(Array.from(patientMap.values()));
+});
+
 /* ─── GET /doctors/:id ─── */
 router.get("/doctors/:id", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -1103,41 +1149,6 @@ router.delete("/doctors/assistants/:id", async (req, res): Promise<void> => {
 
   await db.delete(usersTable).where(eq(usersTable.id, id));
   res.sendStatus(204);
-});
-
-/* ─── GET /doctors/patients ─── */
-router.get("/doctors/patients", async (req, res): Promise<void> => {
-  const result = await requireDoctor(req.headers.authorization);
-  if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
-  const { doctorRow } = result;
-
-  const rows = await db.select({
-    patientName: appointmentsTable.patientName,
-    patientPhone: appointmentsTable.patientPhone,
-    patientUserId: appointmentsTable.patientUserId,
-    appointmentDate: appointmentsTable.appointmentDate,
-    status: appointmentsTable.status,
-  }).from(appointmentsTable)
-    .where(eq(appointmentsTable.doctorId, doctorRow.id))
-    .orderBy(appointmentsTable.appointmentDate);
-
-  const patientMap = new Map<string, {
-    patientName: string; patientPhone: string; patientUserId: number | null;
-    lastVisit: string; totalVisits: number;
-  }>();
-
-  for (const row of rows) {
-    const key = row.patientPhone;
-    const existing = patientMap.get(key);
-    if (!existing) {
-      patientMap.set(key, { patientName: row.patientName, patientPhone: row.patientPhone, patientUserId: row.patientUserId, lastVisit: String(row.appointmentDate), totalVisits: 1 });
-    } else {
-      existing.totalVisits++;
-      if (String(row.appointmentDate) > existing.lastVisit) existing.lastVisit = String(row.appointmentDate);
-    }
-  }
-
-  res.json(Array.from(patientMap.values()));
 });
 
 /* ─── POST /doctors/:id/follow  (toggle follow/unfollow) ─── */

@@ -521,6 +521,7 @@ export interface ApiPatientRecord {
   patientUserId: number | null;
   lastVisit: string;
   totalVisits: number;
+  status: ApiAppointment["status"];
 }
 
 export function getDoctorPatients(): Promise<ApiPatientRecord[]> {

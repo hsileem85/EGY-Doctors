@@ -376,6 +376,7 @@ function AssistantsTab({ isRTL, doctorId }: { isRTL: boolean; doctorId: number }
 /* ── Patients Tab ── */
 function PatientsTab({ isRTL }: { isRTL: boolean }) {
   const [search, setSearch] = useState("");
+  const { t } = useLanguage();
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ["doctor-patients"],
     queryFn: getDoctorPatients,
@@ -413,14 +414,15 @@ function PatientsTab({ isRTL }: { isRTL: boolean }) {
                 <TableHead>{isRTL ? "اسم المريض" : "Patient Name"}</TableHead>
                 <TableHead>{isRTL ? "الجوال" : "Mobile"}</TableHead>
                 <TableHead>{isRTL ? "آخر زيارة" : "Last Visit"}</TableHead>
+                <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
                 <TableHead>{isRTL ? "عدد الزيارات" : "Total Visits"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-gray-400">{isRTL ? "جار التحميل..." : "Loading..."}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-500">{isRTL ? "لا يوجد مرضى حتى الآن" : "No patients yet"}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-10 text-gray-500">{isRTL ? "لا يوجد مرضى حتى الآن" : "No patients yet"}</TableCell></TableRow>
               ) : (
                 filtered.map((p: ApiPatientRecord, i: number) => (
                   <TableRow key={i}>
@@ -432,6 +434,7 @@ function PatientsTab({ isRTL }: { isRTL: boolean }) {
                       </a>
                     </TableCell>
                     <TableCell className="text-gray-600">{p.lastVisit}</TableCell>
+                    <TableCell>{statusBadge(p.status, t)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{p.totalVisits}</Badge>
                     </TableCell>
