@@ -475,6 +475,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportsResponse"
+  /admin/reports/doctors-financial:
+    get:
+      operationId: getDoctorsFinancialReport
+      tags: [admin]
+      summary: Get financial report for all doctors
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: walletBalanceLt
+          in: query
+          required: false
+          schema: { type: number, minimum: 0, format: double }
+      responses:
+        "200":
+          description: Doctor financial report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DoctorFinancialReportRow" }
+        "400":
+          description: Invalid wallet balance filter
   /wallet:
     get:
       operationId: getWallet
@@ -788,6 +810,24 @@ components:
         - onboardingStatus
         - createdAt
         - updatedAt
+    DoctorFinancialReportRow:
+      type: object
+      properties:
+        doctorId: { type: integer }
+        doctorUserId: { type: integer }
+        doctorName: { type: string }
+        doctorNameAr: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+        walletBalance: { type: number, format: double }
+        pendingWithdrawalAmount: { type: number, format: double }
+        completedWithdrawalAmount: { type: number, format: double }
+        appointmentCount: { type: integer }
+        grossAppointmentAmount: { type: number, format: double }
+        paidAppointmentAmount: { type: number, format: double }
+      required: [doctorId, doctorUserId, doctorName, doctorNameAr, phone, email,
+        walletBalance, pendingWithdrawalAmount, completedWithdrawalAmount,
+        appointmentCount, grossAppointmentAmount, paidAppointmentAmount]
     OnboardingUpdate:
       type: object
       properties:

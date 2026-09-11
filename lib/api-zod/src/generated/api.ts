@@ -551,6 +551,34 @@ export const GetReportsResponse = zod.object({
 
 
 /**
+ * @summary Get financial report for all doctors
+ */
+export const getDoctorsFinancialReportQueryWalletBalanceLtMin = 0;
+
+
+
+export const GetDoctorsFinancialReportQueryParams = zod.object({
+  "walletBalanceLt": zod.coerce.number().min(getDoctorsFinancialReportQueryWalletBalanceLtMin).optional()
+})
+
+export const GetDoctorsFinancialReportResponseItem = zod.object({
+  "doctorId": zod.number(),
+  "doctorUserId": zod.number(),
+  "doctorName": zod.string(),
+  "doctorNameAr": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "walletBalance": zod.number(),
+  "pendingWithdrawalAmount": zod.number(),
+  "completedWithdrawalAmount": zod.number(),
+  "appointmentCount": zod.number(),
+  "grossAppointmentAmount": zod.number(),
+  "paidAppointmentAmount": zod.number()
+})
+export const GetDoctorsFinancialReportResponse = zod.array(GetDoctorsFinancialReportResponseItem)
+
+
+/**
  * @summary Get the authenticated user's wallet
  */
 export const GetWalletResponse = zod.object({

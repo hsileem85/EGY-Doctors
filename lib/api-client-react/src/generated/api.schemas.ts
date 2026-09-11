@@ -106,6 +106,24 @@ export interface Doctor {
   updatedAt: string;
 }
 
+export interface DoctorFinancialReportRow {
+  doctorId: number;
+  doctorUserId: number;
+  doctorName: string;
+  /** @nullable */
+  doctorNameAr: string | null;
+  /** @nullable */
+  phone: string | null;
+  /** @nullable */
+  email: string | null;
+  walletBalance: number;
+  pendingWithdrawalAmount: number;
+  completedWithdrawalAmount: number;
+  appointmentCount: number;
+  grossAppointmentAmount: number;
+  paidAppointmentAmount: number;
+}
+
 export type OnboardingUpdateStatus = typeof OnboardingUpdateStatus[keyof typeof OnboardingUpdateStatus];
 
 
@@ -522,5 +540,12 @@ cityId?: number;
 areaId?: number;
 dateFrom?: string;
 dateTo?: string;
+};
+
+export type GetDoctorsFinancialReportParams = {
+/**
+ * @minimum 0
+ */
+walletBalanceLt?: number;
 };
 

@@ -30,8 +30,10 @@ import type {
   CityInput,
   CityUpdate,
   Doctor,
+  DoctorFinancialReportRow,
   FinancialSettings,
   FinancialSettingsUpdate,
+  GetDoctorsFinancialReportParams,
   GetReportsParams,
   HealthStatus,
   ListAreasParams,
@@ -2042,6 +2044,90 @@ export function useGetReports<TData = Awaited<ReturnType<typeof getReports>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetReportsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetDoctorsFinancialReportUrl = (params?: GetDoctorsFinancialReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/reports/doctors-financial?${stringifiedParams}` : `/api/admin/reports/doctors-financial`
+}
+
+/**
+ * @summary Get financial report for all doctors
+ */
+export const getDoctorsFinancialReport = async (params?: GetDoctorsFinancialReportParams, options?: RequestInit): Promise<DoctorFinancialReportRow[]> => {
+
+  return customFetch<DoctorFinancialReportRow[]>(getGetDoctorsFinancialReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDoctorsFinancialReportQueryKey = (params?: GetDoctorsFinancialReportParams,) => {
+    return [
+    `/api/admin/reports/doctors-financial`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDoctorsFinancialReportQueryOptions = <TData = Awaited<ReturnType<typeof getDoctorsFinancialReport>>, TError = ErrorType<void>>(params?: GetDoctorsFinancialReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorsFinancialReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDoctorsFinancialReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDoctorsFinancialReport>>> = ({ signal }) => getDoctorsFinancialReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDoctorsFinancialReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDoctorsFinancialReportQueryResult = NonNullable<Awaited<ReturnType<typeof getDoctorsFinancialReport>>>
+export type GetDoctorsFinancialReportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get financial report for all doctors
+ */
+
+export function useGetDoctorsFinancialReport<TData = Awaited<ReturnType<typeof getDoctorsFinancialReport>>, TError = ErrorType<void>>(
+ params?: GetDoctorsFinancialReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorsFinancialReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDoctorsFinancialReportQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

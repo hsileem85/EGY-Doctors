@@ -3,7 +3,7 @@ import { eq, max, inArray, desc, count, sql, gte } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, doctorsTable, specialtiesTable, servicesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable, appointmentsTable, reviewsTable, paymentsTable } from "@workspace/db";
+import { db, doctorsTable, specialtiesTable, servicesTable, citiesTable, areasTable, usersTable, adminNotificationsTable, siteSettingsTable, clinicsTable, vouchersTable, medicalCentersTable, appointmentsTable, reviewsTable, paymentsTable, walletsTable, withdrawalRequestsTable } from "@workspace/db";
 import { sendDoctorApprovedEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -158,6 +158,71 @@ router.delete("/admin/doctors/:id", async (req, res): Promise<void> => {
 router.get("/admin/doctors/pending", async (_req, res): Promise<void> => {
   const rows = await listDoctorsWithDetails();
   res.json(stringifyDates(rows.filter((r) => r.accountStatus === "pending")));
+});
+
+/* ─── GET /admin/reports/doctors-financial ─── */
+router.get("/admin/reports/doctors-financial", async (req, res): Promise<void> => {
+  const rawLimit = req.query.walletBalanceLt;
+  let walletBalanceLt: number | undefined;
+  if (rawLimit !== undefined) {
+    const value = Array.isArray(rawLimit) ? NaN : Number(rawLimit);
+    if (typeof rawLimit !== "string" || rawLimit.trim() === "" || !Number.isFinite(value) || value < 0) {
+      res.status(400).json({ error: "walletBalanceLt must be a finite non-negative number" });
+      return;
+    }
+    walletBalanceLt = value;
+  }
+
+  const rows = await db.execute(sql`
+    SELECT d.id AS "doctorId", d.user_id AS "doctorUserId",
+      d.name_en AS "doctorName", d.name AS "doctorNameAr",
+      u.phone, u.email,
+      COALESCE(w.balance, 0)::double precision AS "walletBalance",
+      COALESCE(wd.pending_amount, 0)::double precision AS "pendingWithdrawalAmount",
+      COALESCE(wd.completed_amount, 0)::double precision AS "completedWithdrawalAmount",
+      COALESCE(ap.appointment_count, 0)::integer AS "appointmentCount",
+      COALESCE(ap.gross_amount, 0)::double precision AS "grossAppointmentAmount",
+      COALESCE(pp.paid_amount, 0)::double precision AS "paidAppointmentAmount"
+    FROM ${doctorsTable} d
+    LEFT JOIN ${usersTable} u ON u.id = d.user_id
+    LEFT JOIN (
+      SELECT owner_id, MAX(balance)::double precision AS balance FROM ${walletsTable}
+      WHERE owner_type = 'DOCTOR' GROUP BY owner_id
+    ) w ON w.owner_id = d.user_id::text
+    LEFT JOIN (
+      SELECT doctor_user_id,
+        SUM(amount) FILTER (WHERE status IN ('PENDING', 'APPROVED')) AS pending_amount,
+        SUM(amount) FILTER (WHERE status = 'COMPLETED') AS completed_amount
+      FROM ${withdrawalRequestsTable} GROUP BY doctor_user_id
+    ) wd ON wd.doctor_user_id = d.user_id::text
+    LEFT JOIN (
+      SELECT doctor_id, COUNT(*) AS appointment_count,
+        SUM(COALESCE(fee_charged, 0)) AS gross_amount
+      FROM ${appointmentsTable} GROUP BY doctor_id
+    ) ap ON ap.doctor_id = d.id
+    LEFT JOIN (
+      SELECT a.doctor_id, SUM(p.amount) AS paid_amount
+      FROM ${appointmentsTable} a
+      INNER JOIN ${paymentsTable} p ON p.appointment_id = a.id
+      WHERE p.status IN ('PAID', 'SETTLED') AND p.plan_type = 'BOOKING'
+        AND p.appointment_id IS NOT NULL
+      GROUP BY a.doctor_id
+    ) pp ON pp.doctor_id = d.id
+    ${walletBalanceLt === undefined ? sql`` : sql`WHERE COALESCE(w.balance, 0) < ${walletBalanceLt}`}
+    ORDER BY COALESCE(w.balance, 0) ASC, d.name_en ASC
+  `);
+
+  res.json(rows.rows.map((row) => ({
+    ...row,
+    doctorId: Number(row.doctorId),
+    doctorUserId: Number(row.doctorUserId),
+    walletBalance: Number(row.walletBalance),
+    pendingWithdrawalAmount: Number(row.pendingWithdrawalAmount),
+    completedWithdrawalAmount: Number(row.completedWithdrawalAmount),
+    appointmentCount: Number(row.appointmentCount),
+    grossAppointmentAmount: Number(row.grossAppointmentAmount),
+    paidAppointmentAmount: Number(row.paidAppointmentAmount),
+  })));
 });
 
 router.patch("/admin/doctors/:id/approve", async (req, res): Promise<void> => {

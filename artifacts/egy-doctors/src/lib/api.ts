@@ -1047,3 +1047,29 @@ export function savePushSubscription(sub: {
 export function removePushSubscription(endpoint: string): Promise<{ ok: boolean }> {
   return request("/push/subscribe", { method: "DELETE", body: JSON.stringify({ endpoint }) });
 }
+
+/* ─── Reports ─── */
+
+export interface DoctorFinancialReportRow {
+  doctorId: number;
+  doctorUserId: number;
+  doctorName: string;
+  doctorNameAr: string | null;
+  phone: string | null;
+  email: string | null;
+  walletBalance: number;
+  pendingWithdrawalAmount: number;
+  completedWithdrawalAmount: number;
+  appointmentCount: number;
+  grossAppointmentAmount: number;
+  paidAppointmentAmount: number;
+}
+
+export function getDoctorsFinancialReport(params?: { walletBalanceLt?: number }): Promise<DoctorFinancialReportRow[]> {
+  const qs = new URLSearchParams();
+  if (params?.walletBalanceLt !== undefined) {
+    qs.set("walletBalanceLt", String(params.walletBalanceLt));
+  }
+  const query = qs.toString();
+  return request(`/admin/reports/doctors-financial${query ? `?${query}` : ""}`);
+}

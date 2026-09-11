@@ -103,7 +103,7 @@ import {
   BarChart3,
   WalletCards,
 } from "lucide-react";
-import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter, getAdminFinancialSettings, updateAdminFinancialSettings, getAdminPlatformBankAccount, updateAdminPlatformBankAccount, getAdminWithdrawals, decideAdminWithdrawal, giftAdminWalletFunds, type AdminFinancialSettings, type AdminPlatformBankAccount, type AdminWithdrawal } from "@/lib/api";
+import { adminSearchUser, adminResetUserPassword, getContactSettings, updateContactSettings, type ContactSettings, toggleDoctorActive, toggleDoctorVezeeta, getAdminDoctorClinics, type AdminClinic, getAdminPlatformSettings, updateAdminPlatformSettings, type PlatformSettings, getAdminVouchers, createAdminVoucher, updateAdminVoucher, deleteAdminVoucher, type AdminVoucher, getAdminMedicalCenters, approveCenter, toggleCenterVezeeta, type AdminMedicalCenter, getAdminFinancialSettings, updateAdminFinancialSettings, getAdminPlatformBankAccount, updateAdminPlatformBankAccount, getAdminWithdrawals, decideAdminWithdrawal, giftAdminWalletFunds, type AdminFinancialSettings, type AdminPlatformBankAccount, type AdminWithdrawal, getDoctorsFinancialReport, type DoctorFinancialReportRow } from "@/lib/api";
 
 /* ─── Notification Bell ─── */
 
@@ -2148,9 +2148,141 @@ function CentersSection({ lang }: { lang: string }) {
 
 /* ─── ReportsSection ─── */
 
+function ReportsSection({ lang }: { lang: string }) {
+  const isRTL = lang === "ar";
+  const [subpage, setSubpage] = useState<"overview" | "financial">("overview");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 border-b border-gray-200 pb-4">
+        <Button
+          variant={subpage === "overview" ? "default" : "ghost"}
+          onClick={() => setSubpage("overview")}
+          className={subpage === "overview" ? "bg-[#D4A853] hover:bg-[#C49A48] text-white" : "text-gray-500"}
+        >
+          <BarChart3 className="w-4 h-4 mr-2" />
+          {isRTL ? "نظرة عامة" : "Overview"}
+        </Button>
+        <Button
+          variant={subpage === "financial" ? "default" : "ghost"}
+          onClick={() => setSubpage("financial")}
+          className={subpage === "financial" ? "bg-[#D4A853] hover:bg-[#C49A48] text-white" : "text-gray-500"}
+        >
+          <DollarSign className="w-4 h-4 mr-2" />
+          {isRTL ? "التقرير المالي للأطباء" : "Doctors Financial Report"}
+        </Button>
+      </div>
+
+      {subpage === "overview" ? <ReportsOverviewSubpage lang={lang} /> : <DoctorsFinancialReportSubpage lang={lang} />}
+    </div>
+  );
+}
+
+function DoctorsFinancialReportSubpage({ lang }: { lang: string }) {
+  const isRTL = lang === "ar";
+  const [walletBalanceBelow, setWalletBalanceBelow] = useState("");
+  const [appliedFilter, setAppliedFilter] = useState<{ walletBalanceLt?: number }>({});
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["doctorsFinancialReport", appliedFilter],
+    queryFn: () => getDoctorsFinancialReport(appliedFilter)
+  });
+
+  const handleApply = () => {
+    const parsed = walletBalanceBelow === "" ? undefined : Number(walletBalanceBelow);
+    if (parsed !== undefined && (!Number.isFinite(parsed) || parsed < 0)) return;
+    setAppliedFilter({
+      walletBalanceLt: parsed,
+    });
+  };
+
+  const handleClear = () => {
+    setWalletBalanceBelow("");
+    setAppliedFilter({});
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">{isRTL ? "عوامل التصفية" : "Filters"}</h3>
+        <div className="flex items-end gap-4 max-w-sm">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              {isRTL ? "رصيد المحفظة أقل من" : "Wallet Balance Below"}
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={walletBalanceBelow}
+              onChange={(e) => setWalletBalanceBelow(e.target.value)}
+              placeholder={isRTL ? "الكل" : "All"}
+              className="text-sm"
+              dir="ltr"
+            />
+          </div>
+          <Button onClick={handleApply} className="bg-[#D4A853] hover:bg-[#C49A48] text-white">
+            {isRTL ? "تطبيق" : "Apply"}
+          </Button>
+          {(walletBalanceBelow !== "" || appliedFilter.walletBalanceLt !== undefined) && (
+            <Button variant="outline" onClick={handleClear}>
+              {isRTL ? "إزالة" : "Clear"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{isRTL ? "الطبيب" : "Doctor"}</TableHead>
+                <TableHead>{isRTL ? "رقم الهاتف" : "Phone"}</TableHead>
+                <TableHead>{isRTL ? "البريد الإلكتروني" : "Email"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "رصيد المحفظة" : "Wallet Balance"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "سحوبات معلقة" : "Pending Withdrawals"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "سحوبات مكتملة" : "Completed Withdrawals"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "عدد الحجوزات" : "Appointments"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "إجمالي الحجوزات" : "Gross Appointments"}</TableHead>
+                <TableHead className="text-right">{isRTL ? "الحجوزات المدفوعة" : "Paid Appointments"}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8">{isRTL ? "جاري التحميل..." : "Loading..."}</TableCell></TableRow>
+              ) : isError ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-red-500">{isRTL ? "حدث خطأ" : "Error loading data"}</TableCell></TableRow>
+              ) : !data || data.length === 0 ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-gray-500">{isRTL ? "لا توجد بيانات" : "No data available"}</TableCell></TableRow>
+              ) : (
+                data.map((row: DoctorFinancialReportRow) => (
+                  <TableRow key={row.doctorId}>
+                    <TableCell className="font-medium">
+                      {isRTL ? (row.doctorNameAr || row.doctorName) : row.doctorName}
+                    </TableCell>
+                    <TableCell>{row.phone || "-"}</TableCell>
+                    <TableCell>{row.email || "-"}</TableCell>
+                    <TableCell className="text-right font-bold text-gray-900">{row.walletBalance.toLocaleString()} EGP</TableCell>
+                    <TableCell className="text-right text-yellow-600">{row.pendingWithdrawalAmount.toLocaleString()} EGP</TableCell>
+                    <TableCell className="text-right text-green-600">{row.completedWithdrawalAmount.toLocaleString()} EGP</TableCell>
+                    <TableCell className="text-right">{row.appointmentCount}</TableCell>
+                    <TableCell className="text-right text-gray-600">{row.grossAppointmentAmount.toLocaleString()} EGP</TableCell>
+                    <TableCell className="text-right text-blue-600">{row.paidAppointmentAmount.toLocaleString()} EGP</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 const CHART_COLORS = ["#D4A853", "#0F172A", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
-function ReportsSection({ lang }: { lang: string }) {
+function ReportsOverviewSubpage({ lang }: { lang: string }) {
   const isRTL = lang === "ar";
 
   const [doctorId, setDoctorId] = useState("");
