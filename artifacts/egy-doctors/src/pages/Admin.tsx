@@ -381,10 +381,10 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const isRTL = dir === "rtl";
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] ${isRTL ? "font-arabic" : ""}`}>
+    <div className={`min-h-screen bg-[#F8FAFC] flex flex-col ${isRTL ? "font-arabic" : ""}`}>
       {/* Header */}
-      <div className="bg-[#0F172A] border-b border-[#D4A853]/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="bg-[#0F172A] border-b border-[#D4A853]/20 shrink-0">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 w-full">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Link href="/">
@@ -413,10 +413,11 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex gap-1 overflow-x-auto py-2">
+      {/* Main Layout */}
+      <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row gap-6">
+        {/* Navigation Sidebar */}
+        <div className="md:w-64 shrink-0">
+          <div className="bg-white rounded-xl border border-gray-200 p-2 flex gap-1 overflow-x-auto md:flex-col md:overflow-visible sticky top-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -424,34 +425,34 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap text-start ${
                     active
                       ? "bg-[#D4A853]/10 text-[#D4A853]"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  {lang === "ar" ? tab.labelAr : tab.label}
+                  <Icon className={`w-5 h-5 shrink-0 ${active ? "text-[#D4A853]" : "text-gray-400"}`} />
+                  <span>{lang === "ar" ? tab.labelAr : tab.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {activeTab === "doctors" && <DoctorsSection lang={lang} />}
-        {activeTab === "centers" && <CentersSection lang={lang} />}
-        {activeTab === "users" && <UsersSection lang={lang} />}
-        {activeTab === "specialties" && <SpecialtiesSection lang={lang} />}
-        {activeTab === "cities" && <CitiesSection lang={lang} />}
-        {activeTab === "areas" && <AreasSection lang={lang} />}
-        {activeTab === "services" && <ServicesSection lang={lang} />}
-        {activeTab === "reports" && <ReportsSection lang={lang} />}
-        {activeTab === "contact" && <ContactInfoSection lang={lang} />}
-        {activeTab === "billing" && <BillingManagementSection lang={lang} />}
-        {activeTab === "financial" && <FinancialManagementSection lang={lang} />}
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {activeTab === "doctors" && <DoctorsSection lang={lang} />}
+          {activeTab === "centers" && <CentersSection lang={lang} />}
+          {activeTab === "users" && <UsersSection lang={lang} />}
+          {activeTab === "specialties" && <SpecialtiesSection lang={lang} />}
+          {activeTab === "cities" && <CitiesSection lang={lang} />}
+          {activeTab === "areas" && <AreasSection lang={lang} />}
+          {activeTab === "services" && <ServicesSection lang={lang} />}
+          {activeTab === "reports" && <ReportsSection lang={lang} />}
+          {activeTab === "contact" && <ContactInfoSection lang={lang} />}
+          {activeTab === "billing" && <BillingManagementSection lang={lang} />}
+          {activeTab === "financial" && <FinancialManagementSection lang={lang} />}
+        </div>
       </div>
     </div>
   );
