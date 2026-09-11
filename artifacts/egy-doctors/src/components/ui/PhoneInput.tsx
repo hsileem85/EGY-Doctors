@@ -298,7 +298,6 @@ export function PhoneInput({
         value={phone}
         onChange={(e) => onPhoneChange(normalizePhoneInput(e.target.value, countryCode))}
         placeholder={placeholder}
-        maxLength={(MAX_LOCAL_DIGITS[countryCode] ?? 15)}
         data-testid={testId}
         className="rounded-l-none bg-[#0F172A]/60 border-[#334155] text-white placeholder:text-gray-500 focus:border-[#D4A853] focus:ring-[#D4A853]/20"
       />
@@ -332,16 +331,33 @@ const MAX_LOCAL_DIGITS: Record<string, number> = {
   "+7":   10, // Russia
 };
 
-/** Normalize a phone input value:
- *  1. Keep digits only (strip spaces, dashes, letters, +, parens).
- *  2. Strip all leading zeros (country code prefix already in dropdown).
- *  3. Clamp to the max local-number length for the selected country.
+/** Normalize pasted, typed, or autofilled phone values before storing them.
+ * Native maxLength is intentionally not used on the input: some browsers apply
+ * it to the full autofilled international number before React sees the value.
  */
 export function normalizePhoneInput(raw: string, countryCode: string): string {
-  const digits = raw.replace(/\D/g, "");               // digits only
-  const stripped = digits.replace(/^0+/, "");          // strip leading zeros
+  const compact = raw.replace(/[\s-]/g, "");
+  const digits = compact.replace(/\D/g, "");
+  const dialDigits = countryCode.replace(/\D/g, "");
   const max = MAX_LOCAL_DIGITS[countryCode] ?? 15;
-  return stripped.slice(0, max);
+  let localDigits = digits;
+
+  const internationalPrefix = `00${dialDigits}`;
+  if (dialDigits && digits.startsWith(internationalPrefix)) {
+    localDigits = digits.slice(internationalPrefix.length);
+  } else if (dialDigits && digits.startsWith(dialDigits)) {
+    const remainder = digits.slice(dialDigits.length);
+    const remainderWithoutTrunkZero = remainder.replace(/^0+/, "");
+    const hasExplicitPlus = compact.startsWith("+");
+    const looksLikeCompleteInternationalNumber =
+      remainderWithoutTrunkZero.length === max;
+
+    if (hasExplicitPlus || looksLikeCompleteInternationalNumber) {
+      localDigits = remainder;
+    }
+  }
+
+  return localDigits.replace(/^0+/, "").slice(0, max);
 }
 
 export function buildPhone(countryCode: string, localNumber: string): string {

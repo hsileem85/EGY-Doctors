@@ -11,3 +11,4 @@
 - [New schema tables need lib rebuild](schema-lib-rebuild.md) — after adding tables to lib/db/src/schema/, run `pnpm run typecheck:libs` before typechecking artifacts or TS2305/TS2724 errors appear.
 - [Push notifications setup](push-notifications.md) — web-push installed on api-server; VAPID keys in VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY env vars (shared); sw.js at artifacts/egy-doctors/public/sw.js.
 - [Wallet ownership identity](wallet-ownership.md) — authenticated wallets use user IDs as stable owner keys; center subtypes change ownerType, not ownerId.
+- [Phone autofill normalization](phone-autofill.md) — sanitize selected international dial-code prefixes before clamping; native maxLength can truncate autofill before React.
