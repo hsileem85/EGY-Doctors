@@ -13,3 +13,4 @@
 - [Wallet ownership identity](wallet-ownership.md) — authenticated wallets use user IDs as stable owner keys; center subtypes change ownerType, not ownerId.
 - [Phone autofill normalization](phone-autofill.md) — sanitize selected international dial-code prefixes before clamping; native maxLength can truncate autofill before React.
 - [Booking cashback policy](booking-cashback-policy.md) — settle at Visit Done; patient cashback is reserved until review, never an additional bonus.
+- [Appointment privacy boundary](appointment-privacy.md) — public booking needs slots, never patient records; phone matching is not patient identity.

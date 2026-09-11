@@ -5,6 +5,53 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface AppointmentSlot {
+  appointmentDate: string;
+  appointmentTime: string;
+}
+
+export type AppointmentStatus = typeof AppointmentStatus[keyof typeof AppointmentStatus];
+
+
+export const AppointmentStatus = {
+  pending: 'pending',
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+  completed: 'completed',
+  pending_confirmation: 'pending_confirmation',
+} as const;
+
+export interface Appointment {
+  id: number;
+  doctorId: number;
+  /** @nullable */
+  clinicId: number | null;
+  /** @nullable */
+  patientUserId: number | null;
+  patientName: string;
+  patientPhone: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  status: AppointmentStatus;
+  /** @nullable */
+  notes: string | null;
+  isFollowUp: boolean;
+  /** @nullable */
+  feeCharged: number | null;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  doctorName: string | null;
+  /** @nullable */
+  specialty: string | null;
+  /** @nullable */
+  specialtyAr: string | null;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -269,6 +316,7 @@ export const WalletTransactionCategory = {
   WITHDRAWAL_PAYOUT: 'WITHDRAWAL_PAYOUT',
   REFUND: 'REFUND',
   CASHBACK_REWARD: 'CASHBACK_REWARD',
+  CASHBACK_RESERVE: 'CASHBACK_RESERVE',
   WALLET_TOP_UP: 'WALLET_TOP_UP',
   CASHBACK_USAGE: 'CASHBACK_USAGE',
   FEE_DEDUCTION: 'FEE_DEDUCTION',
@@ -524,6 +572,33 @@ export interface ReportsResponse {
   paymentsByMonth: ReportsResponsePaymentsByMonthItem[];
   recentSignups: ReportsResponseRecentSignupsItem[];
 }
+
+export type GetAppointmentSlotsParams = {
+/**
+ * @minimum 1
+ */
+doctorId: number;
+/**
+ * @minimum 1
+ */
+clinicId?: number;
+};
+
+export type ListAppointmentsParams = {
+/**
+ * @minimum 1
+ */
+doctorId?: number;
+/**
+ * @minimum 1
+ */
+clinicId?: number;
+/**
+ * @minimum 1
+ */
+patientUserId?: number;
+patientPhone?: string;
+};
 
 export type ListDoctorsParams = {
 status?: string;

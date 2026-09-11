@@ -282,7 +282,7 @@ router.get("/doctors", async (req, res): Promise<void> => {
 
 /* ─── GET /doctors/patients ─── */
 router.get("/doctors/patients", async (req, res): Promise<void> => {
-  const result = await requireDoctor(req.headers.authorization);
+  const result = await requirePatientsDoctor(req.headers.authorization);
   if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
   const { doctorRow } = result;
 
@@ -1042,6 +1042,45 @@ router.post("/doctors/profile/submit-for-review", async (req, res): Promise<void
 });
 
 /* ─── Helper: verify JWT and return doctor row ─── */
+async function requirePatientsDoctor(authHeader: string | undefined): Promise<
+  { doctorRow: { id: number }; userId: number } | { error: string; status: number }
+> {
+  if (!authHeader?.startsWith("Bearer ")) return { error: "Unauthorized", status: 401 };
+
+  let payload: { sub?: unknown; role?: unknown };
+  try {
+    const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET);
+    if (typeof decoded !== "object" || decoded === null) {
+      return { error: "Invalid token", status: 401 };
+    }
+    payload = decoded as { sub?: unknown; role?: unknown };
+  } catch {
+    return { error: "Invalid token", status: 401 };
+  }
+
+  if (typeof payload.sub !== "number" || !Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
+    return { error: "Unauthorized", status: 401 };
+  }
+
+  const userId = payload.sub;
+  const [caller] = await db.select({
+    id: usersTable.id,
+    role: usersTable.role,
+    isActive: usersTable.isActive,
+  }).from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  if (!caller?.isActive || caller.role !== "doctor" || payload.role !== "doctor") {
+    return { error: "Forbidden", status: 403 };
+  }
+
+  const [doctorRow] = await db.select({ id: doctorsTable.id }).from(doctorsTable)
+    .where(eq(doctorsTable.userId, userId)).limit(1);
+  if (!doctorRow) return { error: "Doctor not found", status: 403 };
+
+  return { doctorRow, userId };
+}
 async function requireDoctor(authHeader: string | undefined): Promise<
   { doctorRow: { id: number }; userId: number } | { error: string; status: number }
 > {

@@ -484,7 +484,7 @@ describe.sequential("wallet service database guarantees", () => {
     await ensureWallet("PATIENT", patientId);
 
     const [payment] = await db.insert(paymentsTable).values({
-      appointmentId: Number.parseInt(crypto.randomUUID().replace(/-/g, "").slice(0, 8), 16),
+      appointmentId: Number.parseInt(crypto.randomUUID().replace(/-/g, "").slice(0, 7), 16),
       escrowOwnerType: "DOCTOR",
       escrowOwnerId: ownerId,
       planType: "BOOKING",

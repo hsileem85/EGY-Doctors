@@ -157,6 +157,10 @@ export interface ApiAppointment {
   specialtyAr?: string | null;
 }
 
+export interface ApiAppointmentSlot {
+  appointmentDate: string;
+  appointmentTime: string;
+}
 export interface ReviewEligibility {
   appointmentId: number;
   doctorId: number;
@@ -421,6 +425,14 @@ export function bookAppointment(data: {
   return request("/appointments", { method: "POST", body: JSON.stringify(data) });
 }
 
+export function getAppointmentSlots(params: {
+  doctorId: number;
+  clinicId?: number;
+}): Promise<ApiAppointmentSlot[]> {
+  const qs = new URLSearchParams({ doctorId: String(params.doctorId) });
+  if (params.clinicId != null) qs.set("clinicId", String(params.clinicId));
+  return request(`/appointments/slots?${qs.toString()}`);
+}
 export function initiateAppointmentPayment(appointmentId: number): Promise<PaymobInitiateResponse> {
   return request(`/billing/paymob/appointments/${appointmentId}/initiate`, {
     method: "POST",

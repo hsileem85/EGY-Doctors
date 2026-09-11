@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: admin
     description: Admin operations
+  - name: appointments
+    description: Appointment availability and authenticated appointment operations
   - name: wallet
     description: Authenticated wallet and ledger operations
 paths:
@@ -28,6 +30,87 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /appointments/slots:
+    get:
+      operationId: getAppointmentSlots
+      tags: [appointments]
+      summary: List booked appointment slots
+      description: Returns only date/time values for non-cancelled appointments.
+      parameters:
+        - name: doctorId
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: clinicId
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Appointment date/time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentSlot"
+        "400":
+          description: Invalid appointment filters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments visible to the authenticated account
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+        - name: clinicId
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+        - name: patientUserId
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+        - name: patientPhone
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Appointments visible to the authenticated account
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Invalid appointment filters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /admin/doctors:
     get:
       operationId: listDoctors
@@ -716,6 +799,57 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+    AppointmentSlot:
+      type: object
+      properties:
+        appointmentDate: { type: string }
+        appointmentTime: { type: string }
+      required: [appointmentDate, appointmentTime]
+    Appointment:
+      type: object
+      properties:
+        id: { type: integer }
+        doctorId: { type: integer }
+        clinicId: { type: [integer, "null"] }
+        patientUserId: { type: [integer, "null"] }
+        patientName: { type: string }
+        patientPhone: { type: string }
+        appointmentDate: { type: string }
+        appointmentTime: { type: string }
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed, pending_confirmation]
+        notes: { type: [string, "null"] }
+        isFollowUp: { type: boolean }
+        feeCharged: { type: [integer, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        doctorName: { type: [string, "null"] }
+        specialty: { type: [string, "null"] }
+        specialtyAr: { type: [string, "null"] }
+      required:
+        - id
+        - doctorId
+        - clinicId
+        - patientUserId
+        - patientName
+        - patientPhone
+        - appointmentDate
+        - appointmentTime
+        - status
+        - notes
+        - isFollowUp
+        - feeCharged
+        - createdAt
+        - updatedAt
+        - doctorName
+        - specialty
+        - specialtyAr
     HealthStatus:
       type: object
       properties:

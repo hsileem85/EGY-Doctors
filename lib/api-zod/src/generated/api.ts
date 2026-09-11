@@ -18,6 +18,63 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * Returns only date/time values for non-cancelled appointments.
+ * @summary List booked appointment slots
+ */
+
+
+
+
+export const GetAppointmentSlotsQueryParams = zod.object({
+  "doctorId": zod.coerce.number().min(1),
+  "clinicId": zod.coerce.number().min(1).optional()
+})
+
+export const GetAppointmentSlotsResponseItem = zod.object({
+  "appointmentDate": zod.string(),
+  "appointmentTime": zod.string()
+})
+export const GetAppointmentSlotsResponse = zod.array(GetAppointmentSlotsResponseItem)
+
+
+/**
+ * @summary List appointments visible to the authenticated account
+ */
+
+
+
+
+
+export const ListAppointmentsQueryParams = zod.object({
+  "doctorId": zod.coerce.number().min(1).optional(),
+  "clinicId": zod.coerce.number().min(1).optional(),
+  "patientUserId": zod.coerce.number().min(1).optional(),
+  "patientPhone": zod.coerce.string().optional()
+})
+
+export const ListAppointmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "doctorId": zod.number(),
+  "clinicId": zod.number().nullable(),
+  "patientUserId": zod.number().nullable(),
+  "patientName": zod.string(),
+  "patientPhone": zod.string(),
+  "appointmentDate": zod.string(),
+  "appointmentTime": zod.string(),
+  "status": zod.enum(['pending', 'confirmed', 'cancelled', 'completed', 'pending_confirmation']),
+  "notes": zod.string().nullable(),
+  "isFollowUp": zod.boolean(),
+  "feeCharged": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "doctorName": zod.string().nullable(),
+  "specialty": zod.string().nullable(),
+  "specialtyAr": zod.string().nullable()
+})
+export const ListAppointmentsResponse = zod.array(ListAppointmentsResponseItem)
+
+
+/**
  * @summary List all doctors
  */
 export const ListDoctorsQueryParams = zod.object({
@@ -824,7 +881,7 @@ export const CreateWalletGiftResponse = zod.object({
   "transactions": zod.array(zod.object({
   "id": zod.string().uuid(),
   "type": zod.enum(['CREDIT', 'DEBIT']),
-  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'CASHBACK_RESERVE', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
   "amount": zod.number(),
   "balancePost": zod.number(),
   "referenceId": zod.string().nullish(),
@@ -854,7 +911,7 @@ export const CreateAdminWalletGiftResponse = zod.object({
   "transactions": zod.array(zod.object({
   "id": zod.string().uuid(),
   "type": zod.enum(['CREDIT', 'DEBIT']),
-  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND', 'CASHBACK_REWARD', 'CASHBACK_RESERVE', 'WALLET_TOP_UP', 'CASHBACK_USAGE', 'FEE_DEDUCTION', 'ADMIN_GIFT']),
   "amount": zod.number(),
   "balancePost": zod.number(),
   "referenceId": zod.string().nullish(),

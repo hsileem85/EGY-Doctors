@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctor, getAppointments, bookAppointment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
+import { getDoctor, getAppointmentSlots, bookAppointment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
 import { useGetWallet } from "@workspace/api-client-react";
 import { submitAppointmentPayment, type AppointmentPaymentMethod } from "@/lib/appointmentPayment";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -237,26 +237,24 @@ export default function DoctorProfile() {
     };
   }, [isVirtualClinic, selectedClinic, doctor]);
 
-  const { data: existingAppointments } = useQuery({
+  const { data: existingSlots } = useQuery({
     queryKey: ["appointments-for-booking", doctor?.id, isVirtualClinic ? null : selectedClinic?.id],
     queryFn: () =>
-      getAppointments(
-        isVirtualClinic
-          ? { doctorId: doctor!.id }
-          : { doctorId: doctor!.id, clinicId: selectedClinic!.id },
-      ),
+      getAppointmentSlots({
+        doctorId: doctor!.id,
+        ...(isVirtualClinic ? {} : { clinicId: selectedClinic!.id }),
+      }),
     enabled: !!doctor && bookingStep !== "clinic",
   });
 
   const bookedByDate = useMemo(() => {
     const map = new Map<string, Set<string>>();
-    for (const appt of existingAppointments ?? []) {
-      if (appt.status === "cancelled") continue;
-      if (!map.has(appt.appointmentDate)) map.set(appt.appointmentDate, new Set());
-      map.get(appt.appointmentDate)!.add(appt.appointmentTime);
+    for (const slot of existingSlots ?? []) {
+      if (!map.has(slot.appointmentDate)) map.set(slot.appointmentDate, new Set());
+      map.get(slot.appointmentDate)!.add(slot.appointmentTime);
     }
     return map;
-  }, [existingAppointments]);
+  }, [existingSlots]);
 
   const schedule = useMemo(
     () => buildSchedule(scheduleSource, bookedByDate, availabilityConfig),

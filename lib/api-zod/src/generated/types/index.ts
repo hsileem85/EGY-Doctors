@@ -7,6 +7,9 @@
  */
 
 export * from './adminNotification';
+export * from './appointment';
+export * from './appointmentSlot';
+export * from './appointmentStatus';
 export * from './area';
 export * from './areaInput';
 export * from './areaUpdate';
@@ -19,12 +22,15 @@ export * from './cityInput';
 export * from './cityUpdate';
 export * from './doctor';
 export * from './doctorFinancialReportRow';
+export * from './errorResponse';
 export * from './financialSettings';
 export * from './financialSettingsDeductionType';
 export * from './financialSettingsUpdate';
+export * from './getAppointmentSlotsParams';
 export * from './getDoctorsFinancialReportParams';
 export * from './getReportsParams';
 export * from './healthStatus';
+export * from './listAppointmentsParams';
 export * from './listAreasParams';
 export * from './listDoctorsParams';
 export * from './onboardingUpdate';

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc, ne } from "drizzle-orm";
+import { eq, and, desc, ne, inArray } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { db, appointmentsTable, appointmentReminderDeliveriesTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, type WalletOwnerType } from "@workspace/db";
@@ -8,8 +8,10 @@ import {
   releaseBookingEscrowInTx,
 } from "../lib/wallet.service.js";
 import { dispatchPaymobRefund } from "../lib/paymob.service.js";
+import appointmentsSlotsRouter from "./appointments-slots";
 
 const router: IRouter = Router();
+router.use(appointmentsSlotsRouter);
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
 function decodeJwt(authHeader: string | undefined): { sub: number; role: string } | null {
@@ -263,17 +265,65 @@ router.post("/appointments", async (req, res): Promise<void> => {
 
 /* ─── GET /appointments ─── */
 router.get("/appointments", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || !Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   const Schema = z.object({
-    doctorId: z.coerce.number().optional(),
-    clinicId: z.coerce.number().optional(),
-    patientUserId: z.coerce.number().optional(),
+    doctorId: z.coerce.number().int().positive().optional(),
+    clinicId: z.coerce.number().int().positive().optional(),
+    patientUserId: z.coerce.number().int().positive().optional(),
     patientPhone: z.string().optional(),
   });
 
   const params = Schema.safeParse(req.query);
-  const { doctorId, clinicId, patientUserId, patientPhone } = params.success ? params.data : {};
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid appointment filters" });
+    return;
+  }
+  const { doctorId, clinicId, patientUserId, patientPhone } = params.data;
 
   const conditions = [];
+  // Resolve the current account from the database: token claims and query
+  // selectors must never grant access or keep a revoked assignment alive.
+  const [caller] = await db.select().from(usersTable)
+    .where(eq(usersTable.id, payload.sub)).limit(1);
+  if (!caller?.isActive || caller.role !== payload.role) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  switch (caller.role) {
+    case "patient":
+      conditions.push(eq(appointmentsTable.patientUserId, caller.id));
+      break;
+    case "doctor":
+      conditions.push(inArray(appointmentsTable.doctorId,
+        db.select({ id: doctorsTable.id }).from(doctorsTable)
+          .where(eq(doctorsTable.userId, caller.id))));
+      break;
+    case "medical_center":
+      conditions.push(inArray(appointmentsTable.doctorId,
+        db.select({ id: doctorsTable.id }).from(doctorsTable)
+          .innerJoin(medicalCentersTable, eq(doctorsTable.affiliatedCenterId, medicalCentersTable.id))
+          .where(eq(medicalCentersTable.userId, caller.id))));
+      break;
+    case "assistant":
+      if (!caller.assistantDoctorId) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      conditions.push(eq(appointmentsTable.doctorId, caller.assistantDoctorId));
+      if (caller.assistantClinicId) {
+        conditions.push(eq(appointmentsTable.clinicId, caller.assistantClinicId));
+      }
+      break;
+    case "admin":
+      break;
+    default:
+      res.status(403).json({ error: "Forbidden" });
+      return;
+  }
   if (doctorId) conditions.push(eq(appointmentsTable.doctorId, doctorId));
   if (clinicId) conditions.push(eq(appointmentsTable.clinicId, clinicId));
   if (patientUserId) conditions.push(eq(appointmentsTable.patientUserId, patientUserId));
