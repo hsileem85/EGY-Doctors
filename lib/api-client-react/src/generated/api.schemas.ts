@@ -233,6 +233,62 @@ export interface AdminNotification {
   createdAt: string;
 }
 
+export type WalletTransactionType = typeof WalletTransactionType[keyof typeof WalletTransactionType];
+
+
+export const WalletTransactionType = {
+  CREDIT: 'CREDIT',
+  DEBIT: 'DEBIT',
+} as const;
+
+export type WalletTransactionCategory = typeof WalletTransactionCategory[keyof typeof WalletTransactionCategory];
+
+
+export const WalletTransactionCategory = {
+  BOOKING_PAYMENT: 'BOOKING_PAYMENT',
+  PLATFORM_COMMISSION: 'PLATFORM_COMMISSION',
+  SUBSCRIPTION_FEE: 'SUBSCRIPTION_FEE',
+  WITHDRAWAL_PAYOUT: 'WITHDRAWAL_PAYOUT',
+  REFUND: 'REFUND',
+} as const;
+
+export interface WalletTransaction {
+  id: string;
+  type: WalletTransactionType;
+  category: WalletTransactionCategory;
+  amount: number;
+  balancePost: number;
+  /** @nullable */
+  referenceId?: string | null;
+  description: string;
+  createdAt: string;
+}
+
+export type WalletResponseOwnerType = typeof WalletResponseOwnerType[keyof typeof WalletResponseOwnerType];
+
+
+export const WalletResponseOwnerType = {
+  PATIENT: 'PATIENT',
+  DOCTOR: 'DOCTOR',
+  HOSPITAL: 'HOSPITAL',
+  MEDICAL_CENTER: 'MEDICAL_CENTER',
+  POLY_CLINIC: 'POLY_CLINIC',
+  LAB: 'LAB',
+  SCAN_CENTER: 'SCAN_CENTER',
+  VETERINARY: 'VETERINARY',
+  PLATFORM: 'PLATFORM',
+} as const;
+
+export interface WalletResponse {
+  id: string;
+  ownerType: WalletResponseOwnerType;
+  ownerId: string;
+  balance: number;
+  pendingFunds: number;
+  currency: string;
+  transactions: WalletTransaction[];
+}
+
 export type ReportsResponseOverview = {
   totalUsers: number;
   totalDoctors: number;

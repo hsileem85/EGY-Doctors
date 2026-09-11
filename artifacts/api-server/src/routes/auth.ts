@@ -4,7 +4,14 @@ import jwt from "jsonwebtoken";
 import { eq, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
 import { z } from "zod";
-import { db, usersTable, doctorsTable, passwordResetTokensTable, adminNotificationsTable } from "@workspace/db";
+import {
+  db,
+  usersTable,
+  doctorsTable,
+  passwordResetTokensTable,
+  adminNotificationsTable,
+  walletsTable,
+} from "@workspace/db";
 import { sendDoctorPendingEmail, sendPasswordResetEmail } from "../lib/email.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
@@ -80,22 +87,34 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 
   const passwordHash = await bcrypt.hash(d.password, 10);
 
-  const [user] = await db.insert(usersTable).values({
-    name: d.name,
-    nameAr: d.nameAr ?? null,
-    phone: d.phone,
-    email: d.email ?? null,
-    nationalId: d.nationalId ?? null,
-    syndicateNumber: d.syndicateNumber ?? null,
-    passwordHash,
-    role: d.role,
-  }).returning();
+  const created = await db.transaction(async (tx) => {
+    const [user] = await tx.insert(usersTable).values({
+      name: d.name,
+      nameAr: d.nameAr ?? null,
+      phone: d.phone,
+      email: d.email ?? null,
+      nationalId: d.nationalId ?? null,
+      syndicateNumber: d.syndicateNumber ?? null,
+      passwordHash,
+      role: d.role,
+    }).returning();
 
-  let doctorId: number | null = null;
-  let accountStatus: string | null = null;
-  let isSubmittedForReview = false;
-  if (d.role === "doctor") {
-    const [doc] = await db.insert(doctorsTable).values({
+    const ownerType = d.role === "doctor"
+      ? "DOCTOR" as const
+      : d.role === "medical_center"
+        ? "MEDICAL_CENTER" as const
+        : "PATIENT" as const;
+
+    await tx.insert(walletsTable).values({
+      ownerType,
+      ownerId: String(user.id),
+    });
+
+    if (d.role !== "doctor") {
+      return { user, doctor: null };
+    }
+
+    const [doctor] = await tx.insert(doctorsTable).values({
       userId: user.id,
       nameEn: d.name,
       name: d.nameAr ?? null,
@@ -104,12 +123,16 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
       license: d.license ?? null,
       experience: d.experience ?? null,
     }).returning();
-    doctorId = doc.id;
-    accountStatus = doc.accountStatus;
-    isSubmittedForReview = doc.isSubmittedForReview ?? false;
 
-    // Doctor starts as incomplete — no email/notification until they submit for review
-  }
+    return { user, doctor };
+  });
+
+  const user = created.user;
+  const doctorId = created.doctor?.id ?? null;
+  const accountStatus = created.doctor?.accountStatus ?? null;
+  const isSubmittedForReview = created.doctor?.isSubmittedForReview ?? false;
+
+  // Doctor starts as incomplete — no email/notification until they submit for review
 
   const roleLabels: Record<string, { type: "new_patient" | "new_medical_center"; titleEn: string; bodyEn: string }> = {
     patient: { type: "new_patient", titleEn: "New Patient Registered", bodyEn: `${d.name} joined as a patient.` },

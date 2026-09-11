@@ -550,3 +550,26 @@ export const GetReportsResponse = zod.object({
 })
 
 
+/**
+ * @summary Get the authenticated user's wallet
+ */
+export const GetWalletResponse = zod.object({
+  "id": zod.string().uuid(),
+  "ownerType": zod.enum(['PATIENT', 'DOCTOR', 'HOSPITAL', 'MEDICAL_CENTER', 'POLY_CLINIC', 'LAB', 'SCAN_CENTER', 'VETERINARY', 'PLATFORM']),
+  "ownerId": zod.string(),
+  "balance": zod.number(),
+  "pendingFunds": zod.number(),
+  "currency": zod.string(),
+  "transactions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['CREDIT', 'DEBIT']),
+  "category": zod.enum(['BOOKING_PAYMENT', 'PLATFORM_COMMISSION', 'SUBSCRIPTION_FEE', 'WITHDRAWAL_PAYOUT', 'REFUND']),
+  "amount": zod.number(),
+  "balancePost": zod.number(),
+  "referenceId": zod.string().nullish(),
+  "description": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+

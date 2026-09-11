@@ -43,3 +43,8 @@ export * from './signUpRequestRole';
 export * from './specialty';
 export * from './specialtyInput';
 export * from './specialtyUpdate';
+export * from './walletResponse';
+export * from './walletResponseOwnerType';
+export * from './walletTransaction';
+export * from './walletTransactionCategory';
+export * from './walletTransactionType';

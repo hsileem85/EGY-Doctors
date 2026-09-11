@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: admin
     description: Admin operations
+  - name: wallet
+    description: Authenticated wallet and ledger operations
 paths:
   /healthz:
     get:
@@ -473,7 +475,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportsResponse"
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get the authenticated user's wallet
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Wallet balance and transaction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletResponse"
+        "401":
+          description: Unauthorized
+        "403":
+          description: This account type does not have a wallet
+        "404":
+          description: Wallet not found
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -741,6 +768,52 @@ components:
         - body
         - isRead
         - createdAt
+    WalletTransaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [CREDIT, DEBIT]
+        category:
+          type: string
+          enum: [BOOKING_PAYMENT, PLATFORM_COMMISSION, SUBSCRIPTION_FEE, WITHDRAWAL_PAYOUT, REFUND]
+        amount: { type: number, format: double }
+        balancePost: { type: number, format: double }
+        referenceId: { type: [string, "null"] }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+      required:
+        - id
+        - type
+        - category
+        - amount
+        - balancePost
+        - description
+        - createdAt
+    WalletResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ownerType:
+          type: string
+          enum: [PATIENT, DOCTOR, HOSPITAL, MEDICAL_CENTER, POLY_CLINIC, LAB, SCAN_CENTER, VETERINARY, PLATFORM]
+        ownerId: { type: string }
+        balance: { type: number, format: double }
+        pendingFunds: { type: number, format: double }
+        currency: { type: string }
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletTransaction"
+      required:
+        - id
+        - ownerType
+        - ownerId
+        - balance
+        - pendingFunds
+        - currency
+        - transactions
     ReportsResponse:
       type: object
       properties:

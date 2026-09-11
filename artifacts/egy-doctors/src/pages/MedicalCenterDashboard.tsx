@@ -3,9 +3,10 @@ import {
   Building2, Users, TrendingUp, FileText,
   Settings, Plus, CreditCard, Newspaper, LogOut, BookOpen,
   Stethoscope, Pencil, Trash2, Check, X, UserPlus,
-  Globe, Bell, Mail, MessageSquare, Video, PenSquare, Clock,
+  Globe, Bell, Mail, MessageSquare, Video, PenSquare, Clock, Wallet,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { WalletTab } from "@/components/dashboard/WalletTab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,7 @@ import {
   type ApiMagazinePost,
 } from "@/lib/api";
 
-type CenterTab = "overview" | "billing" | "publications" | "doctors" | "preferences";
+type CenterTab = "overview" | "billing" | "publications" | "doctors" | "preferences" | "wallet";
 
 const typeLabels: Record<string, { en: string; ar: string }> = {
   hospital:    { en: "Hospital",   ar: "مستشفى" },
@@ -1080,7 +1081,12 @@ export default function MedicalCenterDashboard() {
   const { dir, lang } = useLanguage();
   const { signOut } = useAuth();
   const isRTL = dir === "rtl";
-  const [activeTab, setActiveTab] = useState<CenterTab>("overview");
+  const [activeTab, setActiveTab] = useState<CenterTab>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab") as CenterTab;
+    const validTabs: CenterTab[] = ["overview", "billing", "publications", "doctors", "preferences", "wallet"];
+    return validTabs.includes(tabParam) ? tabParam : "overview";
+  });
 
   const { data: billingInfo } = useQuery<BillingInfo>({
     queryKey: ["billingInfo"],
@@ -1120,6 +1126,7 @@ export default function MedicalCenterDashboard() {
     { id: "billing",      icon: <CreditCard className="h-4 w-4" />,  label: isRTL ? "الاشتراك"  : "Billing"       },
     { id: "publications", icon: <Newspaper className="h-4 w-4" />,   label: isRTL ? "المنشورات" : "Publications"  },
     { id: "doctors",      icon: <UserPlus className="h-4 w-4" />,    label: isRTL ? "الأطباء"   : "Doctors"       },
+    { id: "wallet",       icon: <Wallet className="h-4 w-4" />,      label: isRTL ? "المحفظة"   : "Wallet"        },
     { id: "preferences",  icon: <Settings className="h-4 w-4" />,    label: isRTL ? "التفضيلات" : "Preferences"   },
   ];
 
@@ -1310,6 +1317,9 @@ export default function MedicalCenterDashboard() {
 
             {/* ── Doctors Tab ── */}
             {activeTab === "doctors" && <AffiliatedDoctorsTab isRTL={isRTL} />}
+
+            {/* ── Wallet Tab ── */}
+            {activeTab === "wallet" && <WalletTab isRTL={isRTL} />}
 
             {/* ── Preferences Tab ── */}
             {activeTab === "preferences" && <CenterPreferencesTab isRTL={isRTL} />}

@@ -18,3 +18,4 @@ export * from "./vouchers";
 export * from "./payments";
 export * from "./notifications";
 export * from "./push_subscriptions";
+export * from "./wallets";

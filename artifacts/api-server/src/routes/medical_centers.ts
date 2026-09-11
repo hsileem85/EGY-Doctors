@@ -9,6 +9,7 @@ import {
   clinicsTable, citiesTable, servicesTable, availabilityPeriodEnum, centerSubTypeEnum,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
+import { syncMedicalCenterWalletType } from "../lib/wallet.service.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 const router = Router();
@@ -98,6 +99,7 @@ router.put("/medical-centers/profile", requireCenter, async (req, res): Promise<
       name: parsed.data.name ?? user?.name ?? "Medical Center",
       ...parsed.data,
     }).returning();
+    await syncMedicalCenterWalletType(userId, created.subType);
     res.status(201).json(created);
     return;
   }
@@ -108,6 +110,7 @@ router.put("/medical-centers/profile", requireCenter, async (req, res): Promise<
     .where(eq(medicalCentersTable.userId, userId))
     .returning();
 
+  await syncMedicalCenterWalletType(userId, updated.subType);
   res.json(updated);
 });
 

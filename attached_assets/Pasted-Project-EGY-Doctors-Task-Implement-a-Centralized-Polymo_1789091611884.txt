@@ -1,0 +1,47 @@
+Project: EGY Doctors
+Task: Implement a Centralized, Polymorphic Wallet and Ledger System.
+
+Please carefully read and implement the following requirements. Do NOT rewrite existing models from scratch; only append and integrate these new features.
+
+### 1. Database Schema Additions
+Please append the following Enums and Models to our database schema (adjust syntax if using Prisma, Mongoose, or Drizzle):
+
+*   **Enums:**
+    *   `WalletOwnerType`: PATIENT, DOCTOR, HOSPITAL, MEDICAL_CENTER, POLY_CLINIC, LAB, SCAN_CENTER, VETERINARY, PLATFORM.
+    *   `TransactionType`: CREDIT, DEBIT.
+    *   `TransactionCategory`: BOOKING_PAYMENT, PLATFORM_COMMISSION, SUBSCRIPTION_FEE, WITHDRAWAL_PAYOUT, REFUND.
+
+*   **Models:**
+    *   `Wallet`: 
+        - `id` (UUID/ObjectId)
+        - `ownerType` (WalletOwnerType)
+        - `ownerId` (String - ID of the entity)
+        - `balance` (Decimal/Float, default 0.0)
+        - `pendingFunds` (Decimal/Float, default 0.0)
+        - `currency` (String, default "EGP")
+        - Unique constraint on `[ownerType, ownerId]`.
+    *   `WalletTransaction`:
+        - `id` (UUID/ObjectId)
+        - `walletId` (Relation to Wallet)
+        - `type` (TransactionType)
+        - `category` (TransactionCategory)
+        - `amount` (Decimal/Float)
+        - `balancePost` (Decimal/Float - snapshot of balance after transaction)
+        - `referenceId` (String, optional - e.g., booking ID)
+        - `description` (String)
+
+### 2. Auto-Provisioning Logic
+*   Locate the registration/signup controllers for all entities (Patient, Doctor, Medical Center, Veterinary, etc.).
+*   Add logic so that immediately after an entity is successfully created, a corresponding `Wallet` is automatically generated for them with a 0 balance.
+*   Create a seeding script or initialization function to create the "PLATFORM" master wallet (ownerId: "SYSTEM_REVENUE").
+
+### 3. Core Wallet Service (Backend)
+Create a new dedicated service file (e.g., `wallet.service.js` or `wallet.controller.js`) to handle financial logic securely. Implement the following methods using strict database transactions (to prevent race conditions):
+*   `creditWallet({ ownerType, ownerId, amount, category, referenceId, description })`
+*   `debitWallet({ ownerType, ownerId, amount, category, referenceId, description })`
+*   `escrowFunds({ ownerType, ownerId, amount, bookingId })` -> Adds to `pendingFunds`.
+*   `releaseEscrow({ ownerType, ownerId, amount, bookingId, commissionRate })` -> Moves from `pendingFunds` to `balance`, deducts platform commission, and credits the PLATFORM wallet.
+
+### 4. API Endpoints & Basic UI integration
+*   Create an endpoint `GET /api/wallet` that identifies the logged-in user (regardless of entity type), fetches their `Wallet`, and returns the `balance`, `pendingFunds`, and a list of `WalletTransaction` history.
+*   In the frontend Dashboard (for Doctors/Centers), add a simple "My Wallet" tab or section that fetches and displays this data using the new endpoint.

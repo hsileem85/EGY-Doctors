@@ -10,6 +10,7 @@ import magazineRouter from "./magazine";
 import billingRouter from "./billing";
 import medicalCentersRouter from "./medical_centers";
 import notificationsRouter from "./notifications";
+import walletRouter from "./wallet";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(magazineRouter);
 router.use(billingRouter);
 router.use(medicalCentersRouter);
 router.use(notificationsRouter);
+router.use(walletRouter);
 
 export default router;

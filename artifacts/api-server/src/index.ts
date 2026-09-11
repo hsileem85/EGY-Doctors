@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { db, specialtiesTable, usersTable } from "@workspace/db";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { initializeWallets } from "./lib/wallet.service.js";
 
 const SPECIALTIES = [
   { id: 1,  name: "Cardiology",       nameAr: "أمراض القلب" },
@@ -105,4 +106,5 @@ app.listen(port, async (err) => {
   logger.info({ port }, "Server listening");
   await seedSpecialties();
   await seedAdmin();
+  await initializeWallets();
 });

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock, RefreshCw, AlertCircle } from "lucide-react";
+import { CalendarDays, Users, TrendingUp, Search, PenSquare, FileText, Video, MessageSquare, Plus, Clock, LogOut, XCircle, UserCheck, UserCog, Phone, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Settings, Globe, Bell, Mail, MessageSquare as Sms, Newspaper, CreditCard, Lock, RefreshCw, AlertCircle, Wallet } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,8 +23,9 @@ import {
   type BillingInfo, type VoucherValidation, type PlanType,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { WalletTab } from "@/components/dashboard/WalletTab";
 
-type Tab = "appointments" | "patients" | "assistants" | "publications" | "preferences" | "billing";
+type Tab = "appointments" | "patients" | "assistants" | "publications" | "preferences" | "billing" | "wallet";
 
 function statusBadge(status: ApiAppointment["status"], t: { dashboard: { confirmed: string } }) {
   const map: Record<ApiAppointment["status"], string> = {
@@ -1391,8 +1392,9 @@ export default function Dashboard() {
   }, [user?.siteLanguage]);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get("tab");
-    return tabParam === "billing" ? "billing" : "appointments";
+    const tabParam = params.get("tab") as Tab;
+    const validTabs: Tab[] = ["appointments", "patients", "assistants", "publications", "preferences", "billing", "wallet"];
+    return validTabs.includes(tabParam) ? tabParam : "appointments";
   });
   const qc = useQueryClient();
 
@@ -1430,6 +1432,7 @@ export default function Dashboard() {
     { tab: "patients", icon: <Users className="h-4 w-4" />, label: isRTL ? "سجل المرضى" : "My Patients" },
     { tab: "assistants", icon: <UserCog className="h-4 w-4" />, label: isRTL ? "المساعدون" : "Assistants" },
     { tab: "publications", icon: <Newspaper className="h-4 w-4" />, label: isRTL ? "المنشورات" : "Publications" },
+    { tab: "wallet",      icon: <Wallet className="h-4 w-4" />, label: isRTL ? "المحفظة" : "Wallet" },
     { tab: "preferences", icon: <Settings className="h-4 w-4" />, label: isRTL ? "الإعدادات" : "Preferences" },
     { tab: "billing",     icon: <CreditCard className="h-4 w-4" />, label: isRTL ? "الاشتراك" : "Billing" },
   ];
@@ -1708,6 +1711,9 @@ export default function Dashboard() {
                   </div>
                 )
             )}
+
+            {/* ── Wallet Tab ── */}
+            {activeTab === "wallet" && <WalletTab isRTL={isRTL} />}
 
             {/* ── Preferences Tab ── */}
             {activeTab === "preferences" && <PreferencesTab isRTL={isRTL} />}
