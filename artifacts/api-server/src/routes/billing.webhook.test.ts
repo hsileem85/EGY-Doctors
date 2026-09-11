@@ -19,6 +19,23 @@ const state = vi.hoisted(() => ({
   capturedTxSets: [] as unknown[],
   /** args passed to db.update(...).set(<here>) (outside-transaction path) */
   capturedDbSets: [] as unknown[],
+  recordSubscriptionFeeInTx: vi.fn(),
+  recordSubscriptionRefundInTx: vi.fn(),
+  escrowBookingInTx: vi.fn(),
+  refundBookingEscrowInTx: vi.fn(),
+}));
+
+vi.mock("../lib/wallet.service.js", () => ({
+  recordSubscriptionFeeInTx: state.recordSubscriptionFeeInTx,
+  recordSubscriptionRefundInTx: state.recordSubscriptionRefundInTx,
+  escrowBookingInTx: state.escrowBookingInTx,
+  refundBookingEscrowInTx: state.refundBookingEscrowInTx,
+  centerSubtypeToWalletOwnerType: vi.fn(() => "MEDICAL_CENTER"),
+}));
+
+vi.mock("../lib/paymob.service.js", () => ({
+  requestPaymobRefund: vi.fn(),
+  dispatchPaymobRefund: vi.fn(),
 }));
 
 /* ── @workspace/db mock ─────────────────────────────────────────────────────── */
@@ -82,6 +99,7 @@ vi.mock("@workspace/db", () => ({
   doctorsTable: { _: "doctors" },
   siteSettingsTable: { _: "site_settings" },
   vouchersTable: { _: "vouchers" },
+  appointmentsTable: { _: "appointments" },
 }));
 
 /* ── app setup ──────────────────────────────────────────────────────────────── */
@@ -158,6 +176,10 @@ describe("POST /api/billing/paymob/webhook", () => {
     state.txUpdateCallCount = 0;
     state.capturedTxSets = [];
     state.capturedDbSets = [];
+    state.recordSubscriptionFeeInTx.mockReset();
+    state.recordSubscriptionRefundInTx.mockReset();
+    state.escrowBookingInTx.mockReset();
+    state.refundBookingEscrowInTx.mockReset();
     vi.clearAllMocks();
   });
 
@@ -191,6 +213,7 @@ describe("POST /api/billing/paymob/webhook", () => {
       doctorId: 42,
       planType: "MONTHS_3",
       voucherCode: null,
+      amount: 800,
     };
     state.doctor = { id: 42, subscriptionEndDate: null };
 
@@ -214,6 +237,11 @@ describe("POST /api/billing/paymob/webhook", () => {
       subscriptionPlan: "MONTHS_3",
     });
     expect(doctorUpdate["subscriptionEndDate"]).toBeInstanceOf(Date);
+    expect(state.recordSubscriptionFeeInTx).toHaveBeenCalledOnce();
+    expect(state.recordSubscriptionFeeInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      { amount: 800, paymentId: "1" },
+    );
   });
 
   /* ── Test 3: Correct HMAC + failure → payment FAILED, no activation ─────── */
@@ -276,5 +304,135 @@ describe("POST /api/billing/paymob/webhook", () => {
     expect(res.status).toBe(401);
     expect(db.transaction).not.toHaveBeenCalled();
     expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("does not create another subscription ledger entry when a paid webhook is replayed", async () => {
+    const body = makeWebhookBody();
+    const obj = body.obj;
+    const order = obj["order"] as Record<string, unknown>;
+    const sourceData = obj["source_data"] as Record<string, unknown>;
+    const hmac = buildHmac(obj, order, sourceData, HMAC_SECRET);
+
+    state.updatedPayment = null;
+    const res = await request(app)
+      .post(`/api/billing/paymob/webhook?hmac=${hmac}`)
+      .send(body)
+      .set("Content-Type", "application/json");
+
+    expect(res.status).toBe(200);
+    expect(state.recordSubscriptionFeeInTx).not.toHaveBeenCalled();
+  });
+
+  it("records a subscription refund once when Paymob reports a refund", async () => {
+    const body = makeWebhookBody({ is_refunded: true });
+    const obj = body.obj;
+    const order = obj["order"] as Record<string, unknown>;
+    const sourceData = obj["source_data"] as Record<string, unknown>;
+    const hmac = buildHmac(obj, order, sourceData, HMAC_SECRET);
+
+    state.updatedPayment = {
+      id: 1,
+      doctorId: 42,
+      planType: "MONTHS_3",
+      voucherCode: null,
+      amount: 800,
+    };
+
+    const res = await request(app)
+      .post(`/api/billing/paymob/webhook?hmac=${hmac}`)
+      .send(body)
+      .set("Content-Type", "application/json");
+
+    expect(res.status).toBe(200);
+    expect(state.recordSubscriptionRefundInTx).toHaveBeenCalledOnce();
+    expect(state.recordSubscriptionRefundInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      { amount: 800, paymentId: "1" },
+    );
+    expect(state.recordSubscriptionFeeInTx).not.toHaveBeenCalled();
+  });
+
+  it("escrows a verified booking payment into its stored wallet snapshot", async () => {
+    const body = makeWebhookBody();
+    const obj = body.obj;
+    const order = obj["order"] as Record<string, unknown>;
+    const sourceData = obj["source_data"] as Record<string, unknown>;
+    const hmac = buildHmac(obj, order, sourceData, HMAC_SECRET);
+    state.updatedPayment = {
+      id: 9,
+      appointmentId: 77,
+      escrowOwnerType: "DOCTOR",
+      escrowOwnerId: "314",
+      planType: "BOOKING",
+      amount: 450,
+      voucherCode: null,
+    };
+
+    const res = await request(app)
+      .post(`/api/billing/paymob/webhook?hmac=${hmac}`)
+      .send(body)
+      .set("Content-Type", "application/json");
+
+    expect(res.status).toBe(200);
+    expect(state.escrowBookingInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      { ownerType: "DOCTOR", ownerId: "314", amount: 450, bookingId: "77" },
+    );
+    expect(state.recordSubscriptionFeeInTx).not.toHaveBeenCalled();
+  });
+
+  it("refunds booking escrow from the original wallet snapshot", async () => {
+    const body = makeWebhookBody({ is_refunded: true });
+    const obj = body.obj;
+    const order = obj["order"] as Record<string, unknown>;
+    const sourceData = obj["source_data"] as Record<string, unknown>;
+    const hmac = buildHmac(obj, order, sourceData, HMAC_SECRET);
+    state.updatedPayment = {
+      id: 9,
+      appointmentId: 77,
+      escrowOwnerType: "MEDICAL_CENTER",
+      escrowOwnerId: "501",
+      planType: "BOOKING",
+      amount: 450,
+      escrowedAt: new Date(),
+    };
+
+    const res = await request(app)
+      .post(`/api/billing/paymob/webhook?hmac=${hmac}`)
+      .send(body)
+      .set("Content-Type", "application/json");
+
+    expect(res.status).toBe(200);
+    expect(state.refundBookingEscrowInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      { ownerType: "MEDICAL_CENTER", ownerId: "501", amount: 450, bookingId: "77" },
+    );
+    expect(state.recordSubscriptionRefundInTx).not.toHaveBeenCalled();
+  });
+
+  it("does not debit any wallet when a cancelled booking is refunded before escrow", async () => {
+    const body = makeWebhookBody({ is_refunded: true });
+    const obj = body.obj;
+    const order = obj["order"] as Record<string, unknown>;
+    const sourceData = obj["source_data"] as Record<string, unknown>;
+    const hmac = buildHmac(obj, order, sourceData, HMAC_SECRET);
+    state.updatedPayment = {
+      id: 10,
+      appointmentId: 78,
+      escrowOwnerType: "DOCTOR",
+      escrowOwnerId: "314",
+      planType: "BOOKING",
+      amount: 450,
+      escrowedAt: null,
+    };
+
+    const res = await request(app)
+      .post(`/api/billing/paymob/webhook?hmac=${hmac}`)
+      .send(body)
+      .set("Content-Type", "application/json");
+
+    expect(res.status).toBe(200);
+    expect(state.refundBookingEscrowInTx).not.toHaveBeenCalled();
+    expect(state.recordSubscriptionRefundInTx).not.toHaveBeenCalled();
   });
 });

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getDoctor, getAppointments, bookAppointment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
+import { getDoctor, getAppointments, bookAppointment, initiateAppointmentPayment, type ApiClinic, type ClinicScheduleMap, type DoctorScheduleMap } from "@/lib/api";
 
 const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const DEFAULT_SLOT_INTERVAL_MINUTES = 30;
@@ -341,7 +341,7 @@ export default function DoctorProfile() {
     if (!selectedClinic || !selectedDate || !selectedTime) return;
     setIsSubmitting(true);
     try {
-      await bookAppointment({
+      const appointment = await bookAppointment({
         doctorId: doctor.id,
         clinicId: selectedClinic.id > 0 ? selectedClinic.id : undefined,
         patientUserId: user?.id,
@@ -350,10 +350,16 @@ export default function DoctorProfile() {
         patientName: user?.name ?? "Guest",
         patientPhone: user?.phone ?? "",
       });
+      if (appointment.feeCharged && appointment.feeCharged > 0) {
+        const payment = await initiateAppointmentPayment(appointment.id);
+        if (payment.iframeUrl) {
+          window.location.assign(payment.iframeUrl);
+          return;
+        }
+      }
       setBookingStep("success");
     } catch {
-      // still show success for UX continuity
-      setBookingStep("success");
+      setBookingStep("form");
     } finally {
       setIsSubmitting(false);
     }

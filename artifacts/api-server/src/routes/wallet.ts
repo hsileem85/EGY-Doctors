@@ -45,6 +45,7 @@ router.get("/wallet", async (req, res): Promise<void> => {
       category: transaction.category,
       amount: transaction.amount,
       balancePost: transaction.balancePost,
+      pendingFundsPost: transaction.pendingFundsPost,
       referenceId: transaction.referenceId,
       description: transaction.description,
       createdAt: transaction.createdAt.toISOString(),

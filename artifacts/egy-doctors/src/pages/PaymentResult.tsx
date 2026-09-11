@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getBillingInfo } from "@/lib/api";
+import { getAppointmentPaymentStatus, getBillingInfo } from "@/lib/api";
 
 type Status = "loading" | "success" | "confirming" | "failed";
 
@@ -7,10 +7,12 @@ export default function PaymentResult() {
   const [status, setStatus] = useState<Status>("loading");
   const [pollCount, setPollCount] = useState(0);
 
-  const pollStatus = useCallback(async (attempt: number, orderId: string) => {
+  const pollStatus = useCallback(async (attempt: number, orderId: string, appointmentId: number | null) => {
     try {
-      const info = await getBillingInfo();
-      if (info.status === "ACTIVE") {
+      const confirmed = appointmentId
+        ? ["PAID", "SETTLED"].includes((await getAppointmentPaymentStatus(appointmentId)).status)
+        : (await getBillingInfo()).status === "ACTIVE";
+      if (confirmed) {
         setStatus("success");
         if (window.parent !== window) {
           window.parent.postMessage({ type: "PAYMOB_RESULT", success: true, orderId }, "*");
@@ -22,25 +24,28 @@ export default function PaymentResult() {
 
     if (attempt < 8) {
       setPollCount(attempt + 1);
-      setTimeout(() => pollStatus(attempt + 1, orderId), 2000);
+      setTimeout(() => pollStatus(attempt + 1, orderId, appointmentId), 2000);
     } else {
       setStatus("confirming");
     }
   }, []);
 
-  const retryPoll = useCallback((orderId: string) => {
+  const retryPoll = useCallback((orderId: string, appointmentId: number | null) => {
     setStatus("loading");
     setPollCount(0);
-    pollStatus(0, orderId);
+    pollStatus(0, orderId, appointmentId);
   }, [pollStatus]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get("success") === "true";
     const orderId = params.get("order_id") ?? params.get("order") ?? "";
+    const appointmentId = params.get("kind") === "booking"
+      ? Number(params.get("appointment_id")) || null
+      : null;
 
     if (success) {
-      pollStatus(0, orderId);
+      pollStatus(0, orderId, appointmentId);
     } else {
       setStatus("failed");
       if (window.parent !== window) {
@@ -53,6 +58,10 @@ export default function PaymentResult() {
     typeof window !== "undefined" ? window.location.search : ""
   );
   const orderId = params.get("order_id") ?? params.get("order") ?? "";
+  const appointmentId = params.get("kind") === "booking"
+    ? Number(params.get("appointment_id")) || null
+    : null;
+  const isBooking = appointmentId !== null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -71,7 +80,9 @@ export default function PaymentResult() {
           <>
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
             <p className="text-gray-900 font-semibold text-lg">Payment Successful</p>
-            <p className="text-sm text-gray-500 mt-1">Your subscription is now active.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {isBooking ? "Your appointment payment is confirmed." : "Your subscription is now active."}
+            </p>
           </>
         )}
 
@@ -80,11 +91,11 @@ export default function PaymentResult() {
             <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">⏳</div>
             <p className="text-gray-900 font-semibold text-lg">Payment Received</p>
             <p className="text-sm text-gray-500 mt-2">
-              Your payment was received but subscription activation is taking longer than expected. 
+              Your payment was received but {isBooking ? "booking confirmation" : "subscription activation"} is taking longer than expected.
               Please check your dashboard in a moment.
             </p>
             <button
-              onClick={() => retryPoll(orderId)}
+              onClick={() => retryPoll(orderId, appointmentId)}
               className="mt-4 px-4 py-2 bg-[#D4A853] text-white text-sm font-medium rounded-lg hover:bg-[#b8913f] transition-colors"
             >
               Check Status Again
@@ -104,7 +115,9 @@ export default function PaymentResult() {
           <>
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✕</div>
             <p className="text-gray-900 font-semibold text-lg">Payment Not Completed</p>
-            <p className="text-sm text-gray-500 mt-1">Your subscription was not activated. Please try again.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {isBooking ? "Your appointment payment was not completed." : "Your subscription was not activated."} Please try again.
+            </p>
             {window.parent !== window && (
               <button
                 onClick={() => window.parent.postMessage({ type: "PAYMOB_RESULT", success: false, orderId }, "*")}

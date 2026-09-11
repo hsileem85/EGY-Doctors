@@ -57,6 +57,7 @@ export const walletTransactionsTable = pgTable(
     category: text("category", { enum: transactionCategoryEnum }).notNull(),
     amount: numeric("amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
     balancePost: numeric("balance_post", { precision: 14, scale: 2, mode: "number" }).notNull(),
+    pendingFundsPost: numeric("pending_funds_post", { precision: 14, scale: 2, mode: "number" }),
     referenceId: text("reference_id"),
     description: text("description").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

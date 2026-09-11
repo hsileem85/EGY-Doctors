@@ -10,6 +10,7 @@ import {
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 const PLATFORM_OWNER_ID = "SYSTEM_REVENUE";
+type WalletTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export class WalletNotFoundError extends Error {
   constructor() {
@@ -155,6 +156,245 @@ interface WalletMutationInput {
   description: string;
 }
 
+async function ensureWalletInTx(
+  tx: WalletTx,
+  ownerType: WalletOwnerType,
+  ownerId: string,
+) {
+  await tx
+    .insert(walletsTable)
+    .values({ ownerType, ownerId })
+    .onConflictDoNothing({
+      target: [walletsTable.ownerType, walletsTable.ownerId],
+    });
+
+  const [wallet] = await tx
+    .select()
+    .from(walletsTable)
+    .where(and(eq(walletsTable.ownerType, ownerType), eq(walletsTable.ownerId, ownerId)))
+    .limit(1);
+
+  if (!wallet) throw new WalletNotFoundError();
+  return wallet;
+}
+
+export async function escrowBookingInTx(tx: WalletTx, input: {
+  ownerType: WalletOwnerType;
+  ownerId: string;
+  amount: number;
+  bookingId: string;
+}) {
+  const amount = normalizeAmount(input.amount);
+  await ensureWalletInTx(tx, input.ownerType, input.ownerId);
+
+  const [wallet] = await tx
+    .update(walletsTable)
+    .set({
+      pendingFunds: sql`${walletsTable.pendingFunds} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(walletsTable.ownerType, input.ownerType),
+      eq(walletsTable.ownerId, input.ownerId),
+    ))
+    .returning();
+
+  if (!wallet) throw new WalletNotFoundError();
+  await tx.insert(walletTransactionsTable).values({
+    walletId: wallet.id,
+    type: "CREDIT",
+    category: "BOOKING_PAYMENT",
+    amount,
+    balancePost: wallet.balance,
+    pendingFundsPost: wallet.pendingFunds,
+    referenceId: input.bookingId,
+    description: "Booking payment placed in escrow",
+  });
+  return wallet;
+}
+
+export async function refundBookingEscrowInTx(tx: WalletTx, input: {
+  ownerType: WalletOwnerType;
+  ownerId: string;
+  amount: number;
+  bookingId: string;
+}) {
+  const amount = normalizeAmount(input.amount);
+  const [wallet] = await tx
+    .update(walletsTable)
+    .set({
+      pendingFunds: sql`${walletsTable.pendingFunds} - ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(walletsTable.ownerType, input.ownerType),
+      eq(walletsTable.ownerId, input.ownerId),
+      gte(walletsTable.pendingFunds, amount),
+    ))
+    .returning();
+
+  if (!wallet) throw new InsufficientWalletFundsError("Insufficient pending funds");
+
+  await tx.insert(walletTransactionsTable).values({
+    walletId: wallet.id,
+    type: "DEBIT",
+    category: "REFUND",
+    amount,
+    balancePost: wallet.balance,
+    pendingFundsPost: wallet.pendingFunds,
+    referenceId: input.bookingId,
+    description: "Booking payment refunded from escrow",
+  });
+
+  return wallet;
+}
+
+export async function releaseBookingEscrowInTx(tx: WalletTx, input: {
+  ownerType: WalletOwnerType;
+  ownerId: string;
+  amount: number;
+  bookingId: string;
+  commissionRate: number;
+}) {
+  const amount = normalizeAmount(input.amount);
+  const commissionRate = normalizeCommissionRate(input.commissionRate);
+  const commission = Math.round(amount * commissionRate * 100) / 100;
+
+  const [creditedOwner] = await tx
+    .update(walletsTable)
+    .set({
+      pendingFunds: sql`${walletsTable.pendingFunds} - ${amount}`,
+      balance: sql`${walletsTable.balance} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(walletsTable.ownerType, input.ownerType),
+      eq(walletsTable.ownerId, input.ownerId),
+      gte(walletsTable.pendingFunds, amount),
+    ))
+    .returning();
+
+  if (!creditedOwner) throw new InsufficientWalletFundsError("Insufficient pending funds");
+
+  await tx.insert(walletTransactionsTable).values({
+    walletId: creditedOwner.id,
+    type: "CREDIT",
+    category: "BOOKING_PAYMENT",
+    amount,
+    balancePost: creditedOwner.balance,
+    referenceId: input.bookingId,
+    description: "Booking escrow released",
+  });
+
+  let ownerWallet = creditedOwner;
+  if (commission > 0) {
+    const [debitedOwner] = await tx
+      .update(walletsTable)
+      .set({
+        balance: sql`${walletsTable.balance} - ${commission}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(walletsTable.id, creditedOwner.id))
+      .returning();
+    if (!debitedOwner) throw new WalletNotFoundError();
+    ownerWallet = debitedOwner;
+
+    await tx.insert(walletTransactionsTable).values({
+      walletId: debitedOwner.id,
+      type: "DEBIT",
+      category: "PLATFORM_COMMISSION",
+      amount: commission,
+      balancePost: debitedOwner.balance,
+      referenceId: input.bookingId,
+      description: "Platform commission",
+    });
+
+    const platformWallet = await ensureWalletInTx(tx, "PLATFORM", PLATFORM_OWNER_ID);
+    const [creditedPlatform] = await tx
+      .update(walletsTable)
+      .set({
+        balance: sql`${walletsTable.balance} + ${commission}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(walletsTable.id, platformWallet.id))
+      .returning();
+    if (!creditedPlatform) throw new WalletNotFoundError();
+
+    await tx.insert(walletTransactionsTable).values({
+      walletId: creditedPlatform.id,
+      type: "CREDIT",
+      category: "PLATFORM_COMMISSION",
+      amount: commission,
+      balancePost: creditedPlatform.balance,
+      referenceId: input.bookingId,
+      description: "Platform commission received",
+    });
+  }
+
+  return ownerWallet;
+}
+
+export async function recordSubscriptionFeeInTx(tx: WalletTx, input: {
+  amount: number;
+  paymentId: string;
+}) {
+  const amount = normalizeAmount(input.amount);
+  const platformWallet = await ensureWalletInTx(tx, "PLATFORM", PLATFORM_OWNER_ID);
+  const [wallet] = await tx
+    .update(walletsTable)
+    .set({
+      balance: sql`${walletsTable.balance} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(walletsTable.id, platformWallet.id))
+    .returning();
+  if (!wallet) throw new WalletNotFoundError();
+
+  const [transaction] = await tx.insert(walletTransactionsTable).values({
+    walletId: wallet.id,
+    type: "CREDIT",
+    category: "SUBSCRIPTION_FEE",
+    amount,
+    balancePost: wallet.balance,
+    referenceId: input.paymentId,
+    description: "Subscription fee received",
+  }).returning();
+
+  return { wallet, transaction };
+}
+
+export async function recordSubscriptionRefundInTx(tx: WalletTx, input: {
+  amount: number;
+  paymentId: string;
+}) {
+  const amount = normalizeAmount(input.amount);
+  const platformWallet = await ensureWalletInTx(tx, "PLATFORM", PLATFORM_OWNER_ID);
+  const [wallet] = await tx
+    .update(walletsTable)
+    .set({
+      balance: sql`${walletsTable.balance} - ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(walletsTable.id, platformWallet.id),
+      gte(walletsTable.balance, amount),
+    ))
+    .returning();
+  if (!wallet) throw new InsufficientWalletFundsError("Insufficient platform funds for refund");
+
+  const [transaction] = await tx.insert(walletTransactionsTable).values({
+    walletId: wallet.id,
+    type: "DEBIT",
+    category: "REFUND",
+    amount,
+    balancePost: wallet.balance,
+    referenceId: input.paymentId,
+    description: "Subscription payment refunded",
+  }).returning();
+
+  return { wallet, transaction };
+}
+
 export async function creditWallet(input: WalletMutationInput) {
   const amount = normalizeAmount(input.amount);
 
@@ -243,24 +483,7 @@ export async function escrowFunds(input: {
   amount: number;
   bookingId: string;
 }) {
-  const amount = normalizeAmount(input.amount);
-
-  return db.transaction(async (tx) => {
-    const [wallet] = await tx
-      .update(walletsTable)
-      .set({
-        pendingFunds: sql`${walletsTable.pendingFunds} + ${amount}`,
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(walletsTable.ownerType, input.ownerType),
-        eq(walletsTable.ownerId, input.ownerId),
-      ))
-      .returning();
-
-    if (!wallet) throw new WalletNotFoundError();
-    return wallet;
-  });
+  return db.transaction((tx) => escrowBookingInTx(tx, input));
 }
 
 export async function releaseEscrow(input: {
@@ -270,98 +493,7 @@ export async function releaseEscrow(input: {
   bookingId: string;
   commissionRate: number;
 }) {
-  const amount = normalizeAmount(input.amount);
-  const commissionRate = normalizeCommissionRate(input.commissionRate);
-  const commission = Math.round(amount * commissionRate * 100) / 100;
-
-  return db.transaction(async (tx) => {
-    const [creditedOwner] = await tx
-      .update(walletsTable)
-      .set({
-        pendingFunds: sql`${walletsTable.pendingFunds} - ${amount}`,
-        balance: sql`${walletsTable.balance} + ${amount}`,
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(walletsTable.ownerType, input.ownerType),
-        eq(walletsTable.ownerId, input.ownerId),
-        gte(walletsTable.pendingFunds, amount),
-      ))
-      .returning();
-
-    if (!creditedOwner) {
-      throw new InsufficientWalletFundsError("Insufficient pending funds");
-    }
-
-    await tx.insert(walletTransactionsTable).values({
-      walletId: creditedOwner.id,
-      type: "CREDIT",
-      category: "BOOKING_PAYMENT",
-      amount,
-      balancePost: creditedOwner.balance,
-      referenceId: input.bookingId,
-      description: "Booking escrow released",
-    });
-
-    let ownerWallet = creditedOwner;
-
-    if (commission > 0) {
-      const [debitedOwner] = await tx
-        .update(walletsTable)
-        .set({
-          balance: sql`${walletsTable.balance} - ${commission}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(walletsTable.id, creditedOwner.id))
-        .returning();
-
-      if (!debitedOwner) throw new WalletNotFoundError();
-      ownerWallet = debitedOwner;
-
-      await tx.insert(walletTransactionsTable).values({
-        walletId: debitedOwner.id,
-        type: "DEBIT",
-        category: "PLATFORM_COMMISSION",
-        amount: commission,
-        balancePost: debitedOwner.balance,
-        referenceId: input.bookingId,
-        description: "Platform commission",
-      });
-
-      await tx
-        .insert(walletsTable)
-        .values({ ownerType: "PLATFORM", ownerId: PLATFORM_OWNER_ID })
-        .onConflictDoNothing({
-          target: [walletsTable.ownerType, walletsTable.ownerId],
-        });
-
-      const [platformWallet] = await tx
-        .update(walletsTable)
-        .set({
-          balance: sql`${walletsTable.balance} + ${commission}`,
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(walletsTable.ownerType, "PLATFORM"),
-          eq(walletsTable.ownerId, PLATFORM_OWNER_ID),
-        ))
-        .returning();
-
-      if (!platformWallet) throw new WalletNotFoundError();
-
-      await tx.insert(walletTransactionsTable).values({
-        walletId: platformWallet.id,
-        type: "CREDIT",
-        category: "PLATFORM_COMMISSION",
-        amount: commission,
-        balancePost: platformWallet.balance,
-        referenceId: input.bookingId,
-        description: "Platform commission received",
-      });
-    }
-
-    return ownerWallet;
-  });
+  return db.transaction((tx) => releaseBookingEscrowInTx(tx, input));
 }
 
 export async function getWalletWithTransactions(

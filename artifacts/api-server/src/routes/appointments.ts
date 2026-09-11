@@ -1,10 +1,37 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc, ne } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable } from "@workspace/db";
+import { db, appointmentsTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, type WalletOwnerType } from "@workspace/db";
 import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from "../lib/email";
+import {
+  releaseBookingEscrowInTx,
+} from "../lib/wallet.service.js";
+import { dispatchPaymobRefund } from "../lib/paymob.service.js";
 
 const router: IRouter = Router();
+const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
+
+function decodeJwt(authHeader: string | undefined): { sub: number; role: string } | null {
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  try {
+    return jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown as { sub: number; role: string };
+  } catch {
+    return null;
+  }
+}
+
+async function getBookingCommissionRate(
+  executor: Parameters<Parameters<typeof db.transaction>[0]>[0],
+): Promise<number> {
+  const [setting] = await executor.select({ value: siteSettingsTable.value })
+    .from(siteSettingsTable)
+    .where(eq(siteSettingsTable.key, "booking_commission_rate"))
+    .limit(1);
+  const configured = Number(setting?.value ?? 0.1);
+  if (!Number.isFinite(configured) || configured < 0) return 0.1;
+  return configured > 1 ? Math.min(configured / 100, 1) : Math.min(configured, 1);
+}
 
 const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -318,6 +345,11 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
 
 /* ─── PATCH /appointments/:id/status ─── */
 router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   if (isNaN(id)) {
@@ -334,14 +366,128 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db.update(appointmentsTable)
-    .set({ status: parsed.data.status })
-    .where(eq(appointmentsTable.id, id))
-    .returning();
+  let refundPaymentId: number | null = null;
+  const row = await db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(appointmentsTable)
+      .where(eq(appointmentsTable.id, id)).limit(1);
+    if (!existing) return undefined;
 
+    const [doctor] = await tx.select({
+      userId: doctorsTable.userId,
+      affiliatedCenterId: doctorsTable.affiliatedCenterId,
+    }).from(doctorsTable).where(eq(doctorsTable.id, existing.doctorId)).limit(1);
+    const [center] = doctor?.affiliatedCenterId
+      ? await tx.select({ userId: medicalCentersTable.userId })
+        .from(medicalCentersTable)
+        .where(eq(medicalCentersTable.id, doctor.affiliatedCenterId))
+        .limit(1)
+      : [];
+    const isProvider = (payload.role === "doctor" && doctor?.userId === payload.sub)
+      || (payload.role === "medical_center" && center?.userId === payload.sub)
+      || payload.role === "admin";
+    const [assistant] = payload.role === "assistant"
+      ? await tx.select({
+        assistantDoctorId: usersTable.assistantDoctorId,
+        assistantClinicId: usersTable.assistantClinicId,
+        isActive: usersTable.isActive,
+      }).from(usersTable).where(eq(usersTable.id, payload.sub)).limit(1)
+      : [];
+    const isScopedAssistant = payload.role === "assistant"
+      && assistant?.isActive === true
+      && assistant.assistantDoctorId === existing.doctorId
+      && (!assistant.assistantClinicId || assistant.assistantClinicId === existing.clinicId);
+    const isPatientCancellation = payload.role === "patient"
+      && existing.patientUserId === payload.sub
+      && parsed.data.status === "cancelled";
+    if (!isProvider && !isPatientCancellation && !isScopedAssistant) {
+      throw new Error("FORBIDDEN_APPOINTMENT_STATUS");
+    }
+
+    if (existing.status === parsed.data.status) {
+      if (parsed.data.status === "cancelled") {
+        const [pendingRefund] = await tx.select({ id: paymentsTable.id })
+          .from(paymentsTable)
+          .where(and(
+            eq(paymentsTable.appointmentId, existing.id),
+            eq(paymentsTable.status, "REFUND_PENDING"),
+          ))
+          .limit(1);
+        refundPaymentId = pendingRefund?.id ?? null;
+      }
+      return existing;
+    }
+    if (existing.status === "completed" || existing.status === "cancelled") {
+      return existing;
+    }
+
+    const [updated] = await tx.update(appointmentsTable)
+      .set({ status: parsed.data.status })
+      .where(and(eq(appointmentsTable.id, id), eq(appointmentsTable.status, existing.status)))
+      .returning();
+    if (!updated) {
+      const [current] = await tx.select().from(appointmentsTable)
+        .where(eq(appointmentsTable.id, id)).limit(1);
+      return current;
+    }
+
+    if (existing.feeCharged && existing.feeCharged > 0) {
+      const [payment] = await tx.select().from(paymentsTable)
+        .where(and(
+          eq(paymentsTable.appointmentId, existing.id),
+          eq(paymentsTable.status, "PAID"),
+        ))
+        .limit(1);
+      const owner = payment?.escrowOwnerType && payment.escrowOwnerId
+        ? {
+            ownerType: payment.escrowOwnerType as WalletOwnerType,
+            ownerId: payment.escrowOwnerId,
+          }
+        : null;
+      if (!owner) return updated;
+      if (parsed.data.status === "completed") {
+        const [settledPayment] = await tx.update(paymentsTable)
+          .set({ status: "SETTLED" })
+          .where(and(eq(paymentsTable.id, payment.id), eq(paymentsTable.status, "PAID")))
+          .returning();
+        if (settledPayment) {
+          await releaseBookingEscrowInTx(tx, {
+            ...owner,
+            amount: existing.feeCharged,
+            bookingId: String(existing.id),
+            commissionRate: await getBookingCommissionRate(tx),
+          });
+        }
+      } else if (parsed.data.status === "cancelled") {
+        const [refundedPayment] = await tx.update(paymentsTable)
+          .set({ status: "REFUND_PENDING" })
+          .where(and(eq(paymentsTable.id, payment.id), eq(paymentsTable.status, "PAID")))
+          .returning();
+        if (!refundedPayment) throw new Error("Booking refund is already being processed");
+        refundPaymentId = refundedPayment.id;
+      }
+    }
+    return updated;
+  }).catch((error: unknown) => {
+    if (error instanceof Error && error.message === "FORBIDDEN_APPOINTMENT_STATUS") return "FORBIDDEN" as const;
+    throw error;
+  });
+
+  if (row === "FORBIDDEN") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   if (!row) {
     res.status(404).json({ error: "Appointment not found" });
     return;
+  }
+  if (refundPaymentId !== null) {
+    try {
+      await dispatchPaymobRefund(refundPaymentId);
+    } catch (error) {
+      req.log.error({ error, paymentId: refundPaymentId }, "Failed to request Paymob booking refund");
+      res.status(502).json({ error: "Refund request is pending. Please try again." });
+      return;
+    }
   }
 
   // ── Send email on confirmed or cancelled ──

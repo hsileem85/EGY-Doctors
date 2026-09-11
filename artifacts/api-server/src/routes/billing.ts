@@ -7,9 +7,19 @@ import { z } from "zod";
 import {
   db, doctorsTable, medicalCentersTable, usersTable,
   siteSettingsTable, vouchersTable, paymentsTable,
+  appointmentsTable, type WalletOwnerType,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { sendReceiptEmail } from "../lib/email";
+import {
+  recordSubscriptionFeeInTx,
+  recordSubscriptionRefundInTx,
+  centerSubtypeToWalletOwnerType,
+  escrowBookingInTx,
+  refundBookingEscrowInTx,
+  releaseBookingEscrowInTx,
+} from "../lib/wallet.service.js";
+import { dispatchPaymobRefund } from "../lib/paymob.service.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 const PAYMOB_BASE = "https://accept.paymob.com/api";
@@ -97,6 +107,32 @@ async function getDoctor(userId: number) {
   const [row] = await db.select().from(doctorsTable)
     .where(eq(doctorsTable.userId, userId)).limit(1);
   return row ?? null;
+}
+
+async function resolveBookingEscrowOwner(doctorId: number): Promise<{
+  ownerType: WalletOwnerType;
+  ownerId: string;
+}> {
+  const [doctor] = await db.select({
+    userId: doctorsTable.userId,
+    affiliatedCenterId: doctorsTable.affiliatedCenterId,
+  }).from(doctorsTable).where(eq(doctorsTable.id, doctorId)).limit(1);
+  if (!doctor) throw new Error("Doctor not found");
+  if (doctor.affiliatedCenterId) {
+    const [center] = await db.select({
+      userId: medicalCentersTable.userId,
+      subType: medicalCentersTable.subType,
+    }).from(medicalCentersTable)
+      .where(eq(medicalCentersTable.id, doctor.affiliatedCenterId))
+      .limit(1);
+    if (center) {
+      return {
+        ownerType: centerSubtypeToWalletOwnerType(center.subType),
+        ownerId: String(center.userId),
+      };
+    }
+  }
+  return { ownerType: "DOCTOR", ownerId: String(doctor.userId) };
 }
 
 /* ─── GET /billing/payments ─── */
@@ -347,7 +383,7 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
     const uatOrderId = `UAT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     await db.transaction(async (tx) => {
-      await tx.insert(paymentsTable).values({
+      const [payment] = await tx.insert(paymentsTable).values({
         doctorId,
         medicalCenterId: centerId,
         paymobOrderId: uatOrderId,
@@ -357,7 +393,13 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
         voucherCode: appliedVoucherCode,
         status: "PAID",
         paidAt: new Date(),
-      });
+      }).returning();
+      if (finalAmount > 0) {
+        await recordSubscriptionFeeInTx(tx, {
+          amount: finalAmount,
+          paymentId: String(payment.id),
+        });
+      }
 
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + planMonths(planType as PlanType));
@@ -500,6 +542,212 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
   }
 });
 
+/* ─── POST /billing/paymob/appointments/:id/initiate ─── */
+router.post("/billing/paymob/appointments/:id/initiate", async (req, res): Promise<void> => {
+  const apiKey = process.env.PAYMOB_API_KEY;
+  const uatBypass = process.env.UAT_PAYMENT_BYPASS === "true";
+  if (!apiKey && !uatBypass) {
+    res.status(503).json({ error: "Payment gateway not configured. Please contact support." });
+    return;
+  }
+
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "patient") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const appointmentId = Number(req.params.id);
+  if (!Number.isInteger(appointmentId) || appointmentId <= 0) {
+    res.status(400).json({ error: "Invalid appointment ID" });
+    return;
+  }
+
+  const [appointment] = await db.select().from(appointmentsTable)
+    .where(and(
+      eq(appointmentsTable.id, appointmentId),
+      eq(appointmentsTable.patientUserId, payload.sub),
+    ))
+    .limit(1);
+  if (!appointment) {
+    res.status(404).json({ error: "Appointment not found" });
+    return;
+  }
+  if (appointment.status === "completed" || appointment.status === "cancelled") {
+    res.status(409).json({ error: "A terminal appointment cannot be paid" });
+    return;
+  }
+  if (!appointment.feeCharged || appointment.feeCharged <= 0) {
+    res.status(422).json({ error: "This appointment does not require payment" });
+    return;
+  }
+
+  const [existingPayment] = await db.select().from(paymentsTable)
+    .where(eq(paymentsTable.appointmentId, appointmentId))
+    .limit(1);
+  if (existingPayment && existingPayment.status !== "FAILED") {
+    res.status(409).json({
+      error: existingPayment.status === "PAID"
+        ? "Appointment is already paid"
+        : "An appointment payment is already in progress",
+    });
+    return;
+  }
+
+  const owner = await resolveBookingEscrowOwner(appointment.doctorId);
+  const amountCents = Math.round(appointment.feeCharged * 100);
+  const orderReference = `appointment-${appointmentId}`;
+
+  if (uatBypass) {
+    const orderId = `UAT-BOOKING-${appointmentId}-${Date.now()}`;
+    const [payment] = await db.transaction(async (tx) => {
+      const values = {
+        appointmentId,
+        escrowOwnerType: owner.ownerType,
+        escrowOwnerId: owner.ownerId,
+        paymobOrderId: orderId,
+        planType: "BOOKING",
+        amount: appointment.feeCharged!,
+        currency: "EGP",
+        status: "PAID" as const,
+        paidAt: new Date(),
+        escrowedAt: new Date(),
+      };
+      const [created] = existingPayment
+        ? await tx.update(paymentsTable).set(values)
+          .where(and(eq(paymentsTable.id, existingPayment.id), eq(paymentsTable.status, "FAILED")))
+          .returning()
+        : await tx.insert(paymentsTable).values(values).returning();
+      await escrowBookingInTx(tx, {
+        ...owner,
+        amount: appointment.feeCharged!,
+        bookingId: String(appointmentId),
+      });
+      return [created];
+    });
+    const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`;
+    res.json({
+      paymentKey: "uat-bypass",
+      iframeId: "uat",
+      orderId,
+      paymentId: payment.id,
+      iframeUrl: `${origin}/billing/payment-result?success=true&kind=booking&appointment_id=${appointmentId}&order_id=${orderId}`,
+    });
+    return;
+  }
+
+  const integrationId = process.env.PAYMOB_CARD_INTEGRATION_ID;
+  const iframeId = process.env.PAYMOB_IFRAME_ID;
+  if (!integrationId || !iframeId) {
+    res.status(422).json({ error: "Card payments are not configured." });
+    return;
+  }
+
+  try {
+    const authRes = await fetch(`${PAYMOB_BASE}/auth/tokens`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+    if (!authRes.ok) throw new Error(`Paymob auth failed: ${authRes.status}`);
+    const { token: authToken } = await authRes.json() as { token: string };
+
+    const orderRes = await fetch(`${PAYMOB_BASE}/ecommerce/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auth_token: authToken,
+        delivery_needed: false,
+        amount_cents: amountCents,
+        currency: "EGP",
+        items: [{
+          name: `Appointment #${appointmentId}`,
+          amount_cents: amountCents,
+          description: orderReference,
+          quantity: 1,
+        }],
+      }),
+    });
+    if (!orderRes.ok) throw new Error(`Paymob order failed: ${orderRes.status}`);
+    const orderData = await orderRes.json() as { id: number };
+    const paymobOrderId = String(orderData.id);
+    const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`;
+
+    const keyRes = await fetch(`${PAYMOB_BASE}/acceptance/payment_keys`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auth_token: authToken,
+        amount_cents: amountCents,
+        expiration: 3600,
+        order_id: orderData.id,
+        billing_data: {
+          apartment: "NA", email: "NA", floor: "NA", first_name: appointment.patientName,
+          street: "NA", building: "NA", phone_number: appointment.patientPhone, shipping_method: "NA",
+          postal_code: "NA", city: "Cairo", country: "EG", last_name: "NA", state: "NA",
+        },
+        currency: "EGP",
+        integration_id: Number(integrationId),
+        lock_order_when_paid: true,
+        redirect_url: `${origin}/billing/payment-result?kind=booking&appointment_id=${appointmentId}`,
+      }),
+    });
+    if (!keyRes.ok) throw new Error(`Paymob payment key failed: ${keyRes.status}`);
+    const keyData = await keyRes.json() as { token: string };
+
+    const values = {
+      appointmentId,
+      escrowOwnerType: owner.ownerType,
+      escrowOwnerId: owner.ownerId,
+      paymobOrderId,
+      planType: "BOOKING",
+      amount: appointment.feeCharged,
+      currency: "EGP",
+      status: "PENDING" as const,
+      paymobTransactionId: null,
+      paidAt: null,
+    };
+    const [payment] = existingPayment
+      ? await db.update(paymentsTable).set(values)
+        .where(and(eq(paymentsTable.id, existingPayment.id), eq(paymentsTable.status, "FAILED")))
+        .returning()
+      : await db.insert(paymentsTable).values(values).returning();
+    res.json({
+      paymentKey: keyData.token,
+      iframeId,
+      orderId: paymobOrderId,
+      paymentId: payment.id,
+      iframeUrl: `${PAYMOB_BASE}/acceptance/iframes/${iframeId}?payment_token=${keyData.token}`,
+    });
+  } catch (err) {
+    req.log.error({ err, appointmentId }, "Paymob booking initiate error");
+    res.status(502).json({ error: "Failed to initiate payment. Please try again." });
+  }
+});
+
+router.get("/billing/paymob/appointments/:id/status", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "patient") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const appointmentId = Number(req.params.id);
+  const [payment] = await db.select({
+    status: paymentsTable.status,
+    paymobOrderId: paymentsTable.paymobOrderId,
+  }).from(paymentsTable)
+    .innerJoin(appointmentsTable, eq(appointmentsTable.id, paymentsTable.appointmentId))
+    .where(and(
+      eq(paymentsTable.appointmentId, appointmentId),
+      eq(appointmentsTable.patientUserId, payload.sub),
+    ))
+    .limit(1);
+  if (!payment) {
+    res.status(404).json({ error: "Booking payment not found" });
+    return;
+  }
+  res.json(payment);
+});
+
 /* ─── POST /billing/paymob/webhook ─── */
 router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
   const hmacSecret = process.env.PAYMOB_HMAC_SECRET;
@@ -552,17 +800,68 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
 
   const obj = body["obj"] as Record<string, unknown> ?? {};
   const success = obj["success"] === true;
+  const isRefunded = obj["is_refunded"] === true;
   const orderObj = obj["order"] as Record<string, unknown> ?? {};
   const paymobOrderId = String(orderObj["id"] ?? "");
   const paymobTransactionId = String(obj["id"] ?? "");
 
   if (!paymobOrderId) { res.sendStatus(200); return; }
 
-  if (success) {
+  if (isRefunded) {
+    await db.transaction(async (tx) => {
+      const [refunded] = await tx
+        .update(paymentsTable)
+        .set({ status: "REFUNDED", paymobTransactionId })
+        .where(and(
+          eq(paymentsTable.paymobOrderId, paymobOrderId),
+          inArray(paymentsTable.status, ["PAID", "REFUND_PENDING", "REFUND_REQUESTED"]),
+        ))
+        .returning();
+      if (!refunded) {
+        logger.info({ paymobOrderId }, "Paymob refund already processed (idempotent skip)");
+        return;
+      }
+      if (refunded.amount > 0) {
+        if (refunded.appointmentId) {
+          if (refunded.escrowedAt && refunded.escrowOwnerType && refunded.escrowOwnerId) {
+            await refundBookingEscrowInTx(tx, {
+              ownerType: refunded.escrowOwnerType as WalletOwnerType,
+              ownerId: refunded.escrowOwnerId,
+              amount: refunded.amount,
+              bookingId: String(refunded.appointmentId),
+            });
+          }
+        } else {
+          await recordSubscriptionRefundInTx(tx, {
+            amount: refunded.amount,
+            paymentId: String(refunded.id),
+          });
+        }
+      }
+    });
+  } else if (success) {
+    const [pendingRefund] = await db.select({ id: paymentsTable.id })
+      .from(paymentsTable)
+      .where(and(
+        eq(paymentsTable.paymobOrderId, paymobOrderId),
+        eq(paymentsTable.status, "REFUND_PENDING"),
+      ))
+      .limit(1);
+    if (pendingRefund) {
+      try {
+        await dispatchPaymobRefund(pendingRefund.id);
+        res.sendStatus(200);
+      } catch (error) {
+        logger.error({ error, paymentId: pendingRefund.id }, "Failed to retry Paymob booking refund");
+        res.status(502).json({ error: "Refund request failed" });
+      }
+      return;
+    }
     let paidPayment: typeof paymentsTable.$inferSelect | undefined;
     let activatedDoctorId: number | null = null;
     let activatedCenterId: number | null = null;
 
+    let refundPaymentId: number | null = null;
     await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(paymentsTable)
@@ -575,8 +874,53 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
         return;
       }
 
+      if (updated.amount > 0) {
+        if (updated.appointmentId && updated.escrowOwnerType && updated.escrowOwnerId) {
+          const [appointment] = await tx.select({ status: appointmentsTable.status })
+            .from(appointmentsTable)
+            .where(eq(appointmentsTable.id, updated.appointmentId))
+            .limit(1);
+          if (appointment?.status === "cancelled") {
+            await tx.update(paymentsTable)
+              .set({ status: "REFUND_PENDING" })
+              .where(eq(paymentsTable.id, updated.id));
+            refundPaymentId = updated.id;
+            paidPayment = updated;
+            return;
+          }
+          await escrowBookingInTx(tx, {
+            ownerType: updated.escrowOwnerType as WalletOwnerType,
+            ownerId: updated.escrowOwnerId,
+            amount: updated.amount,
+            bookingId: String(updated.appointmentId),
+          });
+          await tx.update(paymentsTable)
+            .set({
+              status: appointment?.status === "completed" ? "SETTLED" : "PAID",
+              escrowedAt: new Date(),
+            })
+            .where(eq(paymentsTable.id, updated.id));
+          if (appointment?.status === "completed") {
+            await releaseBookingEscrowInTx(tx, {
+              ownerType: updated.escrowOwnerType as WalletOwnerType,
+              ownerId: updated.escrowOwnerId,
+              amount: updated.amount,
+              bookingId: String(updated.appointmentId),
+              commissionRate: 0.1,
+            });
+          }
+          paidPayment = updated;
+          return;
+        }
+        await recordSubscriptionFeeInTx(tx, { amount: updated.amount, paymentId: String(updated.id) });
+      }
+      if (!updated.planType) {
+        throw new Error("Subscription payment is missing a plan type");
+      }
+      const subscriptionPlan = updated.planType;
+
       const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + planMonths(updated.planType as PlanType));
+      endDate.setMonth(endDate.getMonth() + planMonths(subscriptionPlan as PlanType));
 
       if (updated.voucherCode) {
         const [voucher] = await tx.select().from(vouchersTable)
@@ -595,7 +939,7 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
           const base = doctor.subscriptionEndDate && doctor.subscriptionEndDate > new Date()
             ? doctor.subscriptionEndDate : new Date();
           const ed = new Date(base);
-          ed.setMonth(ed.getMonth() + planMonths(updated.planType as PlanType));
+          ed.setMonth(ed.getMonth() + planMonths(subscriptionPlan as PlanType));
           if (updated.voucherCode) {
             const [v] = await tx.select().from(vouchersTable)
               .where(eq(vouchersTable.code, updated.voucherCode)).limit(1);
@@ -603,7 +947,7 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
           }
           await tx.update(doctorsTable).set({
             subscriptionStatus: "ACTIVE",
-            subscriptionPlan: updated.planType,
+            subscriptionPlan,
             subscriptionEndDate: ed,
           }).where(eq(doctorsTable.id, doctor.id));
           activatedDoctorId = doctor.id;
@@ -616,7 +960,7 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
           const base = center.subscriptionEndDate && center.subscriptionEndDate > new Date()
             ? center.subscriptionEndDate : new Date();
           const ed = new Date(base);
-          ed.setMonth(ed.getMonth() + planMonths(updated.planType as PlanType));
+          ed.setMonth(ed.getMonth() + planMonths(subscriptionPlan as PlanType));
           if (updated.voucherCode) {
             const [v] = await tx.select().from(vouchersTable)
               .where(eq(vouchersTable.code, updated.voucherCode)).limit(1);
@@ -624,7 +968,7 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
           }
           await tx.update(medicalCentersTable).set({
             subscriptionStatus: "ACTIVE",
-            subscriptionPlan: updated.planType,
+            subscriptionPlan,
             subscriptionEndDate: ed,
           }).where(eq(medicalCentersTable.id, center.id));
           activatedCenterId = center.id;
@@ -634,6 +978,15 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
 
       paidPayment = updated;
     });
+    if (refundPaymentId !== null) {
+      try {
+        await dispatchPaymobRefund(refundPaymentId);
+      } catch (error) {
+        logger.error({ error, paymentId: refundPaymentId }, "Failed to request Paymob booking refund");
+        res.status(502).json({ error: "Refund request failed" });
+        return;
+      }
+    }
 
     // Send receipt email for doctor payments
     if (paidPayment && activatedDoctorId) {
@@ -647,7 +1000,7 @@ router.post("/billing/paymob/webhook", async (req, res): Promise<void> => {
             .where(eq(doctorsTable.id, doctorId)).limit(1);
           if (!row?.email) return;
           const pdfBuffer = await generateReceiptBuffer(payment, row.nameEn ?? "Doctor");
-          await sendReceiptEmail(row.email, payment, row.nameEn ?? "Doctor", pdfBuffer);
+          await sendReceiptEmail(row.email, { ...payment, planType: payment.planType ?? "Subscription" }, row.nameEn ?? "Doctor", pdfBuffer);
         } catch (err) {
           logger.warn({ err, doctorId, paymentId: payment.id }, "Failed to send receipt email");
         }
@@ -704,20 +1057,28 @@ router.post("/billing/checkout", async (req, res): Promise<void> => {
   endDate.setMonth(endDate.getMonth() + planMonths(planType as PlanType));
   if (additionalFreeDays > 0) endDate.setDate(endDate.getDate() + additionalFreeDays);
 
-  await db.update(doctorsTable).set({
-    subscriptionStatus: "ACTIVE",
-    subscriptionPlan: planType,
-    subscriptionEndDate: endDate,
-  }).where(eq(doctorsTable.id, doctor.id));
+  await db.transaction(async (tx) => {
+    await tx.update(doctorsTable).set({
+      subscriptionStatus: "ACTIVE",
+      subscriptionPlan: planType,
+      subscriptionEndDate: endDate,
+    }).where(eq(doctorsTable.id, doctor.id));
 
-  await db.insert(paymentsTable).values({
-    doctorId: doctor.id,
-    planType,
-    amount: finalPrice,
-    currency: settings.currency,
-    voucherCode: voucherCode ?? null,
-    status: "PAID",
-    paidAt: new Date(),
+    const [payment] = await tx.insert(paymentsTable).values({
+      doctorId: doctor.id,
+      planType,
+      amount: finalPrice,
+      currency: settings.currency,
+      voucherCode: voucherCode ?? null,
+      status: "PAID",
+      paidAt: new Date(),
+    }).returning();
+    if (finalPrice > 0) {
+      await recordSubscriptionFeeInTx(tx, {
+        amount: finalPrice,
+        paymentId: String(payment.id),
+      });
+    }
   });
 
   req.log.info({ doctorId: doctor.id, planType }, "Admin checkout — subscription activated");
@@ -774,7 +1135,7 @@ async function generateReceiptBuffer(payment: typeof paymentsTable.$inferSelect,
     const fmt = (k: string, v: string) => doc.text(`${k}: ${v}`, { continued: false }).moveDown(0.3);
     fmt("Name", name);
     fmt("Payment ID", String(payment.id));
-    fmt("Plan", payment.planType);
+    fmt("Plan", payment.planType ?? "Appointment");
     fmt("Amount", `${payment.amount} ${payment.currency}`);
     fmt("Status", payment.status);
     if (payment.voucherCode) fmt("Promo Code", payment.voucherCode);

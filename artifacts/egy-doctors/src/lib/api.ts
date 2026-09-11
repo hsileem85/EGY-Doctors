@@ -413,6 +413,20 @@ export function bookAppointment(data: {
   return request("/appointments", { method: "POST", body: JSON.stringify(data) });
 }
 
+export function initiateAppointmentPayment(appointmentId: number): Promise<PaymobInitiateResponse> {
+  return request(`/billing/paymob/appointments/${appointmentId}/initiate`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function getAppointmentPaymentStatus(appointmentId: number): Promise<{
+  status: "PENDING" | "PAID" | "FAILED" | "REFUND_PENDING" | "REFUND_REQUESTED" | "REFUNDED" | "SETTLED";
+  paymobOrderId: string | null;
+}> {
+  return request(`/billing/paymob/appointments/${appointmentId}/status`);
+}
+
 export function submitReview(
   doctorId: number,
   data: { patientName: string; rating: number; text?: string },
