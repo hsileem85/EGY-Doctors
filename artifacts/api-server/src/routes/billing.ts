@@ -21,10 +21,13 @@ import {
   releaseBookingEscrowInTx,
 } from "../lib/wallet.service.js";
 import { dispatchPaymobRefund } from "../lib/paymob.service.js";
+import { ReplitConnectors } from "@replit/connectors-sdk";
+import { buildStripeBookingCheckoutForm, stripeBookingIdempotencyKey } from "../lib/stripeBooking.js";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 const PAYMOB_BASE = "https://accept.paymob.com/api";
 const router: IRouter = Router();
+const connectors = new ReplitConnectors();
 
 interface JwtPayload { sub: number; role: string }
 function decodeJwt(authHeader: string | undefined): JwtPayload | null {
@@ -44,6 +47,15 @@ const PLAN_LABELS: Record<PlanType, string> = {
 
 function isAllowedRole(role: string): role is UserRole {
   return role === "doctor" || role === "medical_center";
+}
+
+function trustedAppOrigin(req: { headers: Record<string, unknown> }): string {
+  const configured = process.env.APP_URL?.replace(/\/+$/, "");
+  const requestOrigin = typeof req.headers.origin === "string" ? req.headers.origin.replace(/\/+$/, "") : "";
+  if (configured) return configured;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(requestOrigin)) return requestOrigin;
+  if (process.env.NODE_ENV !== "production" && /^https:\/\/[a-z0-9-]+\.replit\.dev$/i.test(requestOrigin)) return requestOrigin;
+  throw new Error("APP_URL is not configured");
 }
 
 /* ── Fetch pricing settings, role-aware ── */
@@ -551,13 +563,7 @@ router.post("/billing/paymob/initiate", async (req, res): Promise<void> => {
 
 /* ─── POST /billing/paymob/appointments/:id/initiate ─── */
 router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/payment"], async (req, res): Promise<void> => {
-  const apiKey = process.env.PAYMOB_API_KEY;
-  const uatBypass = process.env.UAT_PAYMENT_BYPASS === "true";
-  if (!apiKey && !uatBypass) {
-    res.status(503).json({ error: "Payment gateway not configured. Please contact support." });
-    return;
-  }
-
+  const uatBypass = false;
   const payload = decodeJwt(req.headers.authorization);
   if (!payload || payload.role !== "patient") {
     res.status(403).json({ error: "Forbidden" });
@@ -595,25 +601,31 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
   }
   const [existingPayment] = await db.select().from(paymentsTable)
     .where(eq(paymentsTable.appointmentId, appointmentId)).limit(1);
-  if (existingPayment && existingPayment.status !== "FAILED") {
+   if (existingPayment && existingPayment.status !== "FAILED" &&
+       !(existingPayment.status === "PENDING" && existingPayment.paymobOrderId?.startsWith("stripe:pending:"))) {
     res.status(409).json({ error: existingPayment.status === "PAID" ? "Appointment is already paid" : "An appointment payment is already in progress" });
     return;
   }
-   const methodResult = z.enum(["CARD", "WALLET", "CASH", "FAWRY"]).safeParse(String(req.body?.paymentMethod ?? "CARD").toUpperCase());
+   const methodResult = z.enum(["CARD", "CASH"]).safeParse(String(req.body?.paymentMethod ?? "CARD").toUpperCase());
   if (!methodResult.success) { res.status(422).json({ error: "Invalid payment method" }); return; }
    const requestedMethod = methodResult.data;
-   if (requestedMethod === "FAWRY") {
-     res.status(422).json({ error: "Fawry booking payments are not configured for asynchronous reference payments yet." });
-     return;
-   }
   const cashbackInput = z.object({ useCashback: z.boolean().default(false) }).safeParse(req.body ?? {});
   if (!cashbackInput.success) { res.status(422).json({ error: "Invalid cashback amount" }); return; }
+   if (cashbackInput.data.useCashback) {
+     res.status(422).json({ error: "Cashback cannot be combined with Stripe checkout" });
+     return;
+   }
   const [clinic] = appointment.clinicId
     ? await db.select({ acceptedPaymentMethods: clinicsTable.acceptedPaymentMethods }).from(clinicsTable).where(eq(clinicsTable.id, appointment.clinicId)).limit(1)
     : [];
-   const accepted = clinic?.acceptedPaymentMethods?.length ? clinic.acceptedPaymentMethods : ["CASH"];
+   const accepted = Array.from(new Set((clinic?.acceptedPaymentMethods ?? [])
+     .filter((method): method is "CASH" | "CARD" => method === "CASH" || method === "CARD")));
+   if (!accepted.length) accepted.push("CASH");
   if (!accepted.includes(requestedMethod)) { res.status(422).json({ error: "Selected payment method is not accepted by this clinic" }); return; }
-  if (requestedMethod === "CASH") { res.status(422).json({ error: "Cash bookings do not require online payment" }); return; }
+   if (requestedMethod === "CASH") {
+     res.json({ paymentId: null, orderId: `CASH-${appointmentId}`, iframeUrl: "", status: "CASH" });
+     return;
+   }
   const [patientWallet] = await db.select({ balance: walletsTable.balance }).from(walletsTable)
     .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub))));
   const requestedCashback = existingPayment?.status === "FAILED" && existingPayment.cashbackAmount > 0
@@ -628,7 +640,7 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
     const [payment] = await db.transaction(async (tx) => {
       if (cashbackUsed > 0) {
         const [patient] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} - ${cashbackUsed}`, updatedAt: new Date() })
-          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub)), gte(walletsTable.balance, cashbackUsed))).returning();
+           .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String((payload as JwtPayload).sub)), gte(walletsTable.balance, cashbackUsed))).returning();
         if (!patient) throw new Error("Insufficient cashback balance");
         await tx.insert(walletTransactionsTable).values({ walletId: patient.id, type: "DEBIT", category: "CASHBACK_USAGE", amount: cashbackUsed, balancePost: patient.balance, referenceId: String(appointmentId), description: "Cashback applied to booking" });
       }
@@ -642,12 +654,12 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
   const amountCents = Math.round(remainder * 100);
   const orderReference = `appointment-${appointmentId}`;
 
-  if (uatBypass) {
+   if (false) {
     const orderId = `UAT-BOOKING-${appointmentId}-${Date.now()}`;
     const [payment] = await db.transaction(async (tx) => {
       if (cashbackUsed > 0) {
         const [patient] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} - ${cashbackUsed}`, updatedAt: new Date() })
-          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub)), gte(walletsTable.balance, cashbackUsed))).returning();
+          .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String((payload as JwtPayload).sub)), gte(walletsTable.balance, cashbackUsed))).returning();
         if (!patient) throw new Error("Insufficient cashback balance");
         await tx.insert(walletTransactionsTable).values({ walletId: patient.id, type: "DEBIT", category: "CASHBACK_USAGE", amount: cashbackUsed, balancePost: patient.balance, referenceId: String(appointmentId), description: "Cashback applied to booking" });
       }
@@ -687,75 +699,18 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
     return;
   }
 
-   const integrationId = requestedMethod === "WALLET"
-     ? process.env.PAYMOB_WALLET_INTEGRATION_ID
-     : process.env.PAYMOB_CARD_INTEGRATION_ID;
-   const iframeId = requestedMethod === "WALLET"
-     ? process.env.PAYMOB_WALLET_IFRAME_ID
-     : process.env.PAYMOB_IFRAME_ID;
-  if (!integrationId || !iframeId) {
-     const label = requestedMethod === "WALLET" ? "Wallet" : "Card";
-     res.status(422).json({ error: `${label} payments are not configured.` });
-    return;
-  }
-
-  try {
-    const authRes = await fetch(`${PAYMOB_BASE}/auth/tokens`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: apiKey }),
-    });
-    if (!authRes.ok) throw new Error(`Paymob auth failed: ${authRes.status}`);
-    const { token: authToken } = await authRes.json() as { token: string };
-
-    const orderRes = await fetch(`${PAYMOB_BASE}/ecommerce/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: authToken,
-        delivery_needed: false,
-        amount_cents: amountCents,
-        currency: "EGP",
-        items: [{
-          name: `Appointment #${appointmentId}`,
-          amount_cents: amountCents,
-          description: orderReference,
-          quantity: 1,
-        }],
-      }),
-    });
-    if (!orderRes.ok) throw new Error(`Paymob order failed: ${orderRes.status}`);
-    const orderData = await orderRes.json() as { id: number };
-    const paymobOrderId = String(orderData.id);
-    const origin = (req.headers.origin as string | undefined) ?? `https://${req.headers.host}`;
-
-    const keyRes = await fetch(`${PAYMOB_BASE}/acceptance/payment_keys`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: authToken,
-        amount_cents: amountCents,
-        expiration: 3600,
-        order_id: orderData.id,
-        billing_data: {
-          apartment: "NA", email: "NA", floor: "NA", first_name: appointment.patientName,
-          street: "NA", building: "NA", phone_number: appointment.patientPhone, shipping_method: "NA",
-          postal_code: "NA", city: "Cairo", country: "EG", last_name: "NA", state: "NA",
-        },
-        currency: "EGP",
-        integration_id: Number(integrationId),
-        lock_order_when_paid: true,
-        redirect_url: `${origin}/billing/payment-result?kind=booking&appointment_id=${appointmentId}`,
-      }),
-    });
-    if (!keyRes.ok) throw new Error(`Paymob payment key failed: ${keyRes.status}`);
-    const keyData = await keyRes.json() as { token: string };
-
-    const values = {
+   let initiatedPaymentId: number | null = null;
+   try {
+     const origin = trustedAppOrigin(req);
+     const pendingReference = existingPayment?.status === "PENDING" && existingPayment.paymobOrderId?.startsWith("stripe:pending:")
+       ? existingPayment.paymobOrderId
+       : `stripe:pending:${crypto.randomUUID()}`;
+     const values = {
       appointmentId,
       escrowOwnerType: owner.ownerType,
       escrowOwnerId: owner.ownerId,
-      paymobOrderId,
+       paymobOrderId: pendingReference,
+      createdAt: new Date(),
       planType: "BOOKING",
      amount: remainder,
      cashbackAmount: cashbackUsed,
@@ -764,31 +719,145 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
       paymobTransactionId: null,
       paidAt: null,
     };
-    const [payment] = await db.transaction(async (tx) => {
+     const [payment] = await db.transaction(async (tx) => {
       if (cashbackUsed > 0 && !(existingPayment?.status === "FAILED" && existingPayment.cashbackAmount > 0)) {
         const [patient] = await tx.update(walletsTable).set({ balance: sql`${walletsTable.balance} - ${cashbackUsed}`, updatedAt: new Date() })
           .where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payload.sub)), gte(walletsTable.balance, cashbackUsed))).returning();
         if (!patient) throw new Error("Insufficient cashback balance");
         await tx.insert(walletTransactionsTable).values({ walletId: patient.id, type: "DEBIT", category: "CASHBACK_USAGE", amount: cashbackUsed, balancePost: patient.balance, referenceId: String(appointmentId), description: "Cashback applied to booking" });
       }
-      return existingPayment
-        ? tx.update(paymentsTable).set(values).where(and(eq(paymentsTable.id, existingPayment.id), eq(paymentsTable.status, "FAILED"))).returning()
+       return existingPayment
+         ? tx.update(paymentsTable).set(values).where(and(eq(paymentsTable.id, existingPayment.id), inArray(paymentsTable.status, ["FAILED", "PENDING"]))).returning()
         : tx.insert(paymentsTable).values(values).returning();
     });
-    res.json({
-      paymentKey: keyData.token,
-      iframeId,
-      orderId: paymobOrderId,
-      paymentId: payment.id,
-      iframeUrl: `${PAYMOB_BASE}/acceptance/iframes/${iframeId}?payment_token=${keyData.token}`,
-    });
-  } catch (err) {
-    req.log.error({ err, appointmentId }, "Paymob booking initiate error");
+      const form = buildStripeBookingCheckoutForm({
+        origin, appointmentId, paymentId: payment.id, amount: remainder, patientUserId: payload.sub,
+      });
+     initiatedPaymentId = payment.id;
+     const response = await connectors.proxy("stripe", "/v1/checkout/sessions", {
+       method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": stripeBookingIdempotencyKey(payment.id, pendingReference) },
+       body: form,
+     });
+     const session = await response.json() as { id?: string; url?: string; error?: { message?: string } };
+     if (!response.ok || !session.id || !session.url) throw new Error(session.error?.message ?? "Stripe checkout failed");
+     await db.update(paymentsTable).set({ paymobOrderId: `stripe:${session.id}` })
+       .where(and(eq(paymentsTable.id, payment.id), eq(paymentsTable.paymobOrderId, pendingReference)));
+     res.json({ checkoutUrl: session.url, sessionId: session.id, paymentId: payment.id, iframeUrl: session.url });
+   } catch (err) {
+     // Network/5xx failures are ambiguous: preserve the local pending
+     // reference so a retry reuses the same Stripe idempotency key/session.
+     req.log.error({ err, appointmentId }, "Stripe booking initiate error");
     res.status(502).json({ error: "Failed to initiate payment. Please try again." });
   }
 });
 
-router.get("/billing/paymob/appointments/:id/status", async (req, res): Promise<void> => {
+router.post("/billing/stripe/appointments/confirm", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "patient") { res.status(401).json({ error: "Unauthorized" }); return; }
+  const parsed = z.object({ sessionId: z.string().regex(/^cs_(test|live)_/) }).safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Invalid Stripe checkout session" }); return; }
+  try {
+    const response = await connectors.proxy("stripe", `/v1/checkout/sessions/${encodeURIComponent(parsed.data.sessionId)}`);
+    const session = await response.json() as {
+      id?: string; mode?: string; client_reference_id?: string | null; payment_status?: string; payment_intent?: string | null;
+      amount_total?: number | null; currency?: string | null; metadata?: Record<string, string>;
+      error?: { message?: string };
+    };
+    if (!response.ok) throw new Error(session.error?.message ?? "Stripe verification failed");
+    if (session.id !== parsed.data.sessionId || session.mode !== "payment" ||
+        session.payment_status !== "paid") {
+      res.status(409).json({ status: "PENDING", error: "Stripe payment is not complete" }); return;
+    }
+    const paymentId = Number(session.metadata?.payment_id);
+    const appointmentId = Number(session.metadata?.appointment_id);
+    if (!Number.isInteger(paymentId) || !Number.isInteger(appointmentId) ||
+        session.metadata?.patient_user_id !== String(payload.sub)) {
+      res.status(403).json({ error: "Stripe session does not belong to this patient" }); return;
+    }
+    if (session.client_reference_id !== String(paymentId)) {
+      res.status(403).json({ error: "Stripe session reference does not match payment" }); return;
+    }
+    let status: "PAID" | "PENDING" | "REFUNDED" = "PENDING";
+    await db.transaction(async (tx) => {
+      const [payment] = await tx.select().from(paymentsTable)
+        .innerJoin(appointmentsTable, eq(appointmentsTable.id, paymentsTable.appointmentId))
+        .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.appointmentId, appointmentId),
+          eq(paymentsTable.paymobOrderId, `stripe:${parsed.data.sessionId}`),
+          eq(appointmentsTable.patientUserId, payload.sub))).limit(1);
+      if (!payment) throw new Error("Payment ownership validation failed");
+      const row = payment.payments;
+      if (row.currency !== "EGP" || session.currency?.toUpperCase() !== row.currency ||
+          session.amount_total !== Math.round(row.amount * 100)) throw new Error("Stripe payment amount does not match appointment");
+      if (payment.appointments.status === "cancelled") {
+        await tx.update(paymentsTable).set({ status: "REFUND_PENDING" })
+          .where(and(eq(paymentsTable.id, paymentId), inArray(paymentsTable.status, ["PENDING", "FAILED"])));
+        if (session.payment_intent) {
+          const refund = await connectors.proxy("stripe", "/v1/refunds", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": `booking-refund:${paymentId}` },
+            body: new URLSearchParams({ payment_intent: session.payment_intent }),
+          });
+          const refundBody = await refund.json().catch(() => ({})) as { status?: string };
+          if (!refund.ok || refundBody.status !== "succeeded") {
+            throw new Error(`Stripe refund for cancelled appointment is ${refundBody.status ?? "pending"}`);
+          }
+        }
+        const [refunded] = await tx.update(paymentsTable).set({
+          status: "REFUNDED", paymobTransactionId: session.payment_intent ?? session.id,
+        }).where(and(eq(paymentsTable.id, paymentId), inArray(paymentsTable.status, ["PENDING", "FAILED", "REFUND_PENDING"]))).returning();
+        if (refunded && Number(row.cashbackAmount ?? 0) > 0 && payment.appointments.patientUserId) {
+          const [wallet] = await tx.update(walletsTable).set({
+            balance: sql`${walletsTable.balance} + ${row.cashbackAmount}`, updatedAt: new Date(),
+          }).where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(payment.appointments.patientUserId)))).returning();
+          if (wallet) await tx.insert(walletTransactionsTable).values({
+            walletId: wallet.id, type: "CREDIT", category: "CASHBACK_REWARD",
+            amount: row.cashbackAmount, balancePost: wallet.balance, referenceId: String(paymentId),
+            description: "Cashback restored after Stripe refund",
+          });
+        }
+        status = "REFUNDED";
+        return;
+      }
+      const [updated] = await tx.update(paymentsTable).set({
+        status: "PAID", paymobTransactionId: session.payment_intent ?? session.id,
+        paidAt: new Date(), escrowedAt: new Date(),
+      }).where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.appointmentId, appointmentId),
+        eq(paymentsTable.status, "PENDING"))).returning();
+      if (!updated) {
+        const [existing] = await tx.select({ status: paymentsTable.status }).from(paymentsTable)
+          .where(eq(paymentsTable.id, paymentId)).limit(1);
+        if (existing?.status === "PAID") { status = "PAID"; return; }
+        throw new Error("Payment is not pending");
+      }
+      await escrowBookingInTx(tx, {
+        ownerType: updated.escrowOwnerType as WalletOwnerType,
+        ownerId: updated.escrowOwnerId!,
+        amount: Number(updated.amount) + Number(updated.cashbackAmount ?? 0),
+        bookingId: String(appointmentId),
+      });
+      if (payment.appointments.status === "completed") {
+        const settled = await tx.update(paymentsTable).set({ status: "SETTLED" })
+          .where(and(eq(paymentsTable.id, updated.id), eq(paymentsTable.status, "PAID"))).returning();
+        const [commissionSetting] = await tx.select({ value: siteSettingsTable.value })
+          .from(siteSettingsTable).where(eq(siteSettingsTable.key, "booking_commission_rate")).limit(1);
+        if (settled[0]) await releaseBookingEscrowInTx(tx, {
+          ownerType: updated.escrowOwnerType as WalletOwnerType, ownerId: updated.escrowOwnerId!,
+          amount: Number(updated.amount) + Number(updated.cashbackAmount ?? 0), bookingId: String(appointmentId),
+          commissionRate: Math.min(1, Math.max(0, Number(commissionSetting?.value ?? 0.1))),
+          patientUserId: String(payload.sub),
+        });
+      }
+      status = "PAID";
+    });
+    res.json({ status, appointmentId, paymentId });
+  } catch (error) {
+    req.log.error({ error, sessionId: parsed.data.sessionId }, "Stripe appointment confirmation failed");
+    res.status(409).json({ error: "Failed to confirm Stripe payment" });
+  }
+});
+
+ router.get("/billing/paymob/appointments/:id/status", async (req, res): Promise<void> => {
   const payload = decodeJwt(req.headers.authorization);
   if (!payload || payload.role !== "patient") {
     res.status(403).json({ error: "Forbidden" });

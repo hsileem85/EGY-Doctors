@@ -2,15 +2,20 @@ import { Router, type IRouter } from "express";
 import { eq, and, desc, ne, inArray, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { db, appointmentsTable, appointmentReminderDeliveriesTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, type WalletOwnerType } from "@workspace/db";
+import { db, appointmentsTable, appointmentReminderDeliveriesTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, walletsTable, walletTransactionsTable, type WalletOwnerType } from "@workspace/db";
 import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from "../lib/email";
 import {
   releaseBookingEscrowInTx,
+  escrowBookingInTx,
+  refundBookingEscrowInTx,
 } from "../lib/wallet.service.js";
 import { dispatchPaymobRefund } from "../lib/paymob.service.js";
+import { ReplitConnectors } from "@replit/connectors-sdk";
+import { buildStripeBookingCheckoutForm, stripeBookingIdempotencyKey } from "../lib/stripeBooking.js";
 import appointmentsSlotsRouter from "./appointments-slots";
 
 const router: IRouter = Router();
+const connectors = new ReplitConnectors();
 router.use(appointmentsSlotsRouter);
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-prod";
 
@@ -195,14 +200,105 @@ router.post("/appointments", async (req, res): Promise<void> => {
       eq(appointmentsTable.doctorId, d.doctorId),
       eq(appointmentsTable.appointmentDate, d.appointmentDate),
       eq(appointmentsTable.appointmentTime, d.appointmentTime),
-      ne(appointmentsTable.status, "cancelled"),
-      eq(paymentsTable.status, "PENDING"),
+       inArray(paymentsTable.status, ["PENDING", "FAILED"]),
       // Payment creation is the authoritative checkout age.
       sql`${paymentsTable.createdAt} < ${pendingCutoff}`,
     ));
   if (stale.length) {
     await db.transaction(async (tx) => {
       for (const row of stale) {
+        const [bound] = await tx.select({ paymobOrderId: paymentsTable.paymobOrderId })
+          .from(paymentsTable).where(eq(paymentsTable.id, row.paymentId)).limit(1);
+        // A Stripe checkout can complete after a lost redirect. Never release its
+        // reservation based only on age; reconciliation must inspect Stripe first.
+        if (bound?.paymobOrderId?.startsWith("stripe:")) {
+          let sessionId = bound.paymobOrderId.slice("stripe:".length);
+          let currentBoundReference = bound.paymobOrderId;
+          try {
+            if (sessionId.startsWith("pending:")) {
+              const [appointment] = await tx.select().from(appointmentsTable)
+                .where(eq(appointmentsTable.id, row.appointmentId)).limit(1);
+              if (!appointment?.feeCharged || appointment.feeCharged <= 0 || !appointment.patientUserId) continue;
+              const origin = process.env.APP_URL?.replace(/\/+$/, "");
+              if (!origin) continue;
+              const response = await connectors.proxy("stripe", "/v1/checkout/sessions", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": stripeBookingIdempotencyKey(row.paymentId, bound.paymobOrderId) },
+                body: buildStripeBookingCheckoutForm({ origin, appointmentId: row.appointmentId, paymentId: row.paymentId, amount: appointment.feeCharged, patientUserId: appointment.patientUserId }),
+              });
+              if (!response.ok) continue;
+              const created = await response.json() as { id?: string };
+              if (!created.id) continue;
+              sessionId = created.id;
+              currentBoundReference = `stripe:${sessionId}`;
+              await tx.update(paymentsTable).set({ paymobOrderId: currentBoundReference })
+                .where(and(eq(paymentsTable.id, row.paymentId), eq(paymentsTable.paymobOrderId, bound.paymobOrderId)));
+            }
+            const response = await connectors.proxy("stripe", `/v1/checkout/sessions/${encodeURIComponent(sessionId)}`);
+            const session = await response.json() as { payment_status?: string; payment_intent?: string | null };
+            if (response.ok && session.payment_status === "paid") {
+              const [boundPayment] = await tx.select().from(paymentsTable)
+                .where(and(eq(paymentsTable.id, row.paymentId), eq(paymentsTable.paymobOrderId, currentBoundReference),
+                  inArray(paymentsTable.status, ["PENDING", "FAILED"]))).limit(1);
+              if (boundPayment) {
+                const [appointment] = await tx.select().from(appointmentsTable)
+                  .where(eq(appointmentsTable.id, row.appointmentId)).limit(1);
+                if (appointment?.status === "cancelled") {
+                  const intent = session.payment_intent;
+                  if (!intent) continue;
+                   const refund = await connectors.proxy("stripe", "/v1/refunds", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": `booking-refund:${row.paymentId}` },
+                    body: new URLSearchParams({ payment_intent: intent }),
+                  });
+                   const refundBody = await refund.json().catch(() => ({})) as { status?: string };
+                   if (!refund.ok || refundBody.status !== "succeeded") continue;
+                   const [refunded] = await tx.update(paymentsTable).set({ status: "REFUNDED", paymobTransactionId: intent })
+                     .where(and(eq(paymentsTable.id, row.paymentId), inArray(paymentsTable.status, ["PENDING", "FAILED"]))).returning();
+                  if (refunded && refunded.cashbackAmount > 0 && appointment.patientUserId) {
+                    const [wallet] = await tx.update(walletsTable).set({
+                      balance: sql`${walletsTable.balance} + ${refunded.cashbackAmount}`, updatedAt: new Date(),
+                    }).where(and(eq(walletsTable.ownerType, "PATIENT"), eq(walletsTable.ownerId, String(appointment.patientUserId)))).returning();
+                    if (wallet) await tx.insert(walletTransactionsTable).values({
+                      walletId: wallet.id, type: "CREDIT", category: "CASHBACK_REWARD",
+                      amount: refunded.cashbackAmount, balancePost: wallet.balance,
+                      referenceId: String(refunded.id), description: "Cashback restored after Stripe refund",
+                    });
+                  }
+                  continue;
+                }
+                await tx.update(paymentsTable).set({
+                  status: "PAID", paidAt: new Date(), escrowedAt: new Date(),
+                  paymobTransactionId: session.payment_intent ?? null,
+                }).where(and(eq(paymentsTable.id, row.paymentId), inArray(paymentsTable.status, ["PENDING", "FAILED"])));
+                if (boundPayment.escrowOwnerType && boundPayment.escrowOwnerId) {
+                  await escrowBookingInTx(tx, {
+                    ownerType: boundPayment.escrowOwnerType as WalletOwnerType,
+                    ownerId: boundPayment.escrowOwnerId,
+                    amount: Number(boundPayment.amount) + Number(boundPayment.cashbackAmount ?? 0),
+                    bookingId: String(row.appointmentId),
+                  });
+                  if (appointment?.status === "completed") {
+                    const [settled] = await tx.update(paymentsTable).set({ status: "SETTLED" })
+                      .where(and(eq(paymentsTable.id, row.paymentId), eq(paymentsTable.status, "PAID"))).returning();
+                    if (settled) await releaseBookingEscrowInTx(tx, {
+                      ownerType: boundPayment.escrowOwnerType as WalletOwnerType,
+                      ownerId: boundPayment.escrowOwnerId,
+                      amount: Number(boundPayment.amount) + Number(boundPayment.cashbackAmount ?? 0),
+                      bookingId: String(row.appointmentId),
+                      commissionRate: await getBookingCommissionRate(tx),
+                      patientUserId: appointment.patientUserId ? String(appointment.patientUserId) : null,
+                    });
+                  }
+                }
+              }
+              continue;
+            }
+          } catch {
+            // Fail closed: an unavailable gateway cannot prove an unpaid session.
+            continue;
+          }
+        }
         await tx.update(paymentsTable).set({ status: "FAILED" })
           .where(and(eq(paymentsTable.id, row.paymentId), eq(paymentsTable.status, "PENDING")));
         await tx.update(appointmentsTable).set({ status: "cancelled" })
@@ -587,6 +683,14 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
     }
 
     if (existing.feeCharged && existing.feeCharged > 0) {
+      if (parsed.data.status === "cancelled") {
+        const [pending] = await tx.select().from(paymentsTable)
+          .where(and(eq(paymentsTable.appointmentId, existing.id), eq(paymentsTable.status, "PENDING"))).limit(1);
+        if (pending) {
+          await tx.update(paymentsTable).set({ status: "FAILED" })
+            .where(and(eq(paymentsTable.id, pending.id), eq(paymentsTable.status, "PENDING")));
+        }
+      }
       const [payment] = await tx.select().from(paymentsTable)
         .where(and(
           eq(paymentsTable.appointmentId, existing.id),
@@ -639,7 +743,36 @@ router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   }
   if (refundPaymentId !== null) {
     try {
-      await dispatchPaymobRefund(refundPaymentId);
+      const [payment] = await db.select({
+        paymobOrderId: paymentsTable.paymobOrderId,
+        paymentIntent: paymentsTable.paymobTransactionId,
+      }).from(paymentsTable).where(eq(paymentsTable.id, refundPaymentId)).limit(1);
+      if (payment?.paymobOrderId?.startsWith("stripe:")) {
+        if (!payment.paymentIntent) throw new Error("Stripe payment intent is missing");
+        const refund = await connectors.proxy("stripe", "/v1/refunds", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": `booking-refund:${refundPaymentId}` },
+          body: new URLSearchParams({ payment_intent: payment.paymentIntent }),
+        });
+        const refundBody = await refund.json().catch(() => ({})) as { status?: string };
+        if (!refund.ok || refundBody.status !== "succeeded") {
+          throw new Error(`Stripe refund is ${refundBody.status ?? `unavailable (${refund.status})`}`);
+        }
+        await db.transaction(async (tx) => {
+          const [refunded] = await tx.update(paymentsTable).set({ status: "REFUNDED" })
+            .where(and(eq(paymentsTable.id, refundPaymentId!), eq(paymentsTable.status, "REFUND_PENDING"))).returning();
+          if (refunded?.escrowOwnerType && refunded.escrowOwnerId) {
+            await refundBookingEscrowInTx(tx, {
+              ownerType: refunded.escrowOwnerType as WalletOwnerType,
+              ownerId: refunded.escrowOwnerId,
+              amount: Number(refunded.amount) + Number(refunded.cashbackAmount ?? 0),
+              bookingId: String(id),
+            });
+          }
+        });
+      } else {
+        await dispatchPaymobRefund(refundPaymentId);
+      }
     } catch (error) {
       req.log.error({ error, paymentId: refundPaymentId }, "Failed to request Paymob booking refund");
       res.status(502).json({ error: "Refund request is pending. Please try again." });

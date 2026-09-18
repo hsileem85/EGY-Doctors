@@ -1,4 +1,4 @@
-export type AppointmentPaymentMethod = "CASH" | "CARD" | "WALLET" | "FAWRY";
+export type AppointmentPaymentMethod = "CASH" | "CARD";
 
 export interface AppointmentPaymentParams {
   paymentMethod: AppointmentPaymentMethod;

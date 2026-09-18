@@ -529,7 +529,11 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
       availabilityFrom: c.availabilityFrom ?? null,
       availabilityTo: c.availabilityTo ?? null,
       sessionsPerHour: c.sessionsPerHour ?? null,
-       acceptedPaymentMethods: c.acceptedPaymentMethods ?? ["CASH"],
+       acceptedPaymentMethods: Array.from(new Set((c.acceptedPaymentMethods ?? [])
+         .filter((method): method is "CASH" | "CARD" => method === "CASH" || method === "CARD"))).length
+         ? Array.from(new Set((c.acceptedPaymentMethods ?? [])
+           .filter((method): method is "CASH" | "CARD" => method === "CASH" || method === "CARD")))
+         : ["CASH"],
       bookingConfirmationMethod: (c.bookingConfirmationMethod as "automatic" | "manual" | null) ?? "automatic",
     })),
     reviewList: reviews.map((r) => ({
@@ -831,7 +835,7 @@ router.post("/doctor/clinics", async (req, res): Promise<void> => {
     followUpDays: z.coerce.number().int().min(0).optional().nullable(),
     followUpPrice: z.coerce.number().int().min(0).optional().nullable(),
     bookingConfirmationMethod: z.enum(["automatic", "manual"]),
-     acceptedPaymentMethods: z.array(z.enum(["CASH", "CARD", "WALLET", "FAWRY"])).min(1).optional(),
+acceptedPaymentMethods: z.array(z.enum(["CASH", "CARD"])).min(1).optional(),
     areaId: z.coerce.number({ message: "Area is required" }),
     lat: z.coerce.number({ message: "Clinic location (latitude) is required" }),
     lng: z.coerce.number({ message: "Clinic location (longitude) is required" }),
@@ -899,7 +903,7 @@ router.put("/doctor/clinics/:id", async (req, res): Promise<void> => {
     followUpDays: z.coerce.number().int().min(0).optional().nullable(),
     followUpPrice: z.coerce.number().int().min(0).optional().nullable(),
     bookingConfirmationMethod: z.enum(["automatic", "manual"]).optional(),
-     acceptedPaymentMethods: z.array(z.enum(["CASH", "CARD", "WALLET", "FAWRY"])).min(1).optional(),
+acceptedPaymentMethods: z.array(z.enum(["CASH", "CARD"])).min(1).optional(),
     areaId: z.coerce.number({ message: "Area is required" }).optional(),
     lat: z.coerce.number({ message: "Clinic location (latitude) is required" }).optional(),
     lng: z.coerce.number({ message: "Clinic location (longitude) is required" }).optional(),

@@ -40,6 +40,7 @@ export default function PaymentResult() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const isStripeWalletTopUp = params.get("kind") === "wallet_top_up" && params.get("provider") === "stripe";
+    const isStripeBooking = params.get("kind") === "booking" && params.get("provider") === "stripe";
     const stripeSessionId = params.get("session_id");
     if (isStripeWalletTopUp) {
       if (params.get("cancelled") === "true" || !stripeSessionId) {
@@ -49,6 +50,23 @@ export default function PaymentResult() {
       void confirmStripeWalletTopUp(stripeSessionId)
         .then((result) => setStatus(result.status === "PAID" ? "success" : "confirming"))
         .catch(() => setStatus("failed"));
+      return;
+    }
+    if (isStripeBooking) {
+      const appointmentId = Number(params.get("appointment_id")) || null;
+      if (params.get("cancelled") === "true" || !stripeSessionId || !appointmentId) {
+        setStatus("failed");
+        return;
+      }
+      const token = localStorage.getItem("egy_token");
+      void fetch("/api/billing/stripe/appointments/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ sessionId: stripeSessionId }),
+      }).then(async response => {
+        const result = await response.json().catch(() => ({}));
+        setStatus(response.ok && result.status === "PAID" ? "success" : "failed");
+      }).catch(() => setStatus("failed"));
       return;
     }
 

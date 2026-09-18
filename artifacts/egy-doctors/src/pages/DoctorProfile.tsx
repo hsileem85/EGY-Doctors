@@ -351,8 +351,8 @@ export default function DoctorProfile() {
 
   const appointmentFee = Number(selectedClinic?.fee ?? 0);
   const walletBalance = Number((wallet as { balance?: number } | undefined)?.balance ?? 0);
-  const cashbackAmount = useCashback ? Math.min(Math.max(walletBalance, 0), Math.max(appointmentFee, 0)) : 0;
-  const cardCharge = Math.max(appointmentFee - cashbackAmount, 0);
+  const cashbackAmount = 0;
+  const cardCharge = appointmentFee;
   const acceptedPaymentMethods = (selectedClinic as (ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }) | null)
     ?.acceptedPaymentMethods ?? ["CASH"];
 
@@ -373,7 +373,7 @@ export default function DoctorProfile() {
       if (paymentMethod !== "CASH" && appointment.feeCharged && appointment.feeCharged > 0) {
         const payment = await submitAppointmentPayment(appointment.id, {
           paymentMethod,
-          useCashback: paymentMethod === "CARD" && useCashback,
+          useCashback: false,
         });
         if (payment.iframeUrl) {
           window.location.assign(payment.iframeUrl);
@@ -680,8 +680,8 @@ export default function DoctorProfile() {
 
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-gray-800">{isRTL ? "طريقة الدفع" : "Payment method"}</p>
-                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                       {(["CASH", "CARD", "WALLET", "FAWRY"] as AppointmentPaymentMethod[])
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["CASH", "CARD"] as AppointmentPaymentMethod[])
                         .filter(method => acceptedPaymentMethods.includes(method))
                         .map(method => (
                           <button
@@ -694,28 +694,12 @@ export default function DoctorProfile() {
                                 : "border-gray-200 text-gray-600 hover:border-[#D4A853]/50"
                             }`}
                           >
-                             {method === "CASH" ? (isRTL ? "نقداً" : "Cash") : method === "CARD" ? (isRTL ? "بطاقة" : "Card") : method === "FAWRY" ? "Fawry" : (isRTL ? "محفظة" : "Wallet")}
+                             {method === "CASH" ? (isRTL ? "نقداً" : "Cash") : (isRTL ? "بطاقة" : "Card")}
                           </button>
                         ))}
                     </div>
                   </div>
 
-                  {paymentMethod === "CARD" && walletBalance > 0 && (
-                    <label className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50/60 p-3 cursor-pointer">
-                      <Checkbox
-                        checked={useCashback}
-                        onCheckedChange={checked => setUseCashback(checked === true)}
-                      />
-                      <span className="text-sm text-green-800">
-                        <span className="font-semibold block">
-                          {isRTL ? "استخدم رصيد الكاش باك" : "Use Cashback Balance"}
-                        </span>
-                        <span className="text-xs text-green-700">
-                          {isRTL ? `متاح ${walletBalance} ${t.dashboard.egp}` : `${walletBalance} ${t.dashboard.egp} available`}
-                        </span>
-                      </span>
-                    </label>
-                  )}
 
                   <Button
                     type="submit"

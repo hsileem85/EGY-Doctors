@@ -23,8 +23,6 @@ import { useAuth } from "@/context/AuthContext";
 const PAYMENT_METHOD_LABELS: Record<string, { en: string; ar: string }> = {
   CASH: { en: "Cash", ar: "نقداً" },
   CARD: { en: "Card", ar: "بطاقة" },
-  WALLET: { en: "Wallet", ar: "محفظة" },
-  FAWRY: { en: "Fawry", ar: "فوري" },
 };
 
 export default function DoctorPublicProfile() {

@@ -42,8 +42,8 @@ const defaultSchedule = (): ClinicSchedule => ({
 });
 
 type AvailabilityPeriod = "week" | "month" | "quarter" | "year" | "custom";
-type AcceptedPaymentMethod = "CASH" | "CARD" | "WALLET" | "FAWRY";
-const ALL_PAYMENT_METHODS: AcceptedPaymentMethod[] = ["CASH", "CARD", "WALLET", "FAWRY"];
+type AcceptedPaymentMethod = "CASH" | "CARD";
+const ALL_PAYMENT_METHODS: AcceptedPaymentMethod[] = ["CASH", "CARD"];
 
 type Clinic = {
   id: string;
@@ -989,8 +989,6 @@ export default function DoctorProfileSetup() {
                               {([
                                 ["CASH", isRTL ? "نقداً" : "Cash"],
                                 ["CARD", isRTL ? "بطاقة" : "Card"],
-                                ["WALLET", isRTL ? "محفظة" : "Wallet"],
-                                 ["FAWRY", "Fawry"],
                               ] as const).map(([method, label]) => (
                                 <label
                                   key={method}
