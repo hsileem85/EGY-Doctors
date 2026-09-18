@@ -209,6 +209,7 @@ export default function DoctorProfile() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<AppointmentPaymentMethod>("CASH");
+  const [pendingAppointment, setPendingAppointment] = useState<{ id: number; feeCharged?: number | null } | null>(null);
   const [useCashback, setUseCashback] = useState(false);
   const { data: wallet } = useGetWallet();
 
@@ -267,7 +268,7 @@ export default function DoctorProfile() {
     if (autoClinic && bookingStep === "clinic") {
       setSelectedClinic(autoClinic);
       const accepted = (autoClinic as ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }).acceptedPaymentMethods
-        ?? ["CASH", "CARD", "WALLET"];
+       ?? ["CASH"];
       setPaymentMethod((accepted[0] ?? "CASH") as AppointmentPaymentMethod);
       setUseCashback(false);
       setBookingStep("calendar");
@@ -332,7 +333,7 @@ export default function DoctorProfile() {
   const handleClinicSelect = (clinic: ApiClinic) => {
     setSelectedClinic(clinic);
     const accepted = (clinic as ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }).acceptedPaymentMethods
-      ?? ["CASH", "CARD", "WALLET"];
+      ?? ["CASH"];
     setPaymentMethod((accepted[0] ?? "CASH") as AppointmentPaymentMethod);
     setUseCashback(false);
     setBookingStep("calendar");
@@ -353,23 +354,23 @@ export default function DoctorProfile() {
   const cashbackAmount = useCashback ? Math.min(Math.max(walletBalance, 0), Math.max(appointmentFee, 0)) : 0;
   const cardCharge = Math.max(appointmentFee - cashbackAmount, 0);
   const acceptedPaymentMethods = (selectedClinic as (ApiClinic & { acceptedPaymentMethods?: AppointmentPaymentMethod[] }) | null)
-    ?.acceptedPaymentMethods ?? ["CASH", "CARD", "WALLET"];
+    ?.acceptedPaymentMethods ?? ["CASH"];
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClinic || !selectedDate || !selectedTime) return;
     setIsSubmitting(true);
     try {
-      const appointment = await bookAppointment({
+      const appointment = pendingAppointment ?? await bookAppointment({
         doctorId: doctor.id,
         clinicId: selectedClinic.id > 0 ? selectedClinic.id : undefined,
-        patientUserId: user?.id,
         appointmentDate: selectedDate,
         appointmentTime: selectedTime,
-        patientName: user?.name ?? "Guest",
-        patientPhone: user?.phone ?? "",
+        patientName: user.name,
+        patientPhone: user.phone ?? "",
       });
-      if ((paymentMethod === "CARD" || paymentMethod === "WALLET") && appointment.feeCharged && appointment.feeCharged > 0) {
+      setPendingAppointment(appointment);
+      if (paymentMethod !== "CASH" && appointment.feeCharged && appointment.feeCharged > 0) {
         const payment = await submitAppointmentPayment(appointment.id, {
           paymentMethod,
           useCashback: paymentMethod === "CARD" && useCashback,
@@ -379,6 +380,7 @@ export default function DoctorProfile() {
           return;
         }
       }
+      setPendingAppointment(null);
       setBookingStep("success");
     } catch {
       setBookingStep("form");
@@ -397,6 +399,7 @@ export default function DoctorProfile() {
     }
     setSelectedDate(null);
     setSelectedTime(null);
+    setPendingAppointment(null);
   };
 
   return (
@@ -677,8 +680,8 @@ export default function DoctorProfile() {
 
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-gray-800">{isRTL ? "طريقة الدفع" : "Payment method"}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {(["CASH", "CARD", "WALLET"] as AppointmentPaymentMethod[])
+                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                       {(["CASH", "CARD", "WALLET", "FAWRY"] as AppointmentPaymentMethod[])
                         .filter(method => acceptedPaymentMethods.includes(method))
                         .map(method => (
                           <button
@@ -691,7 +694,7 @@ export default function DoctorProfile() {
                                 : "border-gray-200 text-gray-600 hover:border-[#D4A853]/50"
                             }`}
                           >
-                            {method === "CASH" ? (isRTL ? "نقداً" : "Cash") : method === "CARD" ? (isRTL ? "بطاقة" : "Card") : (isRTL ? "محفظة" : "Wallet")}
+                             {method === "CASH" ? (isRTL ? "نقداً" : "Cash") : method === "CARD" ? (isRTL ? "بطاقة" : "Card") : method === "FAWRY" ? "Fawry" : (isRTL ? "محفظة" : "Wallet")}
                           </button>
                         ))}
                     </div>

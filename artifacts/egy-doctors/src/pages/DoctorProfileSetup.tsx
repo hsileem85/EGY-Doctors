@@ -42,8 +42,8 @@ const defaultSchedule = (): ClinicSchedule => ({
 });
 
 type AvailabilityPeriod = "week" | "month" | "quarter" | "year" | "custom";
-type AcceptedPaymentMethod = "CASH" | "CARD" | "WALLET";
-const ALL_PAYMENT_METHODS: AcceptedPaymentMethod[] = ["CASH", "CARD", "WALLET"];
+type AcceptedPaymentMethod = "CASH" | "CARD" | "WALLET" | "FAWRY";
+const ALL_PAYMENT_METHODS: AcceptedPaymentMethod[] = ["CASH", "CARD", "WALLET", "FAWRY"];
 
 type Clinic = {
   id: string;
@@ -85,7 +85,7 @@ function makeClinic(overrides?: Partial<Clinic>): Clinic {
     availabilityFrom: "",
     availabilityTo: "",
     sessionsPerHour: "2",
-    acceptedPaymentMethods: [...ALL_PAYMENT_METHODS],
+    acceptedPaymentMethods: ["CASH"],
     ...overrides,
   };
 }
@@ -985,11 +985,12 @@ export default function DoctorProfileSetup() {
                             <p className="text-[11px] text-gray-400">
                               {isRTL ? "اختر طرق الدفع المتاحة للمرضى في هذه العيادة." : "Choose the payment methods available to patients at this clinic."}
                             </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                               {([
                                 ["CASH", isRTL ? "نقداً" : "Cash"],
                                 ["CARD", isRTL ? "بطاقة" : "Card"],
                                 ["WALLET", isRTL ? "محفظة" : "Wallet"],
+                                 ["FAWRY", "Fawry"],
                               ] as const).map(([method, label]) => (
                                 <label
                                   key={method}

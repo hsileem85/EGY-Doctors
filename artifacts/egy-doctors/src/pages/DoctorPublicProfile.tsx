@@ -24,6 +24,7 @@ const PAYMENT_METHOD_LABELS: Record<string, { en: string; ar: string }> = {
   CASH: { en: "Cash", ar: "نقداً" },
   CARD: { en: "Card", ar: "بطاقة" },
   WALLET: { en: "Wallet", ar: "محفظة" },
+  FAWRY: { en: "Fawry", ar: "فوري" },
 };
 
 export default function DoctorPublicProfile() {
@@ -414,7 +415,7 @@ export default function DoctorPublicProfile() {
                               </span>
                               {(Array.isArray((clinic as typeof clinic & { acceptedPaymentMethods?: string[] }).acceptedPaymentMethods)
                                 ? (clinic as typeof clinic & { acceptedPaymentMethods: string[] }).acceptedPaymentMethods
-                                : ["CASH", "CARD", "WALLET"]
+                                 : ["CASH"]
                               ).map(method => (
                                 <Badge key={method} variant="outline" className="text-[11px] font-medium">
                                   {PAYMENT_METHOD_LABELS[method]?.[isRTL ? "ar" : "en"] ?? method}

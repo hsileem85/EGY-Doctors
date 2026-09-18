@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, ne, inArray, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { db, appointmentsTable, appointmentReminderDeliveriesTable, doctorsTable, usersTable, specialtiesTable, clinicsTable, medicalCentersTable, siteSettingsTable, paymentsTable, type WalletOwnerType } from "@workspace/db";
@@ -118,12 +118,29 @@ function isWithinAvailabilityWindow(
 
 /* ─── POST /appointments ─── */
 router.post("/appointments", async (req, res): Promise<void> => {
+  const payload = decodeJwt(req.headers.authorization);
+  if (!payload || payload.role !== "patient" || !Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
+    res.status(401).json({ error: "Sign in as a patient to book an appointment" });
+    return;
+  }
+  const [caller] = await db.select({
+    id: usersTable.id,
+    name: usersTable.name,
+    phone: usersTable.phone,
+    role: usersTable.role,
+    isActive: usersTable.isActive,
+  }).from(usersTable).where(eq(usersTable.id, payload.sub)).limit(1);
+  if (!caller || !caller.isActive || caller.role !== "patient") {
+    res.status(403).json({ error: "Patient account is not active" });
+    return;
+  }
   const Schema = z.object({
     doctorId: z.coerce.number(),
     clinicId: z.coerce.number().optional().nullable(),
     patientUserId: z.coerce.number().optional().nullable(),
-    patientName: z.string().min(1, "Patient name is required"),
-    patientPhone: z.string().min(7, "Valid phone required"),
+    // Patient identity is always replaced from the authenticated account below.
+    patientName: z.string().optional(),
+    patientPhone: z.string().optional(),
     appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
     appointmentTime: z.string().min(1, "Time is required"),
     notes: z.string().optional().nullable(),
@@ -136,6 +153,63 @@ router.post("/appointments", async (req, res): Promise<void> => {
   }
 
   const d = parsed.data;
+  d.patientUserId = caller.id;
+  d.patientName = caller.name ?? "Patient";
+  if (!caller.phone || caller.phone.length < 7) {
+    res.status(400).json({ error: "Please add a valid phone number to your account before booking" });
+    return;
+  }
+  d.patientPhone = caller.phone;
+
+  // A virtual clinic id (-1) is a UI sentinel, not a database clinic. Resolve
+  // the doctor's canonical clinic so fee, payment methods, and escrow ownership
+  // are always server-owned and never silently become a free appointment.
+  if (!d.clinicId || d.clinicId <= 0) {
+    const [canonicalClinic] = await db.select({ id: clinicsTable.id })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.doctorId, d.doctorId))
+      .orderBy(clinicsTable.id)
+      .limit(1);
+    if (canonicalClinic) d.clinicId = canonicalClinic.id;
+  } else {
+    const [ownedClinic] = await db.select({ id: clinicsTable.id })
+      .from(clinicsTable)
+      .where(and(eq(clinicsTable.id, d.clinicId), eq(clinicsTable.doctorId, d.doctorId)))
+      .limit(1);
+    if (!ownedClinic) {
+      res.status(400).json({ error: "Selected clinic is not available for this doctor" });
+      return;
+    }
+  }
+
+  // Release abandoned online bookings before checking the slot. This prevents
+  // a failed/closed checkout from holding a slot forever.
+  const [expirySetting] = await db.select({ value: siteSettingsTable.value })
+    .from(siteSettingsTable).where(eq(siteSettingsTable.key, "pending_payment_expiry_minutes")).limit(1);
+  const expiryMinutes = Number(expirySetting?.value);
+  const pendingCutoff = new Date(Date.now() - (Number.isFinite(expiryMinutes) && expiryMinutes > 0 ? expiryMinutes : 30) * 60_000);
+  const stale = await db.select({ appointmentId: appointmentsTable.id, paymentId: paymentsTable.id })
+    .from(appointmentsTable)
+    .innerJoin(paymentsTable, eq(paymentsTable.appointmentId, appointmentsTable.id))
+    .where(and(
+      eq(appointmentsTable.doctorId, d.doctorId),
+      eq(appointmentsTable.appointmentDate, d.appointmentDate),
+      eq(appointmentsTable.appointmentTime, d.appointmentTime),
+      ne(appointmentsTable.status, "cancelled"),
+      eq(paymentsTable.status, "PENDING"),
+      // Payment creation is the authoritative checkout age.
+      sql`${paymentsTable.createdAt} < ${pendingCutoff}`,
+    ));
+  if (stale.length) {
+    await db.transaction(async (tx) => {
+      for (const row of stale) {
+        await tx.update(paymentsTable).set({ status: "FAILED" })
+          .where(and(eq(paymentsTable.id, row.paymentId), eq(paymentsTable.status, "PENDING")));
+        await tx.update(appointmentsTable).set({ status: "cancelled" })
+          .where(and(eq(appointmentsTable.id, row.appointmentId), ne(appointmentsTable.status, "cancelled")));
+      }
+    });
+  }
 
   // ── Reject double-booking: same doctor/clinic/date/time already taken (not cancelled) ──
   const conflictConditions = [
@@ -216,7 +290,13 @@ router.post("/appointments", async (req, res): Promise<void> => {
     }).from(clinicsTable).where(eq(clinicsTable.id, d.clinicId)).limit(1);
 
     if (clinic) {
-      feeCharged = clinic.fee ?? null;
+      if (clinic.fee != null) {
+        feeCharged = clinic.fee;
+      } else {
+        const [doctorFee] = await db.select({ fee: doctorsTable.fee })
+          .from(doctorsTable).where(eq(doctorsTable.id, d.doctorId)).limit(1);
+        feeCharged = doctorFee?.fee ?? null;
+      }
 
       // Set initial status based on confirmation method
       initialStatus = clinic.bookingConfirmationMethod === "manual"
@@ -244,6 +324,14 @@ router.post("/appointments", async (req, res): Promise<void> => {
         feeCharged = clinic.followUpPrice ?? 0;
       }
     }
+  } else {
+    // Legacy affiliated doctors may not yet have an auto-created clinic.
+    // Preserve the doctor's configured consultation fee rather than creating
+    // a zero-fee appointment.
+    const [doctor] = await db.select({ fee: doctorsTable.fee })
+      .from(doctorsTable).where(eq(doctorsTable.id, d.doctorId)).limit(1);
+    feeCharged = doctor?.fee ?? null;
+    initialStatus = "confirmed";
   }
 
   const [appointment] = await db.insert(appointmentsTable).values({

@@ -563,6 +563,12 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
     res.status(403).json({ error: "Forbidden" });
     return;
   }
+   const [activePatient] = await db.select({ id: usersTable.id, role: usersTable.role, isActive: usersTable.isActive })
+     .from(usersTable).where(eq(usersTable.id, payload.sub)).limit(1);
+   if (!activePatient || activePatient.role !== "patient" || !activePatient.isActive) {
+     res.status(403).json({ error: "Patient account is not active" });
+     return;
+   }
   const appointmentId = Number(req.params.id);
   if (!Number.isInteger(appointmentId) || appointmentId <= 0) {
     res.status(400).json({ error: "Invalid appointment ID" });
@@ -593,15 +599,19 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
     res.status(409).json({ error: existingPayment.status === "PAID" ? "Appointment is already paid" : "An appointment payment is already in progress" });
     return;
   }
-  const methodResult = z.enum(["CARD", "WALLET", "CASH"]).safeParse(String(req.body?.paymentMethod ?? "CARD").toUpperCase());
+   const methodResult = z.enum(["CARD", "WALLET", "CASH", "FAWRY"]).safeParse(String(req.body?.paymentMethod ?? "CARD").toUpperCase());
   if (!methodResult.success) { res.status(422).json({ error: "Invalid payment method" }); return; }
-  const requestedMethod = methodResult.data;
+   const requestedMethod = methodResult.data;
+   if (requestedMethod === "FAWRY") {
+     res.status(422).json({ error: "Fawry booking payments are not configured for asynchronous reference payments yet." });
+     return;
+   }
   const cashbackInput = z.object({ useCashback: z.boolean().default(false) }).safeParse(req.body ?? {});
   if (!cashbackInput.success) { res.status(422).json({ error: "Invalid cashback amount" }); return; }
   const [clinic] = appointment.clinicId
     ? await db.select({ acceptedPaymentMethods: clinicsTable.acceptedPaymentMethods }).from(clinicsTable).where(eq(clinicsTable.id, appointment.clinicId)).limit(1)
     : [];
-  const accepted = clinic?.acceptedPaymentMethods?.length ? clinic.acceptedPaymentMethods : ["CASH", "CARD", "WALLET"];
+   const accepted = clinic?.acceptedPaymentMethods?.length ? clinic.acceptedPaymentMethods : ["CASH"];
   if (!accepted.includes(requestedMethod)) { res.status(422).json({ error: "Selected payment method is not accepted by this clinic" }); return; }
   if (requestedMethod === "CASH") { res.status(422).json({ error: "Cash bookings do not require online payment" }); return; }
   const [patientWallet] = await db.select({ balance: walletsTable.balance }).from(walletsTable)
@@ -677,10 +687,15 @@ router.post(["/billing/paymob/appointments/:id/initiate", "/appointments/:id/pay
     return;
   }
 
-  const integrationId = requestedMethod === "WALLET" ? process.env.PAYMOB_WALLET_INTEGRATION_ID : process.env.PAYMOB_CARD_INTEGRATION_ID;
-  const iframeId = requestedMethod === "WALLET" ? process.env.PAYMOB_WALLET_IFRAME_ID : process.env.PAYMOB_IFRAME_ID;
+   const integrationId = requestedMethod === "WALLET"
+     ? process.env.PAYMOB_WALLET_INTEGRATION_ID
+     : process.env.PAYMOB_CARD_INTEGRATION_ID;
+   const iframeId = requestedMethod === "WALLET"
+     ? process.env.PAYMOB_WALLET_IFRAME_ID
+     : process.env.PAYMOB_IFRAME_ID;
   if (!integrationId || !iframeId) {
-    res.status(422).json({ error: "Card payments are not configured." });
+     const label = requestedMethod === "WALLET" ? "Wallet" : "Card";
+     res.status(422).json({ error: `${label} payments are not configured.` });
     return;
   }
 
