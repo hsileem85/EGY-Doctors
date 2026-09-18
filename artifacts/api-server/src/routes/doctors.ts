@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, and, inArray, avg, count, sql, asc, gte } from "drizzle-orm";
+import { eq, and, inArray, avg, count, sql, asc } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
@@ -73,18 +73,9 @@ router.get("/doctors", async (req, res): Promise<void> => {
   const params = Schema.safeParse(req.query);
   const { q, specialtyId, cityId, areaId, lat, lng } = params.success ? params.data : {} as Record<string, undefined>;
 
-  const [financialSettings] = await db.select({
-    minDoctorWalletBalance: systemSettingsTable.minDoctorWalletBalance,
-  }).from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
-  const minWallet = financialSettings?.minDoctorWalletBalance ?? 50;
   const conditions = [
     eq(doctorsTable.accountStatus, "approved"),
     eq(doctorsTable.isActive, true),
-    sql`EXISTS (
-      SELECT 1 FROM ${walletsTable} w
-      WHERE w.owner_type = 'DOCTOR' AND w.owner_id = CAST(${doctorsTable.userId} AS TEXT)
-        AND w.balance >= ${minWallet}
-    )`,
   ];
   if (specialtyId) conditions.push(eq(doctorsTable.specialtyId, specialtyId));
   if (cityId) conditions.push(eq(doctorsTable.cityId, cityId));
@@ -407,15 +398,7 @@ router.get("/doctors/:id", async (req, res): Promise<void> => {
   }
   const mayBypassVisibility = callerRole === "admin" || callerId === row.userId;
   if (!mayBypassVisibility) {
-    const [settings] = await db.select({ minimum: systemSettingsTable.minDoctorWalletBalance })
-      .from(systemSettingsTable).where(eq(systemSettingsTable.id, 1)).limit(1);
-    const [visibleWallet] = await db.select({ id: walletsTable.id }).from(walletsTable)
-      .where(and(
-        eq(walletsTable.ownerType, "DOCTOR"),
-        eq(walletsTable.ownerId, String(row.userId)),
-        gte(walletsTable.balance, settings?.minimum ?? 50),
-      )).limit(1);
-    if (row.accountStatus !== "approved" || !row.isActive || !visibleWallet) {
+    if (row.accountStatus !== "approved" || !row.isActive) {
       res.status(404).json({ error: "Doctor not found" });
       return;
     }

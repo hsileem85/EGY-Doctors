@@ -204,7 +204,7 @@ export async function grantDoctorApprovalGiftInTx(tx: WalletTx, userId: number):
     userId,
     type: "wallet_low_balance",
     title: "Welcome gift added to your wallet",
-    body: "We added 50 EGP to your wallet. Keep your balance at or above 50 EGP so your profile remains visible to patients.",
+    body: "We added a 50 EGP welcome gift to your wallet.",
     data: { balance: lockedWallet.balance + giftAmount, threshold: 50 },
   });
   return true;
@@ -229,7 +229,7 @@ export async function notifyDoctorLowBalanceCrossingInTx(
     userId,
     type: "wallet_low_balance",
     title: "Wallet balance warning",
-    body: `Your wallet balance is ${balanceAfter.toFixed(2)} EGP. Top up to keep your profile visible to patients.`,
+    body: `Your wallet balance is ${balanceAfter.toFixed(2)} EGP. You can top up your wallet at any time.`,
     data: { balance: balanceAfter, threshold },
   });
 }

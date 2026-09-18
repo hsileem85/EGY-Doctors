@@ -330,7 +330,7 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
     const base = process.env.APP_URL ?? "https://egydoctors.com";
     await sendEmail(
       to,
-      "Your EGY Doctors account has been approved — activate it with your wallet",
+      "Your EGY Doctors account has been approved",
       `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff">
         <div style="text-align:center;margin-bottom:24px">
@@ -342,11 +342,11 @@ export async function sendDoctorApprovedEmail(to: string, doctorName: string): P
         </p>
         <div style="background:#FEF9F0;border:1px solid #D4A853;border-radius:8px;padding:16px;margin:24px 0">
           <p style="color:#92400E;margin:0;font-size:14px">
-            Your account has been approved, and EGY Doctors has added a <strong>50 EGP welcome gift</strong> to your wallet. Your profile appears to patients while your available wallet balance is at least <strong>50 EGP</strong>.
+            Your account has been approved, and EGY Doctors has added a <strong>50 EGP welcome gift</strong> to your wallet.
           </p>
         </div>
         <p style="color:#475569;line-height:1.6">
-          Keep your wallet topped up to remain visible in doctor searches. We will notify you when your balance reaches 50 EGP or below.
+          Your approved profile remains visible in doctor searches regardless of your wallet balance.
         </p>
         <div style="text-align:center;margin:32px 0">
           <a href="${base}/dashboard?tab=wallet" style="background:#D4A853;color:#0F172A;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">

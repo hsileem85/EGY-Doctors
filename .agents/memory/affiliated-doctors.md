@@ -1,6 +1,6 @@
 ---
 name: Affiliated Doctors Pattern
-description: How medical centers own and manage doctor records; system-user creation; search visibility rules.
+description: How medical centers own and manage doctor records; system-user creation; public visibility rules.
 ---
 
 ## Rule
@@ -15,13 +15,11 @@ A synthetic `users` row is created alongside each affiliated doctor:
 On delete, both `doctors` and `users` rows are removed.
 
 ## Search visibility
-`GET /doctors` subscription filter was extended:
-```sql
-affiliated_center_id IS NOT NULL
-OR subscription_status = 'TRIAL'
-OR (subscription_status = 'ACTIVE' AND ...)
-```
-Affiliated doctors always appear regardless of subscription status.
+Approved, active doctors appear publicly regardless of wallet balance or subscription state. This applies to independent and affiliated doctors.
+
+**Why:** The user explicitly removed the 50 EGP minimum-wallet visibility condition. Wallet funds are financial data, not a publication gate.
+
+**How to apply:** Public list and profile endpoints must enforce approval and active status only. Never hide a doctor, show visibility warnings, or send visibility-related notifications based on wallet balance.
 
 ## Schedule storage
 `doctors.schedule` is a nullable `text` column storing JSON:
